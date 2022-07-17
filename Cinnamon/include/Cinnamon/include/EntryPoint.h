@@ -1,0 +1,100 @@
+#pragma once
+#include <stdint.h>
+#include <iostream>
+
+#ifdef CIN_PLATFORM_WINDOWS
+#include <Windows.h>
+#include <shellapi.h>
+#ifdef APIENTRY
+#undef APIENTRY
+#endif /* APIENTRY */
+#define USE_CRT_MEMORY_LEAK_DETECTION 0 /* 1 */
+/* CRT detection tracks malloc only, so we override the new operators */
+#if USE_CRT_MEMORY_LEAK_DETECTION
+void* operator  new(const std::size_t size)
+{
+	return malloc(size);
+}
+
+void* operator new[](const std::size_t size)
+{
+	return malloc(size);
+}
+#define _CRTDBG_MAP_ALLOC
+#include <stdlib.h>
+#include <crtdbg.h>
+#endif 
+
+static_assert(sizeof(std::remove_pointer<LPWSTR>::type) == sizeof(char16_t), "UTF-16 Encoding for windows required");
+INT WINAPI wWinMain(
+	_In_ HINSTANCE hInstance,
+	_In_opt_ HINSTANCE hPrevInstance,
+	_In_ LPWSTR lpCmdLine,
+	_In_ int nShowCmd)
+{
+	(void)hInstance;
+	(void)hPrevInstance;
+	(void)lpCmdLine;
+	(void)nShowCmd;
+
+#if USE_CRT_MEMORY_LEAK_DETECTION
+	/* Using memory checkpoint to prevent static object initialization and deinitialization */
+	_CrtMemState memoryState;
+	_CrtMemCheckpoint(&memoryState);
+#endif
+
+	INT argc{ 0 };
+	LPWSTR* argv{ CommandLineToArgvW(GetCommandLineW(), &argc) };
+	(void)argv;
+	(void)argc;
+	int result{ EXIT_SUCCESS };
+	//{
+	//	result = CommonEntryPoint(std::move(arguments));
+	//}
+
+#if USE_CRT_MEMORY_LEAK_DETECTION
+	/* No point to log in case of invalid application initialization */
+	if (result == EXIT_SUCCESS)
+	{
+		_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+		_CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
+		_CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDOUT);
+		_CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE);
+		_CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDOUT);
+		_CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
+		_CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDOUT);
+
+		_CrtMemCheckpoint(&memoryState);
+	}
+#endif
+	return result;
+} /* Windows */
+#elif defined CIN_PLATFORM_LINUX
+/* UTF8 only */
+int main(const char argc, const char** argv)
+{
+	CommandLineArguments arguments(static_cast<const char>(argc), (const char**)argv);
+	return CommonEntryPoint(arguments);
+} /* Linux */
+#elif defined CIN_PLATFORM_APPLE
+/* UTF8 only */
+int main(const char argc, const char** argv)
+{
+	CommandLineArguments arguments(static_cast<const char>(argc), (const char**)argv);
+	return CommonEntryPoint(arguments);
+} /* MacOS */
+#elif defined CIN_PLATFORM_IOS
+/* UTF8 only */
+int main(const char argc, const char** argv)
+{
+	CommandLineArguments arguments(static_cast<const char>(argc), (const char**)argv);
+	return CommonEntryPoint(arguments);
+} /* IOS */
+#elif defined CIN_PLATFORM_ANDROID
+/* UTF8 only */
+int main(const char argc, const char** argv)
+{
+	CommandLineArguments arguments(static_cast<const char>(argc), (const char**)argv);
+	return CommonEntryPoint(arguments);
+} /* Android */
+#endif
