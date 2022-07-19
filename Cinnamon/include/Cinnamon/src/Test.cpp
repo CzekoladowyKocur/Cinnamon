@@ -1,1 +1,1 @@
-#include "Cinnamon/include/EntryPoint.h"
+#include "Cinnamon/include/Core/EntryPoint.h"

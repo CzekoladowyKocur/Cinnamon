@@ -2,10 +2,6 @@
 WorkspaceName = "Cinnamon"
 OutputDirectory = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 CoreProjectName = "Cinnamon"
-RendererProjectName = "CinnamonRender"
-ScriptingEngineProjectName = "CinnamonScript"
-AudioEngineProjectName = "CinnamonAudio"
-PhysicsEngineProjectName = "CinnamonPhysics"
 EditorProjectName = "CinnamonEditor"
 
 workspace (WorkspaceName)
@@ -78,7 +74,7 @@ workspace (WorkspaceName)
 		defines "CIN_PLATFORM_ANDROID"
 
 project (CoreProjectName)
-	location (CoreProjectName)
+	location (CoreProjectName .. "/include")
 	language "C++"
 	cppdialect "C++20"
 	kind "ConsoleApp"
@@ -100,53 +96,11 @@ project (CoreProjectName)
 
 	includedirs
 	{
-		"Cinnamon/include",
-	}
-
-project (RendererProjectName)
-	location (RendererProjectName)
-	language "C++"
-	cppdialect "C++20"
-	kind "ConsoleApp"
-
-	targetdir ("bin/" .. (OutputDirectory) .. "/%{prj.name}")
-	objdir ("bin-int/" .. (OutputDirectory) .. "/%{prj.name}")
-
-	files 
-	{ 
-		"%{prj.name}/include/**.h", 
-		"%{prj.name}/include/**.c", 
-		"%{prj.name}/include/**.hpp", 
-		"%{prj.name}/include/**.cpp", 
-		"%{prj.name}/src/**.h", 
-		"%{prj.name}/src/**.c", 
-		"%{prj.name}/src/**.hpp", 
-		"%{prj.name}/src/**.cpp", 
-	}
-
-project (ScriptingEngineProjectName)
-	location (ScriptingEngineProjectName)
-	language "C++"
-	cppdialect "C++20"
-	kind "ConsoleApp"
-
-	targetdir ("bin/" .. (OutputDirectory) .. "/%{prj.name}")
-	objdir ("bin-int/" .. (OutputDirectory) .. "/%{prj.name}")
-
-	files 
-	{ 
-		"%{prj.name}/include/**.h", 
-		"%{prj.name}/include/**.c", 
-		"%{prj.name}/include/**.hpp", 
-		"%{prj.name}/include/**.cpp", 
-		"%{prj.name}/src/**.h", 
-		"%{prj.name}/src/**.c", 
-		"%{prj.name}/src/**.hpp", 
-		"%{prj.name}/src/**.cpp", 
+		"%{prj.name}/include",
 	}
 
 project (EditorProjectName)
-	location (EditorProjectName)
+	location (EditorProjectName .. "/include")
 	language "C++"
 	cppdialect "C++20"
 	kind "ConsoleApp"
@@ -157,6 +111,7 @@ project (EditorProjectName)
 	files 
 	{ 
 		"%{prj.name}/include/**.h", 
+		"%{prj.name}/include/**.h", 
 		"%{prj.name}/include/**.c", 
 		"%{prj.name}/include/**.hpp", 
 		"%{prj.name}/include/**.cpp", 
@@ -164,4 +119,10 @@ project (EditorProjectName)
 		"%{prj.name}/src/**.c", 
 		"%{prj.name}/src/**.hpp", 
 		"%{prj.name}/src/**.cpp", 
+	}
+
+	includedirs
+	{
+		"%{prj.name}/include",
+		"%{wks.location}/Cinnamon/include",
 	}

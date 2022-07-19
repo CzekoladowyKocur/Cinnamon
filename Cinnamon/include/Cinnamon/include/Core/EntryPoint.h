@@ -1,6 +1,28 @@
 #pragma once
-#include <stdint.h>
-#include <iostream>
+
+/* TODO: Temp */
+#include "Cinnamon/include/Core/Application.h"
+
+#ifndef EXIT_SUCCESS 
+#define EXIT_SUCCESS 0
+#endif // !EXIT_SUCCESS 
+
+#ifndef EXIT_FAILURE
+#define EXIT_FAILURE -1
+#endif // !EXIT_FAILURE 
+
+InternalScope int32_t CommonEntryPoint() noexcept
+{
+	using namespace Cinnamon;
+	Application* application{ new Application };
+
+	if (!application->Initialize())
+		return EXIT_FAILURE;
+
+	delete application;
+	return EXIT_SUCCESS;
+}
+
 
 #ifdef CIN_PLATFORM_WINDOWS
 #include <Windows.h>
@@ -42,16 +64,15 @@ INT WINAPI wWinMain(
 	_CrtMemState memoryState;
 	_CrtMemCheckpoint(&memoryState);
 #endif
-
+	/// https://jdelezenne.github.io/Codex/
 	INT argc{ 0 };
 	LPWSTR* argv{ CommandLineToArgvW(GetCommandLineW(), &argc) };
 	(void)argv;
 	(void)argc;
 	int result{ EXIT_SUCCESS };
-	//{
-	//	result = CommonEntryPoint(std::move(arguments));
-	//}
-
+	{
+		result = CommonEntryPoint(/*std::move(arguments)*/);
+	}
 #if USE_CRT_MEMORY_LEAK_DETECTION
 	/* No point to log in case of invalid application initialization */
 	if (result == EXIT_SUCCESS)
