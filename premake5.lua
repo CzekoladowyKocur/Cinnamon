@@ -73,6 +73,12 @@ workspace (WorkspaceName)
 	filter "system:android"
 		defines "CIN_PLATFORM_ANDROID"
 
+local xdg = "%{wks.location}" .. "Cinnamon/include/ThirdParty/xdg"
+group "ThirdParty"
+{
+	include (xdg)
+}
+
 project (CoreProjectName)
 	location (CoreProjectName .. "/include")
 	language "C++"
@@ -98,6 +104,9 @@ project (CoreProjectName)
 	{
 		"%{prj.name}/include",
 	}
+
+	filter "system:linux"
+		links (xdg)
 
 project (EditorProjectName)
 	location (EditorProjectName .. "/include")

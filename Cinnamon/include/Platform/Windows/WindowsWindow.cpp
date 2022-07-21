@@ -15,7 +15,7 @@ namespace Cinnamon {
 
 	Window::Window(WindowProperties&& windowProperties) noexcept
 		:
-		m_Properties(windowProperties)
+		m_Properties(std::move(windowProperties))
 	{}
 
 	Window::~Window() noexcept

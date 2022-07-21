@@ -23,7 +23,6 @@ InternalScope int32_t CommonEntryPoint() noexcept
 	return EXIT_SUCCESS;
 }
 
-
 #ifdef CIN_PLATFORM_WINDOWS
 #include <Windows.h>
 #include <shellapi.h>

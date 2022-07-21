@@ -20,6 +20,8 @@ namespace Cinnamon {
 	{
 		m_Window = new Window(WindowProperties{ u8"Cinnamon Application", 800U, 600U, EWindowMode::Unspecified });
 
+
+
 		return true;
 	}
 
