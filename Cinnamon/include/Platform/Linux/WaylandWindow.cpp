@@ -19,9 +19,10 @@ namespace Cinnamon {
 		:
 		m_Properties(std::move(windowProperties))
 	{
-        std::cout << "Heyy\n";
         m_State = new PlatformWindowState;
+
         m_State->display = wl_display_connect(NULL);
+        m_State->registry = wl_display_get_registry(m_State->display);
     }
 
 	Window::~Window() noexcept

@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <utility>
 #include <stddef.h>
+#include <cstdlib>
 /* Engine includes */
 #include "Cinnamon/include/Core/TypeDefines.h"
 #include "Cinnamon/include/Memory/CinMemory.h"

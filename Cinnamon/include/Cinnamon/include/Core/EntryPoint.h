@@ -91,10 +91,13 @@ INT WINAPI wWinMain(
 } /* Windows */
 #elif defined CIN_PLATFORM_LINUX
 /* UTF8 only */
-int main(const char argc, const char** argv)
+int main(const int argc, const char** argv)
 {
-	CommandLineArguments arguments(static_cast<const char>(argc), (const char**)argv);
-	return CommonEntryPoint(arguments);
+	//CommandLineArguments arguments(static_cast<const char>(argc), (const char**)argv);
+    (void)argc;
+    (void)argv;
+
+	return CommonEntryPoint();
 } /* Linux */
 #elif defined CIN_PLATFORM_APPLE
 /* UTF8 only */

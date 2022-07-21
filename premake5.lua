@@ -115,7 +115,11 @@ project (CoreProjectName)
 	}
 
 	filter "system:linux"
-		links (xdg)
+		links
+        {
+            "wayland-client",
+            xdg,
+        }
 
 project (EditorProjectName)
 	location (EditorProjectName .. "/include")
