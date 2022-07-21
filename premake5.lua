@@ -73,11 +73,9 @@ workspace (WorkspaceName)
 	filter "system:android"
 		defines "CIN_PLATFORM_ANDROID"
 
-local xdg = "%{wks.location}" .. "Cinnamon/include/ThirdParty/xdg"
 group "ThirdParty"
-{
-	include (xdg)
-}
+include "Cinnamon/include/ThirdParty/xdg"
+group ""
 
 project (CoreProjectName)
 	location (CoreProjectName .. "/include")
@@ -90,14 +88,25 @@ project (CoreProjectName)
 
 	files 
 	{ 
-		"%{prj.name}/include/**.h", 
-		"%{prj.name}/include/**.c", 
-		"%{prj.name}/include/**.hpp", 
-		"%{prj.name}/include/**.cpp", 
-		"%{prj.name}/src/**.h", 
-		"%{prj.name}/src/**.c", 
-		"%{prj.name}/src/**.hpp", 
-		"%{prj.name}/src/**.cpp", 
+		"%{prj.name}/include/Cinnamon/**.h", 
+		"%{prj.name}/include/Cinnamon/**.h", 
+		"%{prj.name}/include/Cinnamon/**.c", 
+		"%{prj.name}/include/Cinnamon/**.hpp", 
+		"%{prj.name}/include/Cinnamon/**.cpp", 
+		"%{prj.name}/src/Cinnamon/**.h", 
+		"%{prj.name}/src/Cinnamon/**.c", 
+		"%{prj.name}/src/Cinnamon/**.hpp", 
+		"%{prj.name}/src/Cinnamon/**.cpp", 
+
+		"%{prj.name}/include/Platform/**.h", 
+		"%{prj.name}/include/Platform/**.h", 
+		"%{prj.name}/include/Platform/**.c", 
+		"%{prj.name}/include/Platform/**.hpp", 
+		"%{prj.name}/include/Platform/**.cpp", 
+		"%{prj.name}/src/Platform/**.h", 
+		"%{prj.name}/src/Platform/**.c", 
+		"%{prj.name}/src/Platform/**.hpp", 
+		"%{prj.name}/src/Platform/**.cpp", 
 	}
 
 	includedirs
@@ -119,15 +128,25 @@ project (EditorProjectName)
 
 	files 
 	{ 
-		"%{prj.name}/include/**.h", 
-		"%{prj.name}/include/**.h", 
-		"%{prj.name}/include/**.c", 
-		"%{prj.name}/include/**.hpp", 
-		"%{prj.name}/include/**.cpp", 
-		"%{prj.name}/src/**.h", 
-		"%{prj.name}/src/**.c", 
-		"%{prj.name}/src/**.hpp", 
-		"%{prj.name}/src/**.cpp", 
+		"%{prj.name}/include/CinnamonEditor/**.h", 
+		"%{prj.name}/include/CinnamonEditor/**.h", 
+		"%{prj.name}/include/CinnamonEditor/**.c", 
+		"%{prj.name}/include/CinnamonEditor/**.hpp", 
+		"%{prj.name}/include/CinnamonEditor/**.cpp", 
+		"%{prj.name}/src/CinnamonEditor/**.h", 
+		"%{prj.name}/src/CinnamonEditor/**.c", 
+		"%{prj.name}/src/CinnamonEditor/**.hpp", 
+		"%{prj.name}/src/CinnamonEditor/**.cpp", 
+
+		"%{prj.name}/include/Platform/**.h", 
+		"%{prj.name}/include/Platform/**.h", 
+		"%{prj.name}/include/Platform/**.c", 
+		"%{prj.name}/include/Platform/**.hpp", 
+		"%{prj.name}/include/Platform/**.cpp", 
+		"%{prj.name}/src/Platform/**.h", 
+		"%{prj.name}/src/Platform/**.c", 
+		"%{prj.name}/src/Platform/**.hpp", 
+		"%{prj.name}/src/Platform/**.cpp", 
 	}
 
 	includedirs

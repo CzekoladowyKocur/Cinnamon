@@ -2,8 +2,8 @@ project "xdg"
 	kind "StaticLib"
 	language "C"
 
-	targetdir ("bin/" .. outputdir .. "/%{prj.name}")
-	objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
+	targetdir ("bin/" .. OutputDirectory .. "/%{prj.name}")
+	objdir ("bin-int/" .. OutputDirectory .. "/%{prj.name}")
 
 	filter "system:linux"
 		systemversion "latest"
