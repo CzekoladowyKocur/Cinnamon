@@ -1,5 +1,5 @@
 #pragma once
-
+#include "Cinnamon/include/Core/Core.h"
 /*
 	L1 cache reference                            0.5 ns
 	Branch mispredict                             5   ns

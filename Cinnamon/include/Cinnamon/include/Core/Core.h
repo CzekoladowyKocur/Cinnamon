@@ -2,6 +2,7 @@
 /* Standard includes */
 #include <stdint.h>
 #include <utility>
+#include <stddef.h>
 /* Engine includes */
 #include "Cinnamon/include/Core/TypeDefines.h"
 #include "Cinnamon/include/Memory/CinMemory.h"
