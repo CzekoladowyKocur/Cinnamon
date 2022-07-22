@@ -5,9 +5,7 @@ project "xdg"
 	targetdir ("bin/" .. OutputDirectory .. "/%{prj.name}")
 	objdir ("bin-int/" .. OutputDirectory .. "/%{prj.name}")
 
-	filter "system:linux"
-		systemversion "latest"
-		
+	filter "system:linux"	
 		files
 		{
 			"xdg-shell-unstable-v6.c",
