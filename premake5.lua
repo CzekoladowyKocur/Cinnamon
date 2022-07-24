@@ -118,7 +118,7 @@ project (CoreProjectName)
 		links
         {
             "wayland-client",
-            xdg,
+            "xdg",
         }
 
 project (EditorProjectName)
