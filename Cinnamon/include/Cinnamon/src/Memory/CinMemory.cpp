@@ -16,4 +16,8 @@ namespace Cinnamon {
 	{
 		operator delete(ptr);
 	}
+
+    void Tmp() {
+        s_AllocatorData.Buffer = 0;
+    }
 }

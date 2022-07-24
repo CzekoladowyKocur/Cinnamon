@@ -1,6 +1,10 @@
 #pragma once
 #include "Cinnamon/include/Core/Core.h"
+#ifndef CIN_PLATFORM_LINUX
 #include <format>
+#else
+#include <any>
+#endif
 #include <iostream>
 #include <string_view>
 #include <chrono>
@@ -30,6 +34,7 @@ namespace Cinnamon {
 		template<typename ... Args>
 		static constexpr void Log(const ELogLevel logLevel, const std::string_view message, Args&& ... args)
 		{
+        #ifndef CIN_PLATFORM_LINUX
 			/* TODO: Support for colors and file output */
 			FunctionVariable const char* s_LogLevelLabels[5]{ "TRACE: ", "INFO: ", "WARN: ", "ERROR: ", "CRITICAL: " };
 			if (logLevel < s_LogLevel || logLevel < ELogLevel::Begin || logLevel > ELogLevel::End)
@@ -41,6 +46,14 @@ namespace Cinnamon {
 			prefix.append(formatted);
 		
 			std::cout << prefix << '\n';
+        #else
+            CIN_UNUSED(logLevel);
+            CIN_UNUSED(message);
+            ([&]
+            {
+                CIN_UNUSED(args);
+            } (), ...);
+        #endif
 		}
 	private:
 		static ELogLevel s_LogLevel;
@@ -48,7 +61,7 @@ namespace Cinnamon {
 }
 
 /* TODO: Make seperate engine core and application logging macros */
-#define CIN_DISABLE_LOGGING 0
+#define CIN_DISABLE_LOGGING CIN_PLATFORM_LINUX
 #if CIN_DISABLE_LOGGING
 #define CIN_TRACE(message, ...)				void()
 #define CIN_INFO(message, ...)				void()

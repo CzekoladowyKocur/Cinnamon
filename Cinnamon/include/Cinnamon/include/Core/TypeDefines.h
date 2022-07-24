@@ -19,6 +19,7 @@
 #ifdef CIN_PLATFORM_WINDOWS
 #define CIN_DEBUG_BREAK() __debugbreak()
 #else
+#include <signal.h>
 #define CIN_DEBUG_BREAK() raise(SIGABRT)
 #endif
 

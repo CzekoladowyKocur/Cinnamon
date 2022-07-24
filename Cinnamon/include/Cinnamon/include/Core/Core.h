@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdlib>
 #include <string_view>
+#include <limits>
 /* Engine includes */
 #include "Cinnamon/include/Core/TypeDefines.h"
 #include "Cinnamon/include/Core/Logger.h"

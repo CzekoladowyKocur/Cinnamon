@@ -78,7 +78,7 @@ namespace Cinnamon {
 			template <typename T>
 			constexpr operator T* () const noexcept
 			{
-				CIN_TRACE("Allocating {0} {1}(s) [{2}, {3}]\n", static_cast<int>(ElementCount), typeid(T).name(), File, static_cast<int>(Line));
+				//CIN_TRACE("Allocating {0} {1}(s) [{2}, {3}]\n", static_cast<int>(ElementCount), typeid(T).name(), File, static_cast<int>(Line));
 				return new (std::nothrow) T[ElementCount];
 			}
 		};
