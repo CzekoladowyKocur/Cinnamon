@@ -2,6 +2,8 @@
 #include "Cinnamon/include/Core/Core.h"
 
 namespace Cinnamon {
+	struct PlatformWindowState;
+
 	enum class EWindowMode
 	{
 		Unspecified = 0,
@@ -34,7 +36,6 @@ namespace Cinnamon {
 		~WindowProperties() = default;
 	};
 
-
 	class Window
 	{
 	private:
@@ -58,7 +59,7 @@ namespace Cinnamon {
 		void SetSize(std::pair<uint32_t, uint32_t> windowSize);
 	private:
 		/* To be defined in platform */
-		struct PlatformWindowState* m_State;
+		PlatformWindowState* m_State;
 		WindowProperties m_Properties;
 	};
 }

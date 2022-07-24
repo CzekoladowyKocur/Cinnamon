@@ -1,5 +1,6 @@
 #pragma once
 #include "Cinnamon/include/Core/Core.h"
+#include <typeinfo>
 /*
 	L1 cache reference                            0.5 ns
 	Branch mispredict                             5   ns
@@ -55,18 +56,38 @@ namespace Cinnamon {
 	class GlobalAllocator
 	{
 	public:
-		static auto* Allocate(const std::size_t size)
+		//std::byte* s_Data;
+		struct AllocateProxy
 		{
-			return malloc(size);		
-		}
+			const std::size_t ElementCount;
+			const char* File;
+			const uint32_t Line;
 
-		static void Deallocate(void* const ptr)
-		{
-			return free(ptr);
-		}
+			explicit constexpr AllocateProxy(
+				const std::size_t elementCount,
+				const char* file,
+				const uint32_t line) noexcept
+				:
+				ElementCount(elementCount),
+				File(file),
+				Line(line)
+			{}
+
+			~AllocateProxy() noexcept = default;
+
+			template <typename T>
+			constexpr operator T* () const noexcept
+			{
+				CIN_TRACE("Allocating {0} {1}(s) [{2}, {3}]\n", static_cast<int>(ElementCount), typeid(T).name(), File, static_cast<int>(Line));
+				return new (std::nothrow) T[ElementCount];
+			}
+		};
+	public:
+		static AllocateProxy Allocate(const std::size_t elementCount, const char* file, const uint32_t line);
+		static void Deallocate(void* const ptr);
 	private:
 	};
 
-#define CIN_NEW(size) GlobalAllocator::Allocate(size);
-#define CIN_DELETE(ptr)  GlobalAllocator::Deallocate(ptr);
+#define CIN_NEW(size) GlobalAllocator::Allocate(size, CIN_FILE, CIN_LINE);
+#define CIN_DELETE(ptr) GlobalAllocator::Deallocate(ptr);
 }

@@ -1,4 +1,8 @@
 #include "Cinnamon/include/Core/Application.h"
+#include "Cinnamon/include/Core/Logger.h"
+
+#include <string>
+#include <vector>
 
 namespace Cinnamon {
 	Application* Application::s_ApplicationInstance{ nullptr };
@@ -7,7 +11,7 @@ namespace Cinnamon {
 		:
 		m_Window(nullptr)
 	{
-		/* TODO: Check if already initialized */
+		CIN_ASSERT(s_ApplicationInstance == nullptr, "Application already initialized!");
 		s_ApplicationInstance = this;
 	}
 
@@ -20,7 +24,11 @@ namespace Cinnamon {
 	{
 		m_Window = new Window(WindowProperties{ u8"Cinnamon Application", 800U, 600U, EWindowMode::Unspecified });
 
-
+		CIN_TRACE("Logger test, {0}, {1}, {2}", 1, 2, "Trace");
+		CIN_INFO("Logger test, {0}, {1}, {2}", 1, 2, "Info");
+		CIN_WARN("Logger test, {0}, {1}, {2}", 1, 2, "Warn");
+		CIN_ERROR("Logger test, {0}, {1}, {2}", 1, 2, "Error");
+		CIN_CRITICAL("Logger test, {0}, {1}, {2}", 1, 2, "Critical");
 
 		return true;
 	}

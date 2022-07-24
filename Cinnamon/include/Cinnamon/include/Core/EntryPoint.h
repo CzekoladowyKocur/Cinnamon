@@ -29,7 +29,7 @@ InternalScope int32_t CommonEntryPoint() noexcept
 #ifdef APIENTRY
 #undef APIENTRY
 #endif /* APIENTRY */
-#define USE_CRT_MEMORY_LEAK_DETECTION 0 /* 1 */
+#define USE_CRT_MEMORY_LEAK_DETECTION 1 /* 1 */
 /* CRT detection tracks malloc only, so we override the new operators */
 #if USE_CRT_MEMORY_LEAK_DETECTION
 void* operator  new(const std::size_t size)
