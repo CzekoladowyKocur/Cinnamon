@@ -1,5 +1,4 @@
 #ifdef CIN_PLATFORM_WINDOWS
-#include "Platform/Platform.h"
 #include "Cinnamon/include/Core/Core.h"
 
 constexpr WORD C_FOREGROUND_BLACK = 0;

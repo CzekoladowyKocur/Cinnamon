@@ -4,8 +4,13 @@
 #include "Platform/Platform.h"
 
 namespace Cinnamon {
-	InternalScope STL::UMap<Window*, Swapchain*> s_ContextMap;
+	struct DrawContext
+	{
+		Surface* Surface;
+		Swapchain* Swapchain;
+	};
 
+	InternalScope STL::UMap<Window*, DrawContext> s_ContextMap;
 	/* TODO: Change to GPU score system */
 	InternalScope bool PhysicalDeviceMeetsRequirements(const VkPhysicalDevice physicalDevice)
 	{
@@ -35,24 +40,19 @@ namespace Cinnamon {
 		CIN_UNUSED(objectType);
 
 		if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)
-			//CIN_INFO("Vulkan:\n  Object: {0}\n  Message: {1}", static_cast<int>(objectType), pMessage);
-            printf("erros %s\n", pMessage);
+			CIN_INFO("Vulkan:\n  Object: {0}\n  Message: {1}", static_cast<int>(objectType), pMessage);
 
 		if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
-			//CIN_WARN("Vulkan:\n  Object: {0}\n  Message: {1}", static_cast<int>(objectType), pMessage);
-            printf("erros %s\n", pMessage);
-		
+			CIN_WARN("Vulkan:\n  Object: {0}\n  Message: {1}", static_cast<int>(objectType), pMessage);
+
 		if (flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT)
-			//CIN_WARN("Vulkan:\n  Object: {0}\n  Message: {1}", static_cast<int>(objectType), pMessage);
-            printf("erros %s\n", pMessage);
-		
+			CIN_WARN("Vulkan:\n  Object: {0}\n  Message: {1}", static_cast<int>(objectType), pMessage);
+
 		if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
-			//CIN_ERROR("Vulkan:\n  Object: {0}\n  Message: {1}", static_cast<int>(objectType), pMessage);
-            printf("erros %s\n", pMessage);
-		
+			CIN_ERROR("Vulkan:\n  Object: {0}\n  Message: {1}", static_cast<int>(objectType), pMessage);
+
 		if (flags & VK_DEBUG_REPORT_DEBUG_BIT_EXT)
-			//CIN_WARN("Vulkan:\n  Object: {0}\n  Message: {1}", static_cast<int>(objectType), pMessage);
-            printf("erros %s\n", pMessage);
+			CIN_WARN("Vulkan:\n  Object: {0}\n  Message: {1}", static_cast<int>(objectType), pMessage);
 
 		return VK_FALSE;
 	}
@@ -71,7 +71,7 @@ namespace Cinnamon {
 		auto requiredExtensions{ Platform::GetRequiredVulkanExtensions() };
 
 		/* Check layer support */
-		if(!requestedLayers.empty())
+		if (!requestedLayers.empty())
 		{
 			uint32_t availableLayerCount{ 0 };
 			VK_CHECK(vkEnumerateInstanceLayerProperties(&availableLayerCount, nullptr));
@@ -105,13 +105,13 @@ namespace Cinnamon {
 				}
 			}
 		}
-		
+
 		/* Check extension support */
-		if(!requiredExtensions.empty())
+		if (!requiredExtensions.empty())
 		{
 			uint32_t availableExtensionCount{ 0 };
 			VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &availableExtensionCount, nullptr));
-			
+
 			if (availableExtensionCount == 0 && !requiredExtensions.empty())
 			{
 				CIN_CRITICAL("Requested vulkan extensions, but none are available");
@@ -120,7 +120,7 @@ namespace Cinnamon {
 
 			STL::Vector<VkExtensionProperties> availableExtensions(availableExtensionCount);
 			VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &availableExtensionCount, &availableExtensions[0]));
-			
+
 			for (uint32_t i{ 0 }; i < requiredExtensions.size(); ++i)
 			{
 				bool found{ false };
@@ -180,7 +180,7 @@ namespace Cinnamon {
 		VK_CHECK(vkEnumeratePhysicalDevices(s_Instance, &physicalDeviceCount, nullptr));
 		STL::Vector<VkPhysicalDevice> availablePhysicalDevices(physicalDeviceCount);
 		VK_CHECK(vkEnumeratePhysicalDevices(s_Instance, &physicalDeviceCount, &availablePhysicalDevices[0]));
-		
+
 		if (availablePhysicalDevices.empty())
 		{
 			CIN_CRITICAL("Failed to find a physical device");
@@ -190,14 +190,14 @@ namespace Cinnamon {
 		for (uint32_t i{ 0 }; i < availablePhysicalDevices.size(); ++i)
 		{
 			const VkPhysicalDevice physicalDevice{ availablePhysicalDevices[i] };
-			
+
 			if (PhysicalDeviceMeetsRequirements(physicalDevice))
 			{
 				s_PhysicalDevice = physicalDevice;
 				break;
 			}
 		}
-	
+
 		/* If no discrete gpu was found, pick the first one */
 		if (!s_PhysicalDevice)
 			s_PhysicalDevice = availablePhysicalDevices.front();
@@ -208,6 +208,17 @@ namespace Cinnamon {
 
 	bool GraphicsContext::Shutdown()
 	{
+		VK_CHECK(vkDeviceWaitIdle(s_LogicalDevice));
+		for (const auto& [window, drawContext] : s_ContextMap)
+		{
+			CIN_UNUSED(window);
+			delete drawContext.Swapchain;
+			delete drawContext.Surface;
+		}
+
+		vkDestroyDevice(
+			s_LogicalDevice,
+			s_Allocator);
 #ifdef CIN_DEBUG
 		const auto _vkDestroyDebugReportCallbackEXT{ (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(s_Instance, "vkDestroyDebugReportCallbackEXT") };
 		CIN_ASSERT(_vkDestroyDebugReportCallbackEXT != nullptr);
@@ -231,7 +242,7 @@ namespace Cinnamon {
 			s_PhysicalDevice,
 			&queueFamilyPropertiesCount,
 			nullptr);
-		
+
 		if (queueFamilyPropertiesCount == 0)
 		{
 			CIN_CRITICAL("Failed to retrieve queue family properties");
@@ -289,9 +300,9 @@ namespace Cinnamon {
 
 		auto requestedLayers{ Platform::GetRequestedVulkanDeviceLayers() };
 		auto requiredExtensions{ Platform::GetRequiredVulkanDeviceExtensions() };
-		
+
 		/* Check device layer support */
-		if(!requestedLayers.empty())
+		if (!requestedLayers.empty())
 		{
 			uint32_t availableLayerCount{ 0 };
 			VK_CHECK(vkEnumerateDeviceLayerProperties(s_PhysicalDevice, &availableLayerCount, nullptr));
@@ -327,7 +338,7 @@ namespace Cinnamon {
 		}
 
 		/* Check device extension support */
-		if(!requiredExtensions.empty())
+		if (!requiredExtensions.empty())
 		{
 			uint32_t availableExtensionCount{ 0 };
 			VK_CHECK(vkEnumerateDeviceExtensionProperties(s_PhysicalDevice, nullptr, &availableExtensionCount, nullptr));
@@ -373,7 +384,7 @@ namespace Cinnamon {
 		deviceCreateInfo.pEnabledFeatures = &enabledFeatures;
 		deviceCreateInfo.flags = 0;
 		deviceCreateInfo.pNext = nullptr;
-		
+
 		VK_CHECK(vkCreateDevice(
 			s_PhysicalDevice,
 			&deviceCreateInfo,
@@ -387,22 +398,21 @@ namespace Cinnamon {
 			s_QueueFamilies.Graphics,
 			0, /* Pick first queue */
 			&s_Queues.Graphics);
-		
 
 		CIN_ASSERT(s_Queues.Graphics != VK_NULL_HANDLE, "Failed to pick graphics queue");
 		auto surf{ new Surface(windowContext) };
-		s_ContextMap[windowContext] = new Swapchain(800, 600, surf->GetHandle());
+		s_ContextMap[windowContext] = { surf, new Swapchain(800, 600, surf->GetHandle()) };
 
 		return true;
 	}
 
 	void GraphicsContext::AcquireNextImage(Window* windowContext)
 	{
-		s_ContextMap[windowContext]->AcquireNextSwapchainImage();
+		s_ContextMap[windowContext].Swapchain->AcquireNextSwapchainImage();
 	}
 
 	void GraphicsContext::PresentImage(Window* windowContext)
 	{
-		s_ContextMap[windowContext]->PresentSwapchainImage();
+		s_ContextMap[windowContext].Swapchain->PresentSwapchainImage();
 	}
 }

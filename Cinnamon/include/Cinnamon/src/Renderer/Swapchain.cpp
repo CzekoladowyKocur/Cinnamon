@@ -4,28 +4,38 @@
 namespace Cinnamon {
 	Swapchain::Swapchain(const uint32_t width, const uint32_t height, VkSurfaceKHR surface) noexcept
 		:
-		m_SurfaceFormat({VK_FORMAT_UNDEFINED, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR }),
+		m_SurfaceFormat({ VK_FORMAT_UNDEFINED, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR }),
 		m_PresentMode(VK_PRESENT_MODE_FIFO_KHR), /* The only one guaranteed by specification */
 		m_SurfaceCapabilities({}),
 		m_Extent({ width, height }),
 		m_Handle(VK_NULL_HANDLE),
-		m_ImageIndex(0U)
+		m_ImageIndex(0U),
+		m_FrameIndex(0U),
+		m_FramesInFlight(2)
 	{
 		Create(width, height, surface);
 	}
 
 	Swapchain::~Swapchain() noexcept
 	{
+		VK_CHECK(vkDeviceWaitIdle(GraphicsContext::GetDevice()));
 
+		vkDestroyCommandPool(
+			GraphicsContext::GetDevice(),
+			m_CommandPool,
+			GraphicsContext::GetAllocator());
+
+		Cleanup();
 	}
 
 	void Swapchain::Create(const uint32_t width, const uint32_t height, VkSurfaceKHR surface)
 	{
 		m_ImageIndex = 0;
+		m_FrameIndex = 0;
 		CIN_ASSERT(width >= 1 && width <= 15360, "Invalid swapchain width");
 		CIN_ASSERT(height >= 1 && height <= 8640, "Invalid swapchain height");
 		CIN_TRACE("Recreating swapchain: {0}, {1}", width, height);
-		
+
 		/* Pick surface format */
 		{
 			uint32_t availableSurfaceFormatCount{ 0 };
@@ -67,7 +77,7 @@ namespace Cinnamon {
 
 			CIN_ASSERT(availablePresentModeCount > 0, "No available present mode");
 			STL::Vector<VkPresentModeKHR> availablePresentModes(availablePresentModeCount);
-			
+
 			bool found{ false };
 			for (const VkPresentModeKHR availablePresentMode : availablePresentModes)
 				if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR)
@@ -76,7 +86,7 @@ namespace Cinnamon {
 					found = true;
 					break;
 				}
-					
+
 			if (!found)
 				m_PresentMode = VK_PRESENT_MODE_FIFO_KHR;
 		}
@@ -109,7 +119,7 @@ namespace Cinnamon {
 		}
 
 		uint32_t imageCount{ m_SurfaceCapabilities.minImageCount + 1 };
-		if (m_SurfaceCapabilities.maxImageCount > 0 && imageCount > m_SurfaceCapabilities.maxImageCount) 
+		if (m_SurfaceCapabilities.maxImageCount > 0 && imageCount > m_SurfaceCapabilities.maxImageCount)
 			imageCount = m_SurfaceCapabilities.maxImageCount;
 
 		VkSwapchainCreateInfoKHR swapchainCreateInfo;
@@ -230,7 +240,7 @@ namespace Cinnamon {
 		imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
 		imageViewCreateInfo.flags = 0;
 		imageViewCreateInfo.pNext = nullptr;
-		
+
 		m_ImageViews.resize(imageCount);
 		for (uint32_t i{ 0 }; i < m_ImageViews.size(); ++i)
 		{
@@ -291,9 +301,9 @@ namespace Cinnamon {
 			&commandBufferAllocateInfo,
 			m_CommandBuffers.data()));
 
-		m_Fences.InFlightFences.resize(imageCount);
-		m_Semaphores.ImageAvailable.resize(imageCount);
-		m_Semaphores.RenderingFinished.resize(imageCount);
+		m_Fences.InFlightFences.resize(m_FramesInFlight);
+		m_Semaphores.ImageAvailable.resize(m_FramesInFlight);
+		m_Semaphores.RenderingFinished.resize(m_FramesInFlight);
 
 		VkFenceCreateInfo fenceCreateInfo;
 		fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -305,7 +315,7 @@ namespace Cinnamon {
 		semaphoreCreateInfo.flags = VK_SEMAPHORE_TYPE_BINARY;
 		semaphoreCreateInfo.pNext = nullptr;
 
-		for (uint32_t i = 0; i < imageCount; ++i)
+		for (uint32_t i = 0; i < m_FramesInFlight; ++i)
 		{
 			VK_CHECK(vkCreateFence(
 				GraphicsContext::GetDevice(),
@@ -331,8 +341,8 @@ namespace Cinnamon {
 
 	void Swapchain::AcquireNextSwapchainImage()
 	{
-		VkFence imageInFlightFence{ m_Fences.InFlightFences[m_ImageIndex] };
-		VkSemaphore presentCompleteSemaphore{ m_Semaphores.ImageAvailable[m_ImageIndex] };
+		VkFence imageInFlightFence{ m_Fences.InFlightFences[m_FrameIndex] };
+		VkSemaphore presentCompleteSemaphore{ m_Semaphores.ImageAvailable[m_FrameIndex] };
 
 		VK_CHECK(vkWaitForFences(
 			GraphicsContext::GetDevice(),
@@ -368,12 +378,6 @@ namespace Cinnamon {
 				//Resize();
 				return;
 			} break;
-
-			default:
-			{
-				CIN_WARN("Unhandled present result: {0}", VKResultToString(result));
-			} break;
-
 			}
 		} while (result != VK_SUCCESS);
 
@@ -386,10 +390,10 @@ namespace Cinnamon {
 
 	void Swapchain::PresentSwapchainImage()
 	{
-		VkFence imageInFlightFence{ m_Fences.InFlightFences[m_ImageIndex] };
-		VkSemaphore presentCompleteSemaphore{ m_Semaphores.ImageAvailable[m_ImageIndex] };
-		VkSemaphore renderCompleteSemaphore{ m_Semaphores.RenderingFinished[m_ImageIndex] };
-		VkCommandBuffer commandBuffer{ m_CommandBuffers[m_ImageIndex] };
+		VkFence imageInFlightFence{ m_Fences.InFlightFences[m_FrameIndex] };
+		VkSemaphore presentCompleteSemaphore{ m_Semaphores.ImageAvailable[m_FrameIndex] };
+		VkSemaphore renderCompleteSemaphore{ m_Semaphores.RenderingFinished[m_FrameIndex] };
+		VkCommandBuffer commandBuffer{ m_CommandBuffers[m_FrameIndex] };
 
 		/* Color attachment output */
 		constexpr STL::Array<VkPipelineStageFlags, 1> waitStages = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
@@ -403,7 +407,7 @@ namespace Cinnamon {
 		submitInfo.pSignalSemaphores = &renderCompleteSemaphore; /* Will be signaled after executing the command buffer */
 		submitInfo.pWaitDstStageMask = waitStages.data();
 		submitInfo.pNext = nullptr;
-		
+
 		{
 			/* Record default clear command buffers */
 			constexpr STL::Array<VkClearValue, 1> clearValues{
@@ -458,31 +462,82 @@ namespace Cinnamon {
 
 		switch (result)
 		{
-			case VK_SUCCESS:
-			{
-			} break;
+		case VK_SUCCESS:
+		{
+		} break;
 
-			case VK_ERROR_OUT_OF_DATE_KHR:
-			{
-				//Resize();
-			} break;
+		case VK_ERROR_OUT_OF_DATE_KHR:
+		{
+			//Resize();
+		} break;
 
-			case VK_SUBOPTIMAL_KHR:
-			{
-				//Resize();
+		case VK_SUBOPTIMAL_KHR:
+		{
+			//Resize();
 
-			} break;
+		} break;
 
-			case VK_ERROR_SURFACE_LOST_KHR:
-			{
-				//GraphicsContext::RecreateSurface();
-				//Resize();
-			} break;
+		case VK_ERROR_SURFACE_LOST_KHR:
+		{
+			//GraphicsContext::RecreateSurface();
+			//Resize();
+		} break;
 
-			default:
-			{
-				CIN_WARN("Unhandled present result: {0}", VKResultToString(result));
-			} break;
+		default:
+		{
+			CIN_WARN("Unhandled present result: {0}", VKResultToString(result));
+		} break;
 		}
+
+		m_FrameIndex = (++m_FrameIndex) % m_FramesInFlight;
+	}
+
+	void Swapchain::Cleanup()
+	{
+		vkDestroySwapchainKHR(
+			GraphicsContext::GetDevice(),
+			m_Handle,
+			GraphicsContext::GetAllocator());
+
+		for (uint32_t i{ 0 }; i < m_ImageViews.size(); ++i)
+			vkDestroyImageView(
+				GraphicsContext::GetDevice(),
+				m_ImageViews[i],
+				GraphicsContext::GetAllocator());
+
+		for (uint32_t i{ 0 }; i < m_Framebuffers.size(); ++i)
+			vkDestroyFramebuffer(
+				GraphicsContext::GetDevice(),
+				m_Framebuffers[i],
+				GraphicsContext::GetAllocator());
+
+		for (uint32_t i{ 0 }; i < m_Semaphores.ImageAvailable.size(); ++i)
+			vkDestroySemaphore(
+				GraphicsContext::GetDevice(),
+				m_Semaphores.ImageAvailable[i],
+				GraphicsContext::GetAllocator());
+
+		for (uint32_t i{ 0 }; i < m_Semaphores.RenderingFinished.size(); ++i)
+			vkDestroySemaphore(
+				GraphicsContext::GetDevice(),
+				m_Semaphores.RenderingFinished[i],
+				GraphicsContext::GetAllocator());
+
+		for (uint32_t i{ 0 }; i < m_Fences.InFlightFences.size(); ++i)
+			vkDestroyFence(
+				GraphicsContext::GetDevice(),
+				m_Fences.InFlightFences[i],
+				GraphicsContext::GetAllocator());
+
+		vkDestroyRenderPass(
+			GraphicsContext::GetDevice(),
+			m_RenderPass,
+			GraphicsContext::GetAllocator());
+
+		//vkFreeCommandBuffers(
+		//	GraphicsContext::GetDevice(),
+		//	m_CommandPool,
+		//	static_cast<uint32_t>(m_CommandBuffers.size()),
+		//	&m_CommandBuffers[0]);
 	}
 }

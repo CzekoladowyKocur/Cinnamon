@@ -9,10 +9,11 @@ namespace Cinnamon {
 		Swapchain(const uint32_t width, const uint32_t height, VkSurfaceKHR surface) noexcept;
 		~Swapchain() noexcept;
 
+		void Create(const uint32_t width, const uint32_t height, VkSurfaceKHR surface);
 		void AcquireNextSwapchainImage();
 		void PresentSwapchainImage();
-
-		void Create(const uint32_t width, const uint32_t height, VkSurfaceKHR surface);
+	private:
+		void Cleanup();
 	private:
 		VkSurfaceFormatKHR m_SurfaceFormat;
 		VkPresentModeKHR m_PresentMode;
@@ -39,5 +40,7 @@ namespace Cinnamon {
 		} m_Fences;
 
 		uint32_t m_ImageIndex;
+		uint32_t m_FrameIndex;
+		uint32_t m_FramesInFlight;
 	};
 }
