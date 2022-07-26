@@ -363,6 +363,10 @@ namespace Cinnamon {
 
 			switch (result)
 			{
+            case VK_SUCCESS:
+            {
+            } break;
+
 			case VK_ERROR_OUT_OF_DATE_KHR:
 			{
 				//Resize();
@@ -378,6 +382,11 @@ namespace Cinnamon {
 				//Resize();
 				return;
 			} break;
+
+		    default:
+		    {
+		    	CIN_WARN("Unhandled acquire result: {0}", VKResultToString(result));
+		    } break;
 			}
 		} while (result != VK_SUCCESS);
 
@@ -489,7 +498,7 @@ namespace Cinnamon {
 		} break;
 		}
 
-		m_FrameIndex = (++m_FrameIndex) % m_FramesInFlight;
+		m_FrameIndex = (m_FrameIndex + 1) % m_FramesInFlight;
 	}
 
 	void Swapchain::Cleanup()

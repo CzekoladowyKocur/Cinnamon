@@ -6,8 +6,8 @@
 namespace Cinnamon {
 	struct DrawContext
 	{
-		Surface* Surface;
-		Swapchain* Swapchain;
+		Surface* SurfaceContext;
+		Swapchain* SwapchainContext;
 	};
 
 	InternalScope STL::UMap<Window*, DrawContext> s_ContextMap;
@@ -212,8 +212,8 @@ namespace Cinnamon {
 		for (const auto& [window, drawContext] : s_ContextMap)
 		{
 			CIN_UNUSED(window);
-			delete drawContext.Swapchain;
-			delete drawContext.Surface;
+			delete drawContext.SwapchainContext;
+			delete drawContext.SurfaceContext;
 		}
 
 		vkDestroyDevice(
@@ -408,11 +408,11 @@ namespace Cinnamon {
 
 	void GraphicsContext::AcquireNextImage(Window* windowContext)
 	{
-		s_ContextMap[windowContext].Swapchain->AcquireNextSwapchainImage();
+		s_ContextMap[windowContext].SwapchainContext->AcquireNextSwapchainImage();
 	}
 
 	void GraphicsContext::PresentImage(Window* windowContext)
 	{
-		s_ContextMap[windowContext].Swapchain->PresentSwapchainImage();
+		s_ContextMap[windowContext].SwapchainContext->PresentSwapchainImage();
 	}
 }
