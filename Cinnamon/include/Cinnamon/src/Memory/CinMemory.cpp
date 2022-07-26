@@ -24,8 +24,11 @@ namespace Cinnamon {
 		CIN_INFO("Dumpimg memory");
 		{
 			std::lock_guard<std::mutex> lock{ s_AllocatorData.AllocationTrackerInsertMutex };
-			for (const auto& [userPointer, allocationData] : s_AllocatorData.Allocations)
+			for (const auto& [userPointer, allocationData] : s_AllocatorData.Allocations) {
 				CIN_WARN("Unfreed memory at {0}, requested by {1}, {2}", userPointer, allocationData.File, allocationData.Line);
+                CIN_UNUSED(userPointer);
+                CIN_UNUSED(allocationData);
+            }
 		}
 		CIN_INFO("Finished dumping memory");
 	}

@@ -368,6 +368,12 @@ namespace Cinnamon {
 				//Resize();
 				return;
 			} break;
+
+			default:
+			{
+				CIN_WARN("Unhandled present result: {0}", VKResultToString(result));
+			} break;
+
 			}
 		} while (result != VK_SUCCESS);
 

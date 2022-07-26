@@ -35,19 +35,24 @@ namespace Cinnamon {
 		CIN_UNUSED(objectType);
 
 		if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)
-			CIN_INFO("Vulkan:\n  Object: {0}\n  Message: {1}", static_cast<int>(objectType), pMessage);
+			//CIN_INFO("Vulkan:\n  Object: {0}\n  Message: {1}", static_cast<int>(objectType), pMessage);
+            printf("erros %s\n", pMessage);
 
 		if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
-			CIN_WARN("Vulkan:\n  Object: {0}\n  Message: {1}", static_cast<int>(objectType), pMessage);
+			//CIN_WARN("Vulkan:\n  Object: {0}\n  Message: {1}", static_cast<int>(objectType), pMessage);
+            printf("erros %s\n", pMessage);
 		
 		if (flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT)
-			CIN_WARN("Vulkan:\n  Object: {0}\n  Message: {1}", static_cast<int>(objectType), pMessage);
+			//CIN_WARN("Vulkan:\n  Object: {0}\n  Message: {1}", static_cast<int>(objectType), pMessage);
+            printf("erros %s\n", pMessage);
 		
 		if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
-			CIN_ERROR("Vulkan:\n  Object: {0}\n  Message: {1}", static_cast<int>(objectType), pMessage);
+			//CIN_ERROR("Vulkan:\n  Object: {0}\n  Message: {1}", static_cast<int>(objectType), pMessage);
+            printf("erros %s\n", pMessage);
 		
 		if (flags & VK_DEBUG_REPORT_DEBUG_BIT_EXT)
-			CIN_WARN("Vulkan:\n  Object: {0}\n  Message: {1}", static_cast<int>(objectType), pMessage);
+			//CIN_WARN("Vulkan:\n  Object: {0}\n  Message: {1}", static_cast<int>(objectType), pMessage);
+            printf("erros %s\n", pMessage);
 
 		return VK_FALSE;
 	}

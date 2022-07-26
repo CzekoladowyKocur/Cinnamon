@@ -1,8 +1,9 @@
 #pragma once
-#include <vector>
-#include <unordered_map>
-#include <unordered_set>
-#include <list>
+#include "Cinnamon/include/Core/Core.h"
+//#include <vector>
+//#include <unordered_map>
+//#include <unordered_set>
+//#include <list>
 
 namespace Cinnamon {
 	namespace STL {

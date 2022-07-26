@@ -1,3 +1,4 @@
+#ifdef CIN_PLATFORM_WINDOWS
 #include "Cinnamon/include/Renderer/Surface.h"
 #include "Cinnamon/include/Renderer/GraphicsContext.h"
 
@@ -46,3 +47,4 @@ namespace Cinnamon {
 		return m_Handle;
 	}
 }
+#endif

@@ -42,7 +42,7 @@
 
 #define CIN_PANIC_EXIT() exit(EXIT_FAILURE)
 
-#if defined(__clang__) || defined(__gcc__)
+#if defined(__clang__) || defined(__GNUC__)
 #define CIN_STATIC_ASSERT	_Static_assert
 #define CIN_FORCE_INLINE	inline
 #else

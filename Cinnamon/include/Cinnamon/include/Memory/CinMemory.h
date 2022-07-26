@@ -112,7 +112,7 @@ namespace Cinnamon {
 		};
 	public:
 		template<typename ... Args>
-		static [[nodiscard]] AllocateProxy<Args...> Allocate(const char* file, const uint32_t line, Args&& ... args)
+		[[nodiscard]] static AllocateProxy<Args...> Allocate(const char* file, const uint32_t line, Args&& ... args)
 		{
 			return AllocateProxy<Args...>(file, line, std::forward<Args>(args)...);
 		}

@@ -34,16 +34,16 @@ namespace Cinnamon {
 		Platform() noexcept = delete;
 		~Platform() noexcept = delete;
 	public:
-		static [[nodiscard]] bool Initialize();
-		static [[nodiscard]] bool Shutdown();
+		[[nodiscard]] static bool Initialize();
+		[[nodiscard]] static bool Shutdown();
 
-		static [[nodiscard]] double GetAbsoluteTime();
+		[[nodiscard]] static double GetAbsoluteTime();
 		/* Vulkan */
-		static [[nodiscard]] STL::Vector<const char*> GetRequiredVulkanExtensions();
-		static [[nodiscard]] STL::Vector<const char*> GetRequestedVulkanLayers();
+		[[nodiscard]] static STL::Vector<const char*> GetRequiredVulkanExtensions();
+		[[nodiscard]] static STL::Vector<const char*> GetRequestedVulkanLayers();
 
-		static [[nodiscard]] STL::Vector<const char*> GetRequiredVulkanDeviceExtensions();
-		static [[nodiscard]] STL::Vector<const char*> GetRequestedVulkanDeviceLayers();
+		[[nodiscard]] static STL::Vector<const char*> GetRequiredVulkanDeviceExtensions();
+		[[nodiscard]] static STL::Vector<const char*> GetRequestedVulkanDeviceLayers();
 		
 		static void WriteToConsole(const char* message, const EConsoleTextColor color);
 	public:

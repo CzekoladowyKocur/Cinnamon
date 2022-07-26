@@ -13,6 +13,9 @@
 #include <functional>
 #include <chrono>
 #include <array>
+#include <string>
+#include <cstring>
+#include <string_view>
 
 #ifdef CIN_PLATFORM_WINDOWS
 #undef UNICODE

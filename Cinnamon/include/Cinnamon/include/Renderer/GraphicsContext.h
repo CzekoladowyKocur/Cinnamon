@@ -17,29 +17,29 @@ namespace Cinnamon {
 		GraphicsContext() noexcept = delete;
 		~GraphicsContext() noexcept = delete;
 	public:
-		static bool [[nodiscard]] Initialize();
-		static bool [[nodiscard]] Shutdown();
-		static bool [[nodiscard]] CreateSurface(Window* windowContext);
+		[[nodiscard]] static bool Initialize();
+		[[nodiscard]] static bool Shutdown();
+		[[nodiscard]] static bool CreateSurface(Window* windowContext);
 
 		static void AcquireNextImage(Window* windowContext);
 		static void PresentImage(Window* windowContext);
 
-		static CIN_FORCE_INLINE constexpr VkInstance GetInstance()
+		static CIN_FORCE_INLINE VkInstance GetInstance()
 		{
 			return s_Instance;
 		}
 
-		static CIN_FORCE_INLINE constexpr VkSurfaceKHR GetSurface()
+		static CIN_FORCE_INLINE VkSurfaceKHR GetSurface()
 		{
 			return s_Surface;
 		}
 
-		static CIN_FORCE_INLINE constexpr VkPhysicalDevice GetPhysicalDevice()
+		static CIN_FORCE_INLINE VkPhysicalDevice GetPhysicalDevice()
 		{
 			return s_PhysicalDevice;
 		}
 
-		static CIN_FORCE_INLINE constexpr VkDevice GetDevice()
+		static CIN_FORCE_INLINE VkDevice GetDevice()
 		{
 			return s_LogicalDevice;
 		}
@@ -49,7 +49,7 @@ namespace Cinnamon {
 		//	return s_Swapchain;
 		//}
 
-		static CIN_FORCE_INLINE constexpr VkDebugReportCallbackEXT GetDebugReportCallback()
+		static CIN_FORCE_INLINE VkDebugReportCallbackEXT GetDebugReportCallback()
 		{
 #ifdef CIN_DEBUG
 			return s_DebugObject;
@@ -77,17 +77,17 @@ namespace Cinnamon {
 			return -1;
 		}
 
-		static CIN_FORCE_INLINE constexpr VkQueue GetGraphicsQueue()
+		static CIN_FORCE_INLINE VkQueue GetGraphicsQueue()
 		{
 			return s_Queues.Graphics;
 		}
 
-		static CIN_FORCE_INLINE constexpr VkQueue GetPresentQueue()
+		static CIN_FORCE_INLINE VkQueue GetPresentQueue()
 		{
 			return s_Queues.Present;
 		}
 
-		static CIN_FORCE_INLINE constexpr VkCommandPool GetGraphicsCommandPool()
+		static CIN_FORCE_INLINE VkCommandPool GetGraphicsCommandPool()
 		{
 			return s_CommandPools.Graphics;
 		}
@@ -104,24 +104,48 @@ namespace Cinnamon {
 
 		struct QueueFamilies
 		{
-			int32_t Graphics{ -1 };
-			int32_t Compute{ -1 };
-			int32_t Transfer{ -1 };
-			int32_t Present{ -1 };
+			int32_t Graphics;
+			int32_t Compute;
+			int32_t Transfer;
+			int32_t Present;
+
+            QueueFamilies()
+            :
+            Graphics(-1),
+            Compute(-1),
+            Transfer(-1),
+            Present(-1)
+            {}
 		} static inline s_QueueFamilies;
 
 		struct Queues {
-			VkQueue Graphics{ VK_NULL_HANDLE };
-			VkQueue Compute{ VK_NULL_HANDLE };
-			VkQueue Transfer{ VK_NULL_HANDLE };
-			VkQueue Present{ VK_NULL_HANDLE };
+			VkQueue Graphics;
+			VkQueue Compute;
+			VkQueue Transfer;
+			VkQueue Present;
+
+            Queues()
+            :
+            Graphics(VK_NULL_HANDLE),
+            Compute(VK_NULL_HANDLE),
+            Transfer(VK_NULL_HANDLE),
+            Present(VK_NULL_HANDLE)
+            {} 
 		} static inline s_Queues;
 
 		struct CommandPools {
-			VkCommandPool Graphics{ VK_NULL_HANDLE };
-			VkCommandPool Compute{ VK_NULL_HANDLE };
-			VkCommandPool Transfer{ VK_NULL_HANDLE };
-			VkCommandPool Present{ VK_NULL_HANDLE };
+			VkCommandPool Graphics;
+			VkCommandPool Compute;
+			VkCommandPool Transfer;
+			VkCommandPool Present;
+
+            CommandPools()
+            :
+            Graphics(VK_NULL_HANDLE),
+            Compute(VK_NULL_HANDLE),
+            Transfer(VK_NULL_HANDLE),
+            Present(VK_NULL_HANDLE)
+            {}
 		} static inline s_CommandPools;
 	};
 }

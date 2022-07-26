@@ -58,7 +58,7 @@ namespace Cinnamon {
 	private:
 		static ELogLevel s_LogLevel;
 	};
-
+    #ifdef CIN_PLATFORM_WINDOWS
 	template<>
 	static inline void Logger::Output<ELogLevel::Trace>(const char* message)
 	{
@@ -88,6 +88,7 @@ namespace Cinnamon {
 	{
 		Platform::WriteToConsole(message, EConsoleTextColor::Magenta);
 	}
+    #endif
 }
 
 /* TODO: Make seperate engine core and application logging macros */
