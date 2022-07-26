@@ -2,6 +2,7 @@
 #include "Cinnamon/include/Core/Core.h"
 
 namespace Cinnamon {
+#if 0
 	template<typename T>
 	class LinearAllocator 
 	{
@@ -67,12 +68,12 @@ namespace Cinnamon {
 			return &ref;
 		}
 
-		inline const_pointer address(const_reference ref)
+		inline [[nodiscard]] const_pointer address(const_reference ref)
 		{ 
 			return &ref;
 		}
 
-		inline pointer allocate(size_type count) 
+		inline [[nodiscard]] pointer allocate(size_type count)
 		{
 			CIN_UNUSED(count);
 			return nullptr;
@@ -115,4 +116,5 @@ namespace Cinnamon {
 		T* m_End;
 		T* m_Current;
 	};
+#endif
 }

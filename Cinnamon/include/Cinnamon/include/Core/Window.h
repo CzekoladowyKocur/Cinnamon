@@ -1,5 +1,6 @@
 #pragma once
 #include "Cinnamon/include/Core/Core.h"
+#include "Cinnamon/include/Event/Event.h"
 
 namespace Cinnamon {
 	struct PlatformWindowState;
@@ -40,16 +41,18 @@ namespace Cinnamon {
 	{
 	private:
 	public:
-		explicit Window(WindowProperties&& windowProperties) noexcept;
+		explicit Window(WindowProperties&& windowProperties, const EventCallbackFunction callback) noexcept;
 		~Window() noexcept;
 
 		void PollEvents();
+		void SendEvent(Event& event);
 
 		const char8_t* GetName() const;
 		uint32_t GetWidth() const;
 		uint32_t GetHeight() const;
 		EWindowMode GetWindowMode() const;
 		std::pair<uint32_t, uint32_t> GetSize() const;
+		const PlatformWindowState* GetState() const;
 		const void* GetNativeHandle() const;
 
 		void SetName(const char8_t* windowName);
@@ -61,5 +64,6 @@ namespace Cinnamon {
 		/* To be defined in platform */
 		PlatformWindowState* m_State;
 		WindowProperties m_Properties;
+		EventCallbackFunction m_EventCallback;
 	};
 }

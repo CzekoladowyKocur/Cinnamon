@@ -3,12 +3,16 @@
 namespace Cinnamon {
 	ELogLevel Logger::s_LogLevel{ ELogLevel::Trace };
 
-	void Logger::Initialize(const ELogLevel logLevel)
+	bool Logger::Initialize(const ELogLevel logLevel)
 	{
-		CIN_ASSERT(logLevel > ELogLevel::Begin && logLevel < ELogLevel::End);
+		CIN_ASSERT(logLevel >= ELogLevel::Begin && logLevel <= ELogLevel::End);
 		s_LogLevel = logLevel;
+
+		return true;
 	}
 
-	void Logger::Shutdown()
-	{}
+	bool Logger::Shutdown()
+	{
+		return true;
+	}
 }

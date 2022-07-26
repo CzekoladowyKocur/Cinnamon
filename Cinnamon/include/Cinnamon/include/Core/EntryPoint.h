@@ -14,25 +14,67 @@
 InternalScope int32_t CommonEntryPoint() noexcept
 {
 	using namespace Cinnamon;
-	Application* application{ new Application };
-
-	if (!application->Initialize())
+	/* Initialize platform */
+	if (!Platform::Initialize())
+	{
+		printf("Failed to initialize platform\n");
 		return EXIT_FAILURE;
+	}
 
-	delete application;
+	if (!Logger::Initialize(ELogLevel::Trace))
+	{
+		printf("Failed to initialize platform\n");
+		return EXIT_FAILURE;
+	}
+
+	/* Application lifetime */
+	{
+		Application* application{ new Application };
+		if (!application->Initialize())
+		{
+			CIN_CRITICAL("Failed to properly initialize the application");
+			return EXIT_FAILURE;
+		}
+
+		if (!application->Run())
+		{
+			CIN_CRITICAL("Failed to properly run the application");
+			return EXIT_FAILURE;
+		}
+
+		if (!application->Shutdown())
+		{
+			CIN_CRITICAL("Failed to properly shutdown the application");
+			return EXIT_FAILURE;
+		}
+
+		delete application;
+	} /* Application lifetime */
+
+	/* Shutdown platform */
+	if (!Logger::Shutdown())
+	{
+		CIN_CRITICAL("Failed to shutdown logger");
+		return EXIT_FAILURE;
+	}
+
+	if (!Platform::Shutdown())
+	{
+		CIN_CRITICAL("Failed to shutdown platform");
+		return EXIT_FAILURE;
+	}
+
 	return EXIT_SUCCESS;
 }
 
 #ifdef CIN_PLATFORM_WINDOWS
-#include <Windows.h>
-#include <shellapi.h>
 #ifdef APIENTRY
 #undef APIENTRY
 #endif /* APIENTRY */
-#define USE_CRT_MEMORY_LEAK_DETECTION 1 /* 1 */
+#define USE_CRT_MEMORY_LEAK_DETECTION 0 /* 1 */
 /* CRT detection tracks malloc only, so we override the new operators */
 #if USE_CRT_MEMORY_LEAK_DETECTION
-void* operator  new(const std::size_t size)
+void* operator new(const std::size_t size)
 {
 	return malloc(size);
 }

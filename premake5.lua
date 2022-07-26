@@ -4,6 +4,14 @@ OutputDirectory = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 CoreProjectName = "Cinnamon"
 EditorProjectName = "CinnamonEditor"
 
+VulkanSDK = os.getenv("VULKAN_SDK");
+VulkanLibrary = VulkanSDK .. "/Lib/vulkan-1.lib"
+VulkanSDKInclude = VulkanSDK .. "/Include"
+
+-- Use volk as a static lib from SDK? (Can't use debug symbols)
+-- VolkInclude = VulkanSDK;
+-- VolkLibrary = VulkanSDK .. "/Lib/volk.lib"
+
 workspace (WorkspaceName)
 	architecture "x64"
 	platforms "x64"
@@ -75,6 +83,7 @@ workspace (WorkspaceName)
 
 group "ThirdParty"
 include "Cinnamon/include/ThirdParty/xdg"
+include "Cinnamon/include/ThirdParty/volk"
 group ""
 
 project (CoreProjectName)
@@ -112,6 +121,12 @@ project (CoreProjectName)
 	includedirs
 	{
 		"%{prj.name}/include",
+		VulkanSDKInclude,
+	}
+	
+	links
+	{
+		"volk",
 	}
 
 	filter "system:linux"

@@ -26,7 +26,7 @@
 #ifdef CIN_DEBUG
 #define CIN_EXPAND_VARGS(x) x
 #define CIN_ASSERT_CONDITION(statement) { if(!(statement)) { CIN_DEBUG_BREAK(); } }
-#define CIN_ASSERT_MESSAGE(statement, ...) { if(!(statement)) { CIN_DEBUG_BREAK(); } }
+#define CIN_ASSERT_MESSAGE(statement, ...) { if(!(statement)) { printf(__VA_ARGS__); CIN_DEBUG_BREAK(); } }
 
 #define CIN_ASSERT_RESOLVE(arg1, arg2, macro, ...) macro
 #define CIN_GET_ASSERT_MACRO(...) CIN_EXPAND_VARGS(CIN_ASSERT_RESOLVE(__VA_ARGS__, CIN_ASSERT_MESSAGE, CIN_ASSERT_CONDITION))
@@ -39,6 +39,28 @@
 #endif
 #define CIN_UNIMPLEMENTED() CIN_ASSERT(false, "Unimplemeneted")
 #define CIN_UNUSED(x) (void)x
+
+#define CIN_PANIC_EXIT() exit(EXIT_FAILURE)
+
+#if defined(__clang__) || defined(__gcc__)
+#define CIN_STATIC_ASSERT	_Static_assert
+#define CIN_FORCE_INLINE	inline
+#else
+#define CIN_STATIC_ASSERT	static_assert
+#define CIN_FORCE_INLINE 	__forceinline
+#endif
+
+/* Math*/
+#define CIN_CLAMP(value, min, max) ((value) < (min)) ? (min) : ((value) > (max)) ? (max) : (value); 
+#define CIN_MAX(value, max) ((value) < (max)) ? (value) : (max);
+#define CIN_MIN(value, min) ((value) > (min)) ? (value) : (min);
+#define CIN_MIN_MAX(value, min, max) CIN_CLAMP(value, min, max)
+
+#define CIN_CARRAY_SIZE(array) (const uint32_t)((sizeof(array) / sizeof(*(array))))
+
+#define NON_COPYABLE(classType)							        \
+    classType(const classType&) noexcept = delete;				\
+    classType& operator=(const classType&)noexcept  = delete;
 
 consteval auto ResolveAtCompileTime(auto arg)
 {
