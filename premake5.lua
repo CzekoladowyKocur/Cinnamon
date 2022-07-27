@@ -71,6 +71,7 @@ workspace (WorkspaceName)
 
 	filter "system:linux"
 		defines "CIN_PLATFORM_LINUX"
+        defines "VK_USE_PLATFORM_WAYLAND_KHR"
 
 	filter "system:macosx"
 		defines "CIN_PLATFORM_MACOS"
