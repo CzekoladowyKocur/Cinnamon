@@ -1,18 +1,14 @@
 #ifdef CIN_PLATFORM_LINUX
 #include "Cinnamon/include/Core/Window.h"
-
 #include "Cinnamon/include/Event/WindowEvent.h"
+
 #include <wayland-client.h>
 extern "C"
 {
 #include "ThirdParty/xdg/xdg-shell-unstable-v6.h"
 }
 
-#include <string.h>
-#include <syscall.h>
-#include <unistd.h>
-#include <sys/mman.h>
-#include <stdio.h>
+/* Todo: Manage closing the window and destroying this object properly */
 
 /* Declared in Window.h */
 struct Cinnamon::PlatformWindowState
@@ -21,7 +17,7 @@ struct Cinnamon::PlatformWindowState
     wl_display* display {nullptr}; 
     wl_compositor* compositor {nullptr};
     wl_registry* registry {nullptr};
-    zxdg_shell_v6* shell {nullptr}; 
+    zxdg_shell_v6* xdgShell {nullptr}; 
     wl_output* output {nullptr};
     wl_seat* seat {nullptr};
 
@@ -32,7 +28,7 @@ struct Cinnamon::PlatformWindowState
 };
 
 // -- frame callback
-InternalScope void FrameCallback(void* data, wl_callback* frameCallback, uint32_t time); // forward declaration
+InternalScope void FrameCallback(void* data, wl_callback* frameCallback, uint32_t time);
 
 InternalScope constexpr wl_callback_listener wl_surface_frame_listener =
 {
@@ -89,7 +85,7 @@ InternalScope void xdg_toplevel_close_handler
 {
     (void)xdg_toplevel;
 
-    printf("%s\n", "received close event");
+    printf("%s\n", "XdgToplevelCloseHandler: Received close event.");
 
     Cinnamon::Window* window = reinterpret_cast<Cinnamon::Window*>(data);
 
@@ -150,48 +146,48 @@ InternalScope void RegistryGlobalHandler
     uint32_t version
 ) 
 {
-    auto ptr = reinterpret_cast<Cinnamon::PlatformWindowState*>(data);
-    if (strcmp(interface, wl_display_interface.name) == 0)
-        ptr->display = (wl_display*)wl_registry_bind(registry, name, &wl_display_interface, version);
-
-    if (strcmp(interface, wl_compositor_interface.name) == 0)
-        ptr->compositor = (wl_compositor*)wl_registry_bind(registry, name, &wl_compositor_interface, version);
-
-    if (strcmp(interface, zxdg_shell_v6_interface.name) == 0)
-        ptr->shell = (zxdg_shell_v6*)wl_registry_bind(registry, name, &zxdg_shell_v6_interface, version);
+    //auto ptr = reinterpret_cast<Cinnamon::PlatformWindowState*>(data);
+    //if (strcmp(interface, wl_display_interface.name) == 0)
+    //    ptr->display = (wl_display*)wl_registry_bind(registry, name, &wl_display_interface, version);
 
     //if (strcmp(interface, wl_compositor_interface.name) == 0)
-    //{
-    //    reinterpret_cast<Cinnamon::PlatformWindowState*>(data)->compositor =
-    //    (wl_compositor*)wl_registry_bind(registry, name, &wl_compositor_interface, version);
+    //    ptr->compositor = (wl_compositor*)wl_registry_bind(registry, name, &wl_compositor_interface, version);
 
-    //    if(wl_compositor_interface.version != int(version))
-    //        printf("%s%i%s%i\n", "warning: using wl_compositor_interface version ", version, " but the wanted version is ", wl_compositor_interface.version);
-    //}
-    //else if(strcmp(interface, zxdg_shell_v6_interface.name) == 0)
-    //{
-    //    reinterpret_cast<Cinnamon::PlatformWindowState*>(data)->shell =
-    //    (zxdg_shell_v6*)wl_registry_bind(registry, name, &zxdg_shell_v6_interface, version);
+    //if (strcmp(interface, zxdg_shell_v6_interface.name) == 0)
+    //    ptr->xdgShell = (zxdg_shell_v6*)wl_registry_bind(registry, name, &zxdg_shell_v6_interface, version);
 
-    //    if(zxdg_shell_v6_interface.version != int(version))
-    //        printf("%s%i%s%i\n", "warning: using zxdg_shell_v6_interface version ", version, " but the wanted version is ", zxdg_shell_v6_interface.version);
-    //}
-    //else if(strcmp(interface, wl_output_interface.name) == 0)
-    //{
-    //    reinterpret_cast<Cinnamon::PlatformWindowState*>(data)->output =
-    //    (wl_output*)wl_registry_bind(registry, name, &wl_output_interface, version);
+    if (strcmp(interface, wl_compositor_interface.name) == 0)
+    {
+        reinterpret_cast<Cinnamon::PlatformWindowState*>(data)->compositor =
+        (wl_compositor*)wl_registry_bind(registry, name, &wl_compositor_interface, version);
 
-    //    if(wl_output_interface.version != int(version))
-    //        printf("%s%i%s%i\n", "warning: using wl_output_interface version ", version, " but the wanted version is ", wl_output_interface.version);
-    //}
-    //else if(strcmp(interface, wl_seat_interface.name) == 0)
-    //{
-    //    reinterpret_cast<Cinnamon::PlatformWindowState*>(data)->seat =
-    //    (wl_seat*)wl_registry_bind(registry, name, &wl_seat_interface, version);
+        if(wl_compositor_interface.version != int(version))
+            printf("%s%i%s%i\n", "info: using wl_compositor_interface version ", version, " but the wanted version is ", wl_compositor_interface.version);
+    }
+    else if(strcmp(interface, zxdg_shell_v6_interface.name) == 0)
+    {
+        reinterpret_cast<Cinnamon::PlatformWindowState*>(data)->xdgShell =
+        (zxdg_shell_v6*)wl_registry_bind(registry, name, &zxdg_shell_v6_interface, version);
 
-    //    if(wl_seat_interface.version != int(version))
-    //        printf("%s%i%s%i\n", "warning: using wl_seat_interface version ", version, " but the wanted version is ", wl_seat_interface.version);
-    //}
+        if(zxdg_shell_v6_interface.version != int(version))
+            printf("%s%i%s%i\n", "info: using zxdg_shell_v6_interface version ", version, " but the wanted version is ", zxdg_shell_v6_interface.version);
+    }
+    else if(strcmp(interface, wl_output_interface.name) == 0)
+    {
+        reinterpret_cast<Cinnamon::PlatformWindowState*>(data)->output =
+        (wl_output*)wl_registry_bind(registry, name, &wl_output_interface, version);
+
+        if(wl_output_interface.version != int(version))
+            printf("%s%i%s%i\n", "info: using wl_output_interface version ", version, " but the wanted version is ", wl_output_interface.version);
+    }
+    else if(strcmp(interface, wl_seat_interface.name) == 0)
+    {
+        reinterpret_cast<Cinnamon::PlatformWindowState*>(data)->seat =
+        (wl_seat*)wl_registry_bind(registry, name, &wl_seat_interface, version);
+
+        if(wl_seat_interface.version != int(version))
+            printf("%s%i%s%i\n", "info: using wl_seat_interface version ", version, " but the wanted version is ", wl_seat_interface.version);
+    }
 }
 
 InternalScope void RegistryGlobalRemoveHandler
@@ -213,7 +209,58 @@ InternalScope constexpr struct wl_registry_listener registryListener =
 };
 // registry --
 
+//InternalScope void WaylandCleanup(Cinnamon::PlatformWindowState* state)
+//{
+//    if(state->seat)
+//        wl_seat_destroy(state->seat);
+//
+//    if(state->output)
+//        wl_output_destroy(state->output);
+//
+//    if(state->xdgToplevel)
+//        zxdg_toplevel_v6_destroy(state->xdgToplevel);
+//
+//    if(state->xdgSurface)
+//        zxdg_surface_v6_destroy(state->xdgSurface);
+//
+//    if(state->xdgShell)
+//        zxdg_shell_v6_destroy(state->xdgShell);
+//
+//    if(state->waylandSurface)
+//        wl_surface_destroy(state->waylandSurface);
+//
+//    if(state->compositor)
+//        wl_compositor_destroy(state->compositor);
+//    
+//    if(state->registry)
+//        wl_registry_destroy(state->registry);
+//
+//    if(state->display)
+//        wl_display_disconnect(state->display);
+//}
+
+InternalScope bool WaylandSetup(Cinnamon::PlatformWindowState* state)
+{
+    state->display = wl_display_connect(NULL);
+    if(!state->display)
+        return 0;
+
+    state->registry = wl_display_get_registry(state->display);
+    if(!state->registry)
+        return 0;
+
+    wl_registry_add_listener(state->registry, &registryListener, state);
+
+    wl_display_roundtrip(state->display);
+
+    if(!state->compositor) { return 0; }
+    if(!state->xdgShell) { printf("%s%i\n", "Could not find xdg-shell resource. Make sure your compositor supports xdg-shell interface version ", zxdg_shell_v6_interface.version); return 0; }
+
+    return 1;
+}
+
 namespace Cinnamon {
+
 	Window::Window(WindowProperties&& windowProperties, const EventCallbackFunction callback) noexcept
 		:
 		m_Properties(std::move(windowProperties)),
@@ -221,22 +268,18 @@ namespace Cinnamon {
 	{
         m_State = new PlatformWindowState;
 
-        m_State->display = wl_display_connect(NULL);
-        m_State->registry = wl_display_get_registry(m_State->display);
-
-        wl_registry_add_listener(m_State->registry, &registryListener, m_State);
-        wl_display_roundtrip(m_State->display);
-
-        if(!m_State->display || !m_State->compositor || !m_State->shell) {
-            printf("%s\n", "failed retrieving globals");
+        if(!WaylandSetup(m_State))
+        {
+            printf("%s\n", "Failed connecting to the display or retrieving globals from registry");
+            /* Todo: Add wayland cleanup */
             exit(EXIT_FAILURE);
         }
 
         m_State->waylandSurface = wl_compositor_create_surface(m_State->compositor);
-        m_State->xdgSurface = zxdg_shell_v6_get_xdg_surface(m_State->shell, m_State->waylandSurface);
+        m_State->xdgSurface = zxdg_shell_v6_get_xdg_surface(m_State->xdgShell, m_State->waylandSurface);
         m_State->xdgToplevel = zxdg_surface_v6_get_toplevel(m_State->xdgSurface);
 
-        zxdg_shell_v6_add_listener(m_State->shell, &xdgShellListener, NULL);
+        zxdg_shell_v6_add_listener(m_State->xdgShell, &xdgShellListener, NULL);
         zxdg_toplevel_v6_add_listener(m_State->xdgToplevel, &xdgToplevelListener, this);
 
         wl_surface_commit(m_State->waylandSurface);
@@ -244,13 +287,16 @@ namespace Cinnamon {
     }
 
 	Window::~Window() noexcept
-	{}
+	{
+        delete m_State;
+    }
 
 	void Window::PollEvents()
     {
         /* Todo: Handle the dispatching properly */
         wl_display_dispatch_pending(m_State->display);
     }
+
 	void Window::SendEvent(Event& event)
     {
         CIN_UNIMPLEMENTED(); CIN_UNUSED(event);

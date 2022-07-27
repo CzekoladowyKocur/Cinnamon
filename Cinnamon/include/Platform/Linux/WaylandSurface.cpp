@@ -3,13 +3,13 @@
 #include "Cinnamon/include/Renderer/GraphicsContext.h"
 
 #include <wayland-client.h>
-extern "C" {
+extern "C"
+{
 #include "ThirdParty/xdg/xdg-shell-unstable-v6.h"
 }
 
 #define VOLK_IMPLEMENTATION
 #include "ThirdParty/volk/volk.h"
-
 
 namespace Cinnamon {
     struct PlatformWindowState
@@ -18,7 +18,7 @@ namespace Cinnamon {
         wl_display* display {nullptr}; 
         wl_compositor* compositor {nullptr};
         wl_registry* registry {nullptr};
-        zxdg_shell_v6* shell {nullptr}; 
+        zxdg_shell_v6* xdgShell {nullptr}; 
         wl_output* output {nullptr};
         wl_seat* seat {nullptr};
 
