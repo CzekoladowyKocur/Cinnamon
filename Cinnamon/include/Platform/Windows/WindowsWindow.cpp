@@ -1,13 +1,14 @@
 #ifdef CIN_PLATFORM_WINDOWS
 #include "Cinnamon/include/Core/Window.h"
 #include "Cinnamon/include/Event/WindowEvent.h"
+#include "Cinnamon/include/Event/ApplicationEvent.h"
 
 namespace Cinnamon {
 	InternalScope LRESULT CALLBACK Windows32ProcessMessage(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam);
 	InternalScope std::once_flag s_Win32ClassInitialized;
 
 	constexpr CHAR WIN32_API_WINDOW_CLASS_NAME[] = "CINNAMON_ENGINE_WINDOW_CLASS";
-	
+
 	/* Declared in Window.h */
 	struct PlatformWindowState
 	{
@@ -26,7 +27,7 @@ namespace Cinnamon {
 	{
 		const HINSTANCE hInstance{ GetModuleHandle(NULL) };
 		/* Initialize win32 window class, only generic one for now */
-		std::call_once(s_Win32ClassInitialized,[=]() {
+		std::call_once(s_Win32ClassInitialized, [=]() {
 			WNDCLASSEX windowClass;
 			windowClass.lpszClassName = WIN32_API_WINDOW_CLASS_NAME;
 			windowClass.lpszMenuName = NULL;
@@ -35,10 +36,11 @@ namespace Cinnamon {
 			windowClass.hIconSm = windowClass.hIcon;
 			windowClass.hCursor = LoadCursor(NULL, IDC_ARROW);
 			windowClass.hbrBackground = reinterpret_cast<HBRUSH>(GetStockObject(WHITE_BRUSH));
-			windowClass.style = 
-				CS_DBLCLKS | /* Sends message for double clicks */ 
-				CS_HREDRAW | /* Redraw window if width has changed */ 
-				CS_VREDRAW /* Redraw window if height has changed */;
+			windowClass.style =
+				CS_DBLCLKS | /* Sends message for double clicks */
+				CS_HREDRAW | /* Redraw window if width has changed */
+				CS_VREDRAW,/* Redraw window if height has changed */
+			//	CS_OWNDC;
 			windowClass.cbClsExtra = 0;
 			windowClass.cbWndExtra = 0;
 			windowClass.cbSize = sizeof(WNDCLASSEX);
@@ -54,6 +56,7 @@ namespace Cinnamon {
 
 		/* Initialize window */
 		m_State = CIN_NEW();
+		m_State->Instance = hInstance;
 		m_State->StyleFlags =
 			WS_OVERLAPPEDWINDOW | /* The window is an overlapped window. An overlapped window has a title bar and a border. Same as the WS_TILED style. */
 			WS_SYSMENU | /* The window has a window menu on its title bar. The WS_CAPTION style must also be specified. */
@@ -94,10 +97,11 @@ namespace Cinnamon {
 			CIN_PANIC_EXIT();
 		}
 
+		m_State->Handle = windowHandle;
 		/* TODO: if the window should not accept input, this should be false */
 		const bool shouldActivate{ TRUE };
 		int32_t showWindowCommandFlags = shouldActivate ? SW_SHOW : SW_SHOWNOACTIVATE;
-		
+
 		ShowWindow(windowHandle, showWindowCommandFlags);
 		if (!SetForegroundWindow(windowHandle))
 		{
@@ -110,9 +114,6 @@ namespace Cinnamon {
 			MessageBox(NULL, "Failed to focus window", "Error!", MB_ICONEXCLAMATION | MB_OK);
 			CIN_PANIC_EXIT();
 		}
-
-		m_State->Handle = windowHandle;
-		m_State->Instance = hInstance;
 	}
 
 	Window::~Window() noexcept
@@ -220,10 +221,36 @@ namespace Cinnamon {
 				return DefWindowProcA(hwnd, message, wParam, lParam);
 			}
 
+			case WM_PAINT:
+			{
+				ApplicationRenderEvent event;
+				window->SendEvent(event);
+				/* Notify the os we handled it */
+				return 0;
+			}
+
 			case WM_ERASEBKGND:
 			{
 				/* Notify the OS that erasing will be handled by the application to prevent flicker. */
 				return 1;
+			}
+
+			case WM_SIZE:
+			{
+				{
+					const uint32_t width{ LOWORD(lParam) };
+					const uint32_t height{ HIWORD(lParam) };
+
+					WindowResizedEvent event(window, width, height);
+					window->SendEvent(event);
+				}
+				/* Redraw the window to make resizing smooth */
+				{
+					ApplicationRenderEvent event;
+					window->SendEvent(event);
+				}
+
+				return 0;
 			}
 
 			case WM_CLOSE:
@@ -236,8 +263,7 @@ namespace Cinnamon {
 
 			case WM_DESTROY:
 			{
-				//DestroyWindow(reinterpret_cast<HWND>(const_cast<void*>(window->GetNativeHandle())));
-				return 0;
+				return DefWindowProcA(hwnd, message, wParam, lParam);
 			}
 		}
 

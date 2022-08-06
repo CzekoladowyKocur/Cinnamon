@@ -10,6 +10,8 @@ namespace Cinnamon {
 		~Swapchain() noexcept;
 
 		void Create(const uint32_t width, const uint32_t height, VkSurfaceKHR surface);
+		void Recreate(const uint32_t width, const uint32_t height, VkSurfaceKHR surface);
+
 		void AcquireNextSwapchainImage();
 		void PresentSwapchainImage();
 	private:

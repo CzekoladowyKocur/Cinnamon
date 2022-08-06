@@ -19,10 +19,11 @@ namespace Cinnamon {
 	public:
 		[[nodiscard]] static bool Initialize();
 		[[nodiscard]] static bool Shutdown();
-		[[nodiscard]] static bool CreateSurface(Window* windowContext);
+		[[nodiscard]] static bool CreateSurface(const Window* const windowContext);
+		static void ResizeSurface(const Window* const windowContext, const uint32_t width, const uint32_t height);
 
-		static void AcquireNextImage(Window* windowContext);
-		static void PresentImage(Window* windowContext);
+		static void AcquireNextImage(const Window* const windowContext);
+		static void PresentImage(const Window* const windowContext);
 
 		static CIN_FORCE_INLINE VkInstance GetInstance()
 		{

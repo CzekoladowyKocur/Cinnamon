@@ -18,7 +18,11 @@ namespace Cinnamon {
 		[[nodiscard]] bool Run();
 		[[nodiscard]] bool Shutdown();
 
+	private:
 		void OnEvent(Event& event);
+
+		bool OnApplicationRender(ApplicationRenderEvent& event);
+		bool OnWindowResized(WindowResizedEvent& event);
 		bool OnWindowClosed(WindowClosedEvent& event);
 	public:
 		/* Global application instance */

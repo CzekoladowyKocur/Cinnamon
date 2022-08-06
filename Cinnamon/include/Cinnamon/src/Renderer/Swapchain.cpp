@@ -13,6 +13,18 @@ namespace Cinnamon {
 		m_FrameIndex(0U),
 		m_FramesInFlight(2)
 	{
+		VkCommandPoolCreateInfo commandPoolCreateInfo;
+		commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		commandPoolCreateInfo.queueFamilyIndex = GraphicsContext::GetQueueFamily(GraphicsContext::EQueueFamily::Graphics);
+		commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+		commandPoolCreateInfo.pNext = nullptr;
+
+		VK_CHECK(vkCreateCommandPool(
+			GraphicsContext::GetDevice(),
+			&commandPoolCreateInfo,
+			GraphicsContext::GetAllocator(),
+			&m_CommandPool));
+
 		Create(width, height, surface);
 	}
 
@@ -276,18 +288,6 @@ namespace Cinnamon {
 				&m_Framebuffers[i]));
 		}
 
-		VkCommandPoolCreateInfo commandPoolCreateInfo;
-		commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		commandPoolCreateInfo.queueFamilyIndex = GraphicsContext::GetQueueFamily(GraphicsContext::EQueueFamily::Graphics);
-		commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-		commandPoolCreateInfo.pNext = nullptr;
-
-		VK_CHECK(vkCreateCommandPool(
-			GraphicsContext::GetDevice(),
-			&commandPoolCreateInfo,
-			GraphicsContext::GetAllocator(),
-			&m_CommandPool));
-
 		m_CommandBuffers.resize(imageCount);
 		VkCommandBufferAllocateInfo commandBufferAllocateInfo;
 		commandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -337,6 +337,14 @@ namespace Cinnamon {
 		}
 
 		CIN_TRACE("Created swapchain with {0} images", imageCount);
+	}
+
+	void Swapchain::Recreate(const uint32_t width, const uint32_t height, VkSurfaceKHR surface)
+	{
+		VK_CHECK(vkDeviceWaitIdle(GraphicsContext::GetDevice()));
+
+		Cleanup();
+		Create(width, height, surface);
 	}
 
 	void Swapchain::AcquireNextSwapchainImage()

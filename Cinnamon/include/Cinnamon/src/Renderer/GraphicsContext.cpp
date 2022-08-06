@@ -10,7 +10,7 @@ namespace Cinnamon {
 		Swapchain* SwapchainContext;
 	};
 
-	InternalScope STL::UMap<Window*, DrawContext> s_ContextMap;
+	InternalScope STL::UMap<const Window*, DrawContext> s_ContextMap;
 	/* TODO: Change to GPU score system */
 	InternalScope bool PhysicalDeviceMeetsRequirements(const VkPhysicalDevice physicalDevice)
 	{
@@ -235,7 +235,7 @@ namespace Cinnamon {
 		return true;
 	}
 
-	bool GraphicsContext::CreateSurface(Window* windowContext)
+	bool GraphicsContext::CreateSurface(const Window* const windowContext)
 	{
 		uint32_t queueFamilyPropertiesCount{ 0 };
 		vkGetPhysicalDeviceQueueFamilyProperties(
@@ -406,12 +406,23 @@ namespace Cinnamon {
 		return true;
 	}
 
-	void GraphicsContext::AcquireNextImage(Window* windowContext)
+	void GraphicsContext::ResizeSurface(const Window* const windowContext, const uint32_t width, const uint32_t height)
+	{
+		Swapchain*& swapchain = s_ContextMap[windowContext].SwapchainContext;
+		Surface*& surface = s_ContextMap[windowContext].SurfaceContext;
+
+		if (swapchain && surface)
+		{
+			swapchain->Recreate(width, height, surface->GetHandle());
+		}
+	}
+
+	void GraphicsContext::AcquireNextImage(const Window* const windowContext)
 	{
 		s_ContextMap[windowContext].SwapchainContext->AcquireNextSwapchainImage();
 	}
 
-	void GraphicsContext::PresentImage(Window* windowContext)
+	void GraphicsContext::PresentImage(const Window* const windowContext)
 	{
 		s_ContextMap[windowContext].SwapchainContext->PresentSwapchainImage();
 	}

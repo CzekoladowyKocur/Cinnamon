@@ -52,9 +52,6 @@ namespace Cinnamon {
 		while (m_Running)
 		{
 			m_Window->PollEvents();
-
-			GraphicsContext::AcquireNextImage(m_Window);
-			GraphicsContext::PresentImage(m_Window);
 		}
 
 		return true;
@@ -76,7 +73,34 @@ namespace Cinnamon {
 	void Application::OnEvent(Event& event)
 	{
 		EventDispatcher dispatcher(event);
+		dispatcher.Dispatch<ApplicationRenderEvent>(std::bind(&Application::OnApplicationRender, this, std::placeholders::_1));
+		dispatcher.Dispatch<WindowResizedEvent>(std::bind(&Application::OnWindowResized, this, std::placeholders::_1));
 		dispatcher.Dispatch<WindowClosedEvent>(std::bind(&Application::OnWindowClosed, this, std::placeholders::_1));
+	}
+
+	bool Application::OnApplicationRender(ApplicationRenderEvent& event)
+	{
+		CIN_UNUSED(event);
+
+		/* Clear swapchain image for now */
+		if (m_Window and not m_Minimized)
+		{
+			GraphicsContext::AcquireNextImage(m_Window);
+			GraphicsContext::PresentImage(m_Window);
+		}
+
+		return true;
+	}
+
+	bool Application::OnWindowResized(WindowResizedEvent& event)
+	{
+		const auto [width, height] { event.GetResize() };
+		m_Minimized = (width == 0) || (height == 0);
+
+		if(not m_Minimized)
+			GraphicsContext::ResizeSurface(m_Window, width, height);
+		
+		return true;
 	}
 
 	bool Application::OnWindowClosed(WindowClosedEvent& event)
