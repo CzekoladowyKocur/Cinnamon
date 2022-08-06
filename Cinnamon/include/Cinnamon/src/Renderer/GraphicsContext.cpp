@@ -413,7 +413,11 @@ namespace Cinnamon {
 
 		if (swapchain && surface)
 		{
+			Surface* oldSurface{ surface };
+			surface = new Surface(windowContext);
 			swapchain->Recreate(width, height, surface->GetHandle());
+			
+			delete oldSurface;
 		}
 	}
 
