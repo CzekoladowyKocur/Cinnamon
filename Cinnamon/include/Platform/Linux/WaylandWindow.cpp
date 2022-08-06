@@ -1,6 +1,7 @@
 #ifdef CIN_PLATFORM_LINUX
 #include "Cinnamon/include/Core/Window.h"
 #include "Cinnamon/include/Event/WindowEvent.h"
+#include "Cinnamon/include/Event/ApplicationEvent.h"
 
 #include <wayland-client.h>
 extern "C"
@@ -59,25 +60,44 @@ InternalScope void FrameCallback(void* data, wl_callback* frameCallback, uint32_
 // frame callback --
 
 // -- xdg toplevel
-InternalScope void xdg_toplevel_configure_handler
+InternalScope void xdgToplevelConfigureHandler
 (
     void *data,
-    zxdg_toplevel_v6 *xdg_toplevel,
+    zxdg_toplevel_v6 *xdgToplevel,
     int32_t width,
     int32_t height,
     wl_array *states
 )
 {
-    (void)data;
-    (void)xdg_toplevel;
+    Cinnamon::Window* window = reinterpret_cast<Cinnamon::Window*>(data);
+
+    (void)xdgToplevel;
+    (void)states;
+    (void)window;
     (void)width;
     (void)height;
-    (void)states;
 
-    if(!width && !height) return;
+    auto windowSize = window->GetSize();
+    if((uint32_t)width != windowSize.first || (uint32_t)height != windowSize.second)
+    {
+        if(!width || !height)
+            return;
+        printf("%s%i%s%i\n", "w, h: ", width, ", ", height);
+        {
+            window->SetSize({(uint32_t)width, (uint32_t)height});
+            Cinnamon::WindowResizedEvent event(window, width, height);
+            window->SendEvent(event);
+        }
+
+        {
+            Cinnamon::ApplicationRenderEvent event;
+            window->SendEvent(event);
+        }
+
+    }
 }
 
-InternalScope void xdg_toplevel_close_handler
+InternalScope void xdgToplevelCloseHandler
 (
     void *data,
     struct zxdg_toplevel_v6 *xdg_toplevel
@@ -95,13 +115,13 @@ InternalScope void xdg_toplevel_close_handler
 
 InternalScope constexpr struct zxdg_toplevel_v6_listener xdgToplevelListener =
 {
-    .configure = xdg_toplevel_configure_handler,
-    .close = xdg_toplevel_close_handler
+    .configure = xdgToplevelConfigureHandler,
+    .close = xdgToplevelCloseHandler
 };
 // xdg toplevel --
 
 // -- xdg surface
-InternalScope void xdg_surface_configure_handler
+InternalScope void xdgSurfaceConfigureHandler
 (
     void *data,
     struct zxdg_surface_v6 *xdg_surface,
@@ -112,14 +132,14 @@ InternalScope void xdg_surface_configure_handler
     zxdg_surface_v6_ack_configure(xdg_surface, serial);
 }
 
-InternalScope constexpr struct zxdg_surface_v6_listener xdg_surface_listener =
+InternalScope constexpr struct zxdg_surface_v6_listener xdgSurfaceListener =
 {
-    .configure = xdg_surface_configure_handler
+    .configure = xdgSurfaceConfigureHandler
 };
 // xdg surface --
 
 // -- xdg shell
-InternalScope void xdg_shell_ping_handler
+InternalScope void xdgShellPingHandler
 (
     void *data,
     struct zxdg_shell_v6 *xdg_shell,
@@ -132,7 +152,7 @@ InternalScope void xdg_shell_ping_handler
 
 InternalScope constexpr struct zxdg_shell_v6_listener xdgShellListener =
 {
-    .ping = xdg_shell_ping_handler
+    .ping = xdgShellPingHandler
 };
 // xdg shell --
 
@@ -268,6 +288,8 @@ namespace Cinnamon {
 	{
         m_State = new PlatformWindowState;
 
+        printf("%s%i%s%i\n", "width, height: ", m_Properties.Width, ", ", m_Properties.Height);
+
         if(!WaylandSetup(m_State))
         {
             printf("%s\n", "Failed connecting to the display or retrieving globals from registry");
@@ -282,6 +304,8 @@ namespace Cinnamon {
         zxdg_shell_v6_add_listener(m_State->xdgShell, &xdgShellListener, NULL);
         zxdg_toplevel_v6_add_listener(m_State->xdgToplevel, &xdgToplevelListener, this);
 
+        zxdg_toplevel_v6_set_max_size(m_State->xdgToplevel, 2560, 1440);
+
         wl_surface_commit(m_State->waylandSurface);
         wl_display_roundtrip(m_State->display);
     }
@@ -294,12 +318,15 @@ namespace Cinnamon {
 	void Window::PollEvents()
     {
         /* Todo: Handle the dispatching properly */
+		ApplicationRenderEvent event;
+	    SendEvent(event);
+
         wl_display_dispatch_pending(m_State->display);
     }
 
 	void Window::SendEvent(Event& event)
-    {
-        CIN_UNIMPLEMENTED(); CIN_UNUSED(event);
+    {		
+        m_EventCallback(event);
     }
 
 	const char8_t* Window::GetName() const
@@ -360,7 +387,8 @@ namespace Cinnamon {
 
 	void Window::SetSize(std::pair<uint32_t, uint32_t> windowSize)
     {
-        CIN_UNIMPLEMENTED(); CIN_UNUSED(windowSize);
+        m_Properties.Width = windowSize.first;
+        m_Properties.Height = windowSize.second;
     }
-}
-#endif
+} // namespace Cinnamon
+#endif // #define CIN_PLATFORM_LINUX
