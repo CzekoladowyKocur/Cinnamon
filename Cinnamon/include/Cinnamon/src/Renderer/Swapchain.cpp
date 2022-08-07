@@ -124,7 +124,7 @@ namespace Cinnamon {
 				};
 
 				extent.width = CIN_CLAMP(extent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-				extent.width = CIN_CLAMP(extent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+				extent.height = CIN_CLAMP(extent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
 
 				m_Extent = extent;
 			}

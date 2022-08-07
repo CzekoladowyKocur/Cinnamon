@@ -400,8 +400,10 @@ namespace Cinnamon {
 			&s_Queues.Graphics);
 
 		CIN_ASSERT(s_Queues.Graphics != VK_NULL_HANDLE, "Failed to pick graphics queue");
+
 		auto surf{ new Surface(windowContext) };
-		s_ContextMap[windowContext] = { surf, new Swapchain(800, 600, surf->GetHandle()) };
+		const auto [width, height] { windowContext->GetSize() };
+		s_ContextMap[windowContext] = { surf, new Swapchain(width, height, surf->GetHandle()) };
 
 		return true;
 	}
