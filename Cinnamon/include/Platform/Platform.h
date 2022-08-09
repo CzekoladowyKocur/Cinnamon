@@ -44,6 +44,8 @@ namespace Cinnamon {
 
 		[[nodiscard]] static STL::Vector<const char*> GetRequiredVulkanDeviceExtensions();
 		[[nodiscard]] static STL::Vector<const char*> GetRequestedVulkanDeviceLayers();
+
+		[[nodiscard]] static STL::String GetBuildDate();
 		
 		static void WriteToConsole(const char* message, const EConsoleTextColor color);
 	public:

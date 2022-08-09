@@ -196,5 +196,10 @@ namespace Cinnamon {
 				NULL);
 		}
 	}
+
+	[[nodiscard]] STL::String Platform::GetBuildDate()
+	{
+		return CIN_TIMESTAMP;
+	}
 }
 #endif

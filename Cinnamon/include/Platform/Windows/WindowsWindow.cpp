@@ -1,7 +1,8 @@
 #ifdef CIN_PLATFORM_WINDOWS
 #include "Cinnamon/include/Core/Window.h"
-#include "Cinnamon/include/Event/WindowEvent.h"
 #include "Cinnamon/include/Event/ApplicationEvent.h"
+#include "Cinnamon/include/Event/WindowEvent.h"
+#include "Cinnamon/include/Event/KeyEvent.h"
 
 namespace Cinnamon {
 	InternalScope LRESULT CALLBACK Windows32ProcessMessage(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam);
@@ -55,7 +56,7 @@ namespace Cinnamon {
 			});
 
 		/* Initialize window */
-		m_State = CIN_NEW();
+		m_State = cinew PlatformWindowState;
 		m_State->Instance = hInstance;
 		m_State->StyleFlags =
 			WS_OVERLAPPEDWINDOW | /* The window is an overlapped window. An overlapped window has a title bar and a border. Same as the WS_TILED style. */
@@ -69,7 +70,7 @@ namespace Cinnamon {
 			WS_EX_APPWINDOW /* Forces a top-level window onto the taskbar when the window is visible. */;
 
 		/* Obtain the size of border */
-		RECT windowBorderRectangle{ 0, 0, 0, 0 };
+		RECT windowBorderRectangle{ 0U, 0U, 0U, 0U };
 		if (!AdjustWindowRectEx(&windowBorderRectangle, m_State->StyleFlags, 0, m_State->ExtendedStyleFlags))
 		{
 			MessageBox(NULL, "Failed to obtain size of window border", "Error!", MB_ICONEXCLAMATION | MB_OK);
@@ -126,7 +127,7 @@ namespace Cinnamon {
 			CIN_PANIC_EXIT();
 		}
 
-		CIN_DELETE(m_State);
+		cindel m_State;
 	}
 
 	void Window::PollEvents()
@@ -197,6 +198,115 @@ namespace Cinnamon {
 
 	void Window::SetWindowMode(const EWindowMode windowMode)
 	{
+		if (m_Properties.Mode == windowMode)
+			return;
+
+		const EWindowMode currentWindowMode{ m_Properties.Mode };
+		const HWND windowHandle{ m_State->Handle };
+		const LONG windowStyle{ static_cast<LONG>(m_State->StyleFlags) };
+		const LONG windowStyleExtended{ static_cast<LONG>(m_State->ExtendedStyleFlags) };
+		
+		switch (windowMode)
+		{
+			case EWindowMode::Windowed:
+			{
+				if (currentWindowMode == EWindowMode::Maximized)
+				{
+					CIN_VERIFY(SetWindowLong(
+						windowHandle,
+						GWL_STYLE,
+						windowStyle));
+
+					CIN_VERIFY(SetWindowLong(
+						windowHandle,
+						GWL_EXSTYLE,
+						windowStyleExtended));
+				}
+
+				CIN_VERIFY(ShowWindow(
+					windowHandle, 
+					SW_NORMAL));
+
+				break;
+			}
+
+			case EWindowMode::WindowedFullscreen:
+			{
+				if (currentWindowMode == EWindowMode::Maximized)
+				{
+					CIN_VERIFY(SetWindowLong(
+						windowHandle,
+						GWL_STYLE,
+						windowStyle));
+
+					CIN_VERIFY(SetWindowLong(
+						windowHandle,
+						GWL_EXSTYLE,
+						windowStyleExtended));
+				}
+
+				ShowWindow(
+					windowHandle,
+					SW_SHOWMAXIMIZED);
+
+				break;
+			}
+
+			case EWindowMode::Maximized:
+			{
+				CIN_VERIFY(SetWindowLong(
+					windowHandle,
+					GWL_STYLE,
+					windowStyle & ~(WS_CAPTION | WS_THICKFRAME)));
+
+				CIN_VERIFY(SetWindowLong(
+					windowHandle,
+					GWL_EXSTYLE,
+					windowStyleExtended & ~(WS_EX_DLGMODALFRAME | WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE)));
+
+				MONITORINFO monitorInformation
+				{
+					.cbSize { sizeof(MONITORINFO) },
+					.rcMonitor { 0U, 0U, 0U, 0U },
+					.rcWork { 0U, 0U, 0U, 0U },
+					.dwFlags { 0U }
+				};
+
+				CIN_VERIFY(GetMonitorInfo(
+					MonitorFromWindow(windowHandle, MONITOR_DEFAULTTONEAREST), 
+					&monitorInformation));
+
+				RECT clientRectangle
+				{
+					.left { 0U },
+					.top { 0U },
+					.right { 0U },
+					.bottom { 0U },
+				};
+
+				CIN_VERIFY(GetClientRect(
+					windowHandle, 
+					&clientRectangle));
+
+				CIN_VERIFY(SetWindowPos(
+					windowHandle,
+					NULL,
+					clientRectangle.left,
+					clientRectangle.top,
+					m_Properties.Width,
+					m_Properties.Height,
+					SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED));
+
+				SendMessage(
+					windowHandle, 
+					WM_SYSCOMMAND, 
+					SC_MAXIMIZE, 
+					0);
+
+				break;
+			}
+		}
+
 		m_Properties.Mode = windowMode;
 	}
 
@@ -240,6 +350,7 @@ namespace Cinnamon {
 				{
 					const uint32_t width{ LOWORD(lParam) };
 					const uint32_t height{ HIWORD(lParam) };
+					window->SetSize({ width, height });
 
 					WindowResizedEvent event(window, width, height);
 					window->SendEvent(event);
@@ -253,6 +364,11 @@ namespace Cinnamon {
 				return 0;
 			}
 
+			case SC_MAXIMIZE:
+			{
+				return 0;
+			}
+
 			case WM_CLOSE:
 			{
 				WindowClosedEvent event(window);
@@ -260,10 +376,27 @@ namespace Cinnamon {
 
 				return 0;
 			}
-
+			
 			case WM_DESTROY:
 			{
 				return DefWindowProcA(hwnd, message, wParam, lParam);
+			}
+
+			case WM_KEYUP: /* Nonsystem key */
+			case WM_SYSKEYUP: /* System key (alt pressed) */
+			{
+				/* TODO: Update input */
+				return 0;
+			}
+
+			case WM_KEYDOWN: /* Nonsystem key */
+			case WM_SYSKEYDOWN: /* System key (alt pressed) */
+			{
+				/* TODO: Update input */
+				KeyPressedEvent event(static_cast<KeyCode>(wParam));
+				window->SendEvent(event);
+
+				return 0;
 			}
 		}
 

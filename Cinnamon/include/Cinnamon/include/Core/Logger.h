@@ -1,6 +1,5 @@
 #pragma once
 #include "Cinnamon/include/Core/Core.h"
-//#include "Platform/Platform.h"
 #ifndef CIN_PLATFORM_LINUX
 #include <format>
 #else
@@ -36,9 +35,9 @@ namespace Cinnamon {
 			if (logLevel < s_LogLevel)
 				return;
 
-			/* TODO: User a preallocated buffer? */
+			/* TODO: Use a preallocated buffer? */
 			STL::String formatted;
-			formatted.reserve(256);
+			formatted.reserve(512);
 			formatted = std::format("[{0}]", std::chrono::system_clock::now());
 			formatted.append(std::vformat(message, std::make_format_args(std::forward<Args>(args)...)));
 			

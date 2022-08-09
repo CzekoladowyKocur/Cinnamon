@@ -1,7 +1,6 @@
 #pragma once
 #include "Cinnamon/include/Core/Core.h"
 #include <typeinfo>
-#include <tuple>
 /*
 	L1 cache reference                            0.5 ns
 	Branch mispredict                             5   ns
@@ -35,10 +34,10 @@
 	Useful for data destined for the GPU that will not be read by the CPU.
 */
 
-
 /*
 scripted objects usually work with handles instead of pointers to support hot-reload.
 */
+
 #define SIZE_KB (1024U)
 #define SIZE_MB (SIZE_KB * 1024U) 
 #define SIZE_GB (SIZE_MB * 1024U) 
@@ -46,89 +45,158 @@ scripted objects usually work with handles instead of pointers to support hot-re
 #define MEGABYTES(count) (KILOBYTES * 1024U * count)
 #define GIGABYTES(count) (MEGABYTES * 1024U * count)
 
-namespace Cinnamon {
-#define CIN_TRACK_MEMORY 1
-	//bool IsAddressPowerOfTwo(const std::uintptr_t n)
-	//{
-	//	return (n != 0) && ((n & (n - 1)) == 0);
-	//}
+#define CIN_ALLOCATOR_FORCE_INLINE	CIN_FORCE_INLINE
 
-	//void* Align(const std::uintptr_t ptr, const std::size_t alignment)
-	//{
-	//	return reinterpret_cast<void*>(((ptr + (alignment - 1)) & -((int)alignment)));
-	//}
-#if CIN_TRACK_MEMORY
-	struct AllocationData
-	{
-		const char* File;
-		uint32_t Line;
-	};
-
-	struct AllocatorData {
-		std::unordered_map<void*, AllocationData> Allocations;
-		std::mutex AllocationTrackerInsertMutex;
-	};
+#define CIN_ALLOCATOR_SHARED_STATE 0 /* Can free allocated memory from all threads */ 
+#define CIN_ALLOCATOR_USE_NOTHROW_NEW 1 /* Disable exceptions */
+#if CIN_ALLOCATOR_USE_NOTHROW_NEW 
+#define CIN_ALLOCATOR_THROW_ATTRIBUTE (std::nothrow)
+#else
+#define CIN_ALLOCATOR_THROW_ATTRIBUTE
 #endif
 
-	class GlobalAllocator
+namespace Cinnamon {
+	void DumpCallbackFunction(const void* allocation, const char* typeName, const std::size_t allocationSize, const char* filename, const std::size_t fileLine) noexcept;
+#if CIN_ALLOCATOR_SHARED_STATE
+	class ThreadAllocatorData final
+#else
+	thread_local class ThreadAllocatorData final
+#endif
 	{
 	public:
-		template<typename ... Args>
-		struct AllocateProxy
+		struct AllocationData
 		{
-			std::tuple<Args...> Arguments;
+			const char* Name;
+			std::size_t Size;
 			const char* File;
-			const uint32_t Line;
+			std::size_t Line;
 
-			explicit constexpr AllocateProxy(
-				const char* file,
-				const uint32_t line,
-				Args&&... args) noexcept
+			explicit AllocationData(const char* name, const std::size_t size, const char* file, const std::size_t line) noexcept
 				:
-				Arguments(std::forward<Args>(args)...),
+				Name(name),
+				Size(size),
 				File(file),
 				Line(line)
 			{}
-
-			~AllocateProxy() noexcept = default;
-
-			template <typename T>
-			[[nodiscard]] constexpr operator T* () const noexcept
-			{
-				/* TODO: add support for constructor parameters */
-				T* userPointer{ new (std::nothrow) T(std::get<Args>(Arguments)...) };
-				CIN_ASSERT(userPointer, "Memory allocation failed");
-#if CIN_TRACK_MEMORY
-#ifdef CIN_PLATFORM_WINDOWS
-				CIN_TRACE("Allocating {0} {1}(s) [{2}, {3}]", static_cast<int>(1), typeid(T).name(), File, static_cast<int>(Line));
-#endif
-				{
-					std::lock_guard<std::mutex> lock{ GetAllocatorData().AllocationTrackerInsertMutex};
-					GetAllocatorData().Allocations[reinterpret_cast<void*>(userPointer)] = { File, Line };
-				}
-#endif // CIN_TRACK_MEMORY
-				return userPointer;
-			}
 		};
-	public:
-		template<typename ... Args>
-		[[nodiscard]] static AllocateProxy<Args...> Allocate(const char* file, const uint32_t line, Args&& ... args)
-		{
-			return AllocateProxy<Args...>(file, line, std::forward<Args>(args)...);
-		}
-		static void Deallocate(void* const userPointer);
-#if CIN_TRACK_MEMORY
-		static void DumpAllocations();
+#if CIN_ALLOCATOR_SHARED_STATE
+		static inline std::unordered_map<const void*, AllocationData> Allocations;
+		static inline std::mutex s_AllocationRegistryMutex;
+#else
+		std::unordered_map<const void*, AllocationData> Allocations;
 #endif
-		static AllocatorData& GetAllocatorData();
-	private:
+	public:
+		~ThreadAllocatorData() noexcept
+		{
+			DumpThreadMemory();
+		}
+
+		CIN_ALLOCATOR_FORCE_INLINE void DumpThreadMemory()
+		{
+#if CIN_ALLOCATOR_SHARED_STATE
+			std::lock_guard<std::mutex> lock(s_AllocationRegistryMutex);
+#endif
+			if (!Allocations.empty())
+			{
+				for (const auto& [address, allocation] : Allocations)
+					DumpCallbackFunction(address, allocation.Name, allocation.Size, allocation.File, allocation.Line);
+			}
+		}
+
+		CIN_ALLOCATOR_FORCE_INLINE void Register(const void* address, const char* name, const std::size_t size, const char* file, const std::size_t line) noexcept
+		{
+#if CIN_ALLOCATOR_SHARED_STATE
+			std::lock_guard<std::mutex> lock(s_AllocationRegistryMutex);
+#endif
+			Allocations.emplace(address, std::move(AllocationData{ name, size, file, line }));
+		}
+
+		CIN_ALLOCATOR_FORCE_INLINE void Unregister(const void* address) noexcept
+		{
+#if CIN_ALLOCATOR_SHARED_STATE
+			std::lock_guard<std::mutex> lock(s_AllocationRegistryMutex);
+#endif
+			CIN_ASSERT(Allocations.find(address) != Allocations.end(), "Allocation came from a different thread (invalid if shared state is disabled) or was not done via the API");
+			Allocations.erase(address);
+		}
+	} static t_ThreadAllocatorData;
+
+	static inline void CinDumpThreadMemory()
+	{
+		t_ThreadAllocatorData.DumpThreadMemory();
+	}
+
+	struct AllocationProxy final
+	{
+		const char* File;
+		const uint32_t Line;
+
+		explicit constexpr AllocationProxy(const char* file, const uint32_t line) noexcept
+			:
+			File(file),
+			Line(line)
+		{}
+
+		~AllocationProxy() noexcept = default;
+
+		template <typename T>
+		[[nodiscard]] CIN_FORCE_INLINE T* operator << (T* const allocation) const noexcept
+		{
+			/* Forward the allocation to variable */
+			t_ThreadAllocatorData.Register(allocation, typeid(T).name(), sizeof(T), File, Line);
+			return allocation;
+		}
 	};
 
-#define CIN_NEW(...) GlobalAllocator::Allocate(CIN_FILE, CIN_LINE, __VA_ARGS__);
-#define CIN_DELETE(ptr) GlobalAllocator::Deallocate(ptr);
-#if CIN_TRACK_MEMORY
-#define DUMP_CINNAMON_ALLOCATIONS() GlobalAllocator::DumpAllocations()
+	struct DeallocationProxy final
+	{
+		explicit constexpr DeallocationProxy() noexcept = default;
+		~DeallocationProxy() noexcept = default;
+
+		template<typename T>
+		CIN_FORCE_INLINE void operator << (T* const address) noexcept
+		{
+			t_ThreadAllocatorData.Unregister(address);
+			delete address;
+		}
+	};
+
+	struct DeallocationProxyArray final
+	{
+		explicit constexpr DeallocationProxyArray() noexcept = default;
+		~DeallocationProxyArray() noexcept = default;
+
+		template<typename T>
+		CIN_FORCE_INLINE void operator << (T* const address) noexcept
+		{
+			t_ThreadAllocatorData.Unregister(address);
+			delete[] address;
+		}
+	};
+	/*
+	* When the compiler sees a _new_ expression, it first deduces the appropriate overloaded
+	* new operator (::operator new(...)), depending on the number and type of passed arguments, then,
+	* the function is invoked, returning a pointer to raw block of memory.
+	*
+	* new expression:
+	* int* integer = new int;
+	* new operator:
+	* void* storagePointer = ::operator new(sizeof (int));
+	* ... and using new expression:
+	* int* integer = new (storagePointer) int;
+	* Note that _new_ expression performs no allocation.
+	*/
+#if (CIN_DEBUG)
+	/* If exceptions are disabled, return value should be checked (no different from standard new) */
+#define cinew AllocationProxy(__FILE__, __LINE__) << new CIN_ALLOCATOR_THROW_ATTRIBUTE
+#define cindel DeallocationProxy() << 
+#define cindelarr DeallocationProxyArray() << 
+#define CIN_DUMP_ALLOCATIONS CinDumpThreadMemory
 #else
-#define DUMP_CINNAMON_ALLOCATIONS()
-#endif 
+	/* If exceptions are disabled, return value should be checked (no different from standard new) */
+#define cinew new CIN_ALLOCATOR_THROW_ATTRIBUTE
+#define cindel delete
+#define cindelarr delete[]
+#define CIN_DUMP_ALLOCATIONS void
+#endif
 }

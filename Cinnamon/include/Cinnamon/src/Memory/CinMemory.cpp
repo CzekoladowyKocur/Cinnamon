@@ -1,41 +1,8 @@
 #include "Cinnamon/include/Memory/CinMemory.h"
 
 namespace Cinnamon {
-	InternalScope AllocatorData s_AllocatorData;
-	//GlobalAllocator::AllocateProxy GlobalAllocator::Allocate(const std::size_t elementCount, const char* file, const uint32_t line)
-	//{
-	//	return AllocateProxy(elementCount, file, line);
-	//}
-
-	void GlobalAllocator::Deallocate(void* const userPointer)
+	void DumpCallbackFunction(const void* allocation, const char* typeName, const std::size_t allocationSize, const char* filename, const std::size_t fileLine) noexcept
 	{
-#if CIN_TRACK_MEMORY 
-		{
-			std::lock_guard<std::mutex> lock{ s_AllocatorData.AllocationTrackerInsertMutex };
-			s_AllocatorData.Allocations.erase(userPointer);
-		}
-#endif
-		operator delete(userPointer);
+		CIN_WARN("[Thread: {0}] Found unfreed memory at {1} ({2} bytes) of type {3} [{4}, {5}]", "TODO", allocation, allocationSize,typeName, filename, fileLine);
 	}
-
-#if CIN_TRACK_MEMORY 
-	void GlobalAllocator::DumpAllocations()
-	{
-		CIN_INFO("Dumpimg memory");
-		{
-			std::lock_guard<std::mutex> lock{ s_AllocatorData.AllocationTrackerInsertMutex };
-			for (const auto& [userPointer, allocationData] : s_AllocatorData.Allocations) {
-				CIN_WARN("Unfreed memory at {0}, requested by {1}, {2}", userPointer, allocationData.File, allocationData.Line);
-                CIN_UNUSED(userPointer);
-                CIN_UNUSED(allocationData);
-            }
-		}
-		CIN_INFO("Finished dumping memory");
-	}
-
-	AllocatorData& GlobalAllocator::GetAllocatorData()
-	{
-		return s_AllocatorData;
-	}
-#endif
 }

@@ -11,18 +11,21 @@ namespace Cinnamon {
 		m_Window(nullptr)
 	{
 		CIN_ASSERT(s_ApplicationInstance == nullptr, "Application already initialized!");
+		CIN_TRACE("Running cinnamon build {0}", Platform::GetBuildDate());
+
 		s_ApplicationInstance = this;
 	}
 
 	Application::~Application() noexcept
 	{
-		delete m_Window;
-		DUMP_CINNAMON_ALLOCATIONS();
+		cindel m_Window;
+		CIN_DUMP_ALLOCATIONS();
 	}
 
 	bool Application::Initialize()
 	{
-		m_Window = new Window(
+		/* TODO: Set window event callbacks after context creation? */
+		m_Window = cinew Window(
 			WindowProperties{ u8"Cinnamon Application", 800U, 600U, EWindowMode::Unspecified }, 
 			std::bind(&Application::OnEvent, this, std::placeholders::_1));
 
@@ -44,6 +47,7 @@ namespace Cinnamon {
 		CIN_ERROR("Logger test, {0}, {1}, {2}", 1, 2, "Error");
 		CIN_CRITICAL("Logger test, {0}, {1}, {2}", 1, 2, "Critical");
 
+		m_Window->SetWindowMode(EWindowMode::Maximized);
 		return true;
 	}
 
@@ -76,6 +80,7 @@ namespace Cinnamon {
 		dispatcher.Dispatch<ApplicationRenderEvent>(std::bind(&Application::OnApplicationRender, this, std::placeholders::_1));
 		dispatcher.Dispatch<WindowResizedEvent>(std::bind(&Application::OnWindowResized, this, std::placeholders::_1));
 		dispatcher.Dispatch<WindowClosedEvent>(std::bind(&Application::OnWindowClosed, this, std::placeholders::_1));
+		dispatcher.Dispatch<KeyPressedEvent>(std::bind(&Application::OnKeyPressed, this, std::placeholders::_1));
 	}
 
 	bool Application::OnApplicationRender(ApplicationRenderEvent& event)
@@ -95,7 +100,7 @@ namespace Cinnamon {
 	bool Application::OnWindowResized(WindowResizedEvent& event)
 	{
 		const auto [width, height] { event.GetResize() };
-		m_Minimized = (width == 0) || (height == 0);
+		m_Minimized = (width == 0) or (height == 0);
 
 		if(not m_Minimized)
 			GraphicsContext::ResizeSurface(m_Window, width, height);
@@ -108,6 +113,30 @@ namespace Cinnamon {
 		CIN_UNUSED(event);
 		m_Running = false;
 
+		return true;
+	}
+
+	bool Application::OnKeyPressed(KeyPressedEvent& event)
+	{
+		const Key key{ event.GetKey() };
+		switch(key)
+		{
+			case Key::F10:
+			{
+				const EWindowMode currentWindowMode{ m_Window->GetWindowMode() };
+				m_Window->SetWindowMode(currentWindowMode != EWindowMode::WindowedFullscreen ? EWindowMode::WindowedFullscreen : EWindowMode::Windowed);
+				
+				break;
+			}
+
+			case Key::F11:
+			{
+				m_Window->SetWindowMode(EWindowMode::Maximized);
+				break;
+			}
+		}
+
+		/* Handled for now */
 		return true;
 	}
 

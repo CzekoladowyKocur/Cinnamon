@@ -202,6 +202,7 @@ namespace Cinnamon {
 		if (!s_PhysicalDevice)
 			s_PhysicalDevice = availablePhysicalDevices.front();
 
+		s_ContextMap.clear();
 		CIN_TRACE("Initialized graphics context");
 		return true;
 	}
@@ -212,8 +213,8 @@ namespace Cinnamon {
 		for (const auto& [window, drawContext] : s_ContextMap)
 		{
 			CIN_UNUSED(window);
-			delete drawContext.SwapchainContext;
-			delete drawContext.SurfaceContext;
+			cindel drawContext.SwapchainContext;
+			cindel drawContext.SurfaceContext;
 		}
 
 		vkDestroyDevice(
@@ -401,9 +402,9 @@ namespace Cinnamon {
 
 		CIN_ASSERT(s_Queues.Graphics != VK_NULL_HANDLE, "Failed to pick graphics queue");
 
-		auto surf{ new Surface(windowContext) };
+		auto surf{ cinew Surface(windowContext) };
 		const auto [width, height] { windowContext->GetSize() };
-		s_ContextMap[windowContext] = { surf, new Swapchain(width, height, surf->GetHandle()) };
+		s_ContextMap[windowContext] = { surf, cinew Swapchain(width, height, surf->GetHandle()) };
 
 		return true;
 	}
@@ -416,10 +417,10 @@ namespace Cinnamon {
 		if (swapchain && surface)
 		{
 			Surface* oldSurface{ surface };
-			surface = new Surface(windowContext);
+			surface = cinew Surface(windowContext);
 			swapchain->Recreate(width, height, surface->GetHandle());
 			
-			delete oldSurface;
+			cindel oldSurface;
 		}
 	}
 

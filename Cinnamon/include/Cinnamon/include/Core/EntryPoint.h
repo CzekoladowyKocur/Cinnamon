@@ -29,7 +29,7 @@ InternalScope int32_t CommonEntryPoint() noexcept
 
 	/* Application lifetime */
 	{
-		Application* application{ new Application };
+		Application* application{ cinew Application };
 		if (!application->Initialize())
 		{
 			CIN_CRITICAL("Failed to properly initialize the application");
@@ -48,7 +48,7 @@ InternalScope int32_t CommonEntryPoint() noexcept
 			return EXIT_FAILURE;
 		}
 
-		delete application;
+		cindel application;
 	} /* Application lifetime */
 
 	/* Shutdown platform */

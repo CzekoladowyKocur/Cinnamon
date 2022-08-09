@@ -2,6 +2,24 @@
 #define InternalScope static
 #define FunctionVariable static
 
+#ifdef __DATE__
+#define CIN_DATE __DATE__
+#else
+#error Define me!
+#endif
+
+#ifdef __TIME__
+#define CIN_TIME __TIME__
+#else
+#error Define me!
+#endif
+
+#ifdef __TIMESTAMP__
+#define CIN_TIMESTAMP __TIMESTAMP__
+#else
+#error Define me!
+#endif
+
 #ifdef __FILE__ 
 #define CIN_FILE __FILE__
 #else
@@ -33,9 +51,11 @@
 
 #define CIN_ASSERT(...) CIN_EXPAND_VARGS( CIN_GET_ASSERT_MACRO(__VA_ARGS__)(__VA_ARGS__) )
 #define CIN_CORE_ASSERT(...) CIN_EXPAND_VARGS( CIN_GET_ASSERT_MACRO(__VA_ARGS__)(__VA_ARGS__) )
+#define CIN_VERIFY(x) if(!(x)) CIN_ASSERT(false);
 #else
 #define CIN_ASSERT(...)
 #define CIN_CORE_ASSERT(...)
+#define CIN_VERIFY(x) x
 #endif
 #define CIN_UNIMPLEMENTED() CIN_ASSERT(false, "Unimplemeneted")
 #define CIN_UNUSED(x) (void)x
