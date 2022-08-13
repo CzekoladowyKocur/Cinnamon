@@ -25,9 +25,7 @@ namespace Cinnamon {
 	bool Application::Initialize()
 	{
 		/* TODO: Set window event callbacks after context creation? */
-		m_Window = cinew Window(
-			WindowProperties{ u8"Cinnamon Application", 800U, 600U, EWindowMode::Unspecified }, 
-			std::bind(&Application::OnEvent, this, std::placeholders::_1));
+		m_Window = cinew Window(WindowProperties{ u8"Cinnamon Application", 800U, 600U, EWindowMode::WindowedFullscreen });
 
 		if (!GraphicsContext::Initialize())
 		{
@@ -47,7 +45,7 @@ namespace Cinnamon {
 		CIN_ERROR("Logger test, {0}, {1}, {2}", 1, 2, "Error");
 		CIN_CRITICAL("Logger test, {0}, {1}, {2}", 1, 2, "Critical");
 
-		m_Window->SetWindowMode(EWindowMode::Maximized);
+		m_Window->SetEventCallback(std::bind(&Application::OnEvent, this, std::placeholders::_1));
 		return true;
 	}
 
@@ -88,7 +86,7 @@ namespace Cinnamon {
 		CIN_UNUSED(event);
 
 		/* Clear swapchain image for now */
-		if (m_Window and not m_Minimized)
+		if (not m_Minimized)
 		{
 			GraphicsContext::AcquireNextImage(m_Window);
 			GraphicsContext::PresentImage(m_Window);

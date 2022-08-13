@@ -1,10 +1,14 @@
 #pragma once
 #include "Cinnamon/include/Core/Core.h"
-#ifndef CIN_PLATFORM_LINUX
-#include <format>
-#else
+#define FMT_HEADER_ONLY
+#include "fmt/format.h"
+#include "fmt/chrono.h"
+#include "fmt/core.h"
+
+#ifdef CIN_PLATFORM_LINUX
 #include <any>
 #endif
+
 
 namespace Cinnamon {
 	enum class ELogLevel
@@ -29,26 +33,19 @@ namespace Cinnamon {
 		static bool Shutdown();
 
 		template<ELogLevel logLevel, typename ... Args>
-		static constexpr void Log(const std::string_view message, Args&& ... args)
+		static constexpr void Log(const fmt::string_view message, Args&& ... args)
 		{
 #if CIN_PLATFORM_WINDOWS
 			if (logLevel < s_LogLevel)
 				return;
 
-			/* TODO: Use a preallocated buffer? */
+			// thread_local FunctionVariable char preallocatedBuffer[512];
 			STL::String formatted;
-			formatted.reserve(512);
-			formatted = std::format("[{0}]", std::chrono::system_clock::now());
-			formatted.append(std::vformat(message, std::make_format_args(std::forward<Args>(args)...)));
-			
+			formatted.resize(512);
+
+			formatted = std::move(fmt::format("[{0}]", std::chrono::system_clock::now()));
+			formatted.append(fmt::vformat(message, fmt::make_format_args(std::forward<Args>(args)...)));
 			Output<logLevel>(formatted.c_str());
-#else
-			CIN_UNUSED(logLevel);
-			CIN_UNUSED(message);
-			([&]
-				{
-					CIN_UNUSED(args);
-				} (), ...);
 #endif
 		}
 

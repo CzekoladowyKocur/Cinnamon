@@ -41,7 +41,7 @@ namespace Cinnamon {
 	{
 	private:
 	public:
-		explicit Window(WindowProperties&& windowProperties, const EventCallbackFunction callback) noexcept;
+		explicit Window(WindowProperties&& windowProperties, const EventCallbackFunction callback = nullptr) noexcept;
 		~Window() noexcept;
 
 		void PollEvents();
@@ -52,6 +52,7 @@ namespace Cinnamon {
 		uint32_t GetHeight() const;
 		EWindowMode GetWindowMode() const;
 		std::pair<uint32_t, uint32_t> GetSize() const;
+		EventCallbackFunction GetEventCallback() const;
 		const PlatformWindowState* GetState() const;
 		const void* GetNativeHandle() const;
 
@@ -60,6 +61,7 @@ namespace Cinnamon {
 		void SetHeight(const uint32_t windowHeight);
 		void SetWindowMode(const EWindowMode windowMode);
 		void SetSize(std::pair<uint32_t, uint32_t> windowSize);
+		void SetEventCallback(const EventCallbackFunction callback);
 	private:
 		/* To be defined in platform */
 		PlatformWindowState* m_State;

@@ -402,7 +402,7 @@ namespace Cinnamon {
 
 		CIN_ASSERT(s_Queues.Graphics != VK_NULL_HANDLE, "Failed to pick graphics queue");
 
-		auto surf{ cinew Surface(windowContext) };
+		Surface* surf{ cinew Surface(windowContext) };
 		const auto [width, height] { windowContext->GetSize() };
 		s_ContextMap[windowContext] = { surf, cinew Swapchain(width, height, surf->GetHandle()) };
 
@@ -414,14 +414,11 @@ namespace Cinnamon {
 		Swapchain*& swapchain = s_ContextMap[windowContext].SwapchainContext;
 		Surface*& surface = s_ContextMap[windowContext].SurfaceContext;
 
-		if (swapchain && surface)
-		{
-			Surface* oldSurface{ surface };
-			surface = cinew Surface(windowContext);
-			swapchain->Recreate(width, height, surface->GetHandle());
-			
-			cindel oldSurface;
-		}
+		Surface* oldSurface{ surface };
+		surface = cinew Surface(windowContext);
+		swapchain->Recreate(width, height, surface->GetHandle());
+		
+		cindel oldSurface;
 	}
 
 	void GraphicsContext::AcquireNextImage(const Window* const windowContext)

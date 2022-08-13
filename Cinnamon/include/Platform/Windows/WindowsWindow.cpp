@@ -3,9 +3,21 @@
 #include "Cinnamon/include/Event/ApplicationEvent.h"
 #include "Cinnamon/include/Event/WindowEvent.h"
 #include "Cinnamon/include/Event/KeyEvent.h"
+#include "Cinnamon/include/Event/MouseEvent.h"
+
+/* Assumes variable "event" of type Event& is in scope */
+#define LOG_UNHANDLED_EVENT(eventType)						\
+{															\
+	eventType* cast{ dynamic_cast<eventType*>(&event) };	\
+	if (cast)												\
+	{														\
+	CIN_WARN("Unhandled event: {0}", #eventType);			\
+	}														\
+}
 
 namespace Cinnamon {
 	InternalScope LRESULT CALLBACK Windows32ProcessMessage(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam);
+	InternalScope void DefaultEventCallback(Event& event);
 	InternalScope std::once_flag s_Win32ClassInitialized;
 
 	constexpr CHAR WIN32_API_WINDOW_CLASS_NAME[] = "CINNAMON_ENGINE_WINDOW_CLASS";
@@ -24,7 +36,7 @@ namespace Cinnamon {
 		:
 		m_State(nullptr),
 		m_Properties(std::move(windowProperties)),
-		m_EventCallback(callback)
+		m_EventCallback(callback ? callback : DefaultEventCallback)
 	{
 		const HINSTANCE hInstance{ GetModuleHandle(NULL) };
 		/* Initialize win32 window class, only generic one for now */
@@ -40,8 +52,8 @@ namespace Cinnamon {
 			windowClass.style =
 				CS_DBLCLKS | /* Sends message for double clicks */
 				CS_HREDRAW | /* Redraw window if width has changed */
-				CS_VREDRAW,/* Redraw window if height has changed */
-			//	CS_OWNDC;
+				CS_VREDRAW | /* Redraw window if height has changed */
+				CS_OWNDC;
 			windowClass.cbClsExtra = 0;
 			windowClass.cbWndExtra = 0;
 			windowClass.cbSize = sizeof(WNDCLASSEX);
@@ -115,6 +127,13 @@ namespace Cinnamon {
 			MessageBox(NULL, "Failed to focus window", "Error!", MB_ICONEXCLAMATION | MB_OK);
 			CIN_PANIC_EXIT();
 		}
+
+		if (m_Properties.Mode != EWindowMode::Unspecified)
+		{
+			const EWindowMode windowMode{ m_Properties.Mode };
+			m_Properties.Mode = EWindowMode::Unspecified;
+			SetWindowMode(windowMode);
+		}
 	}
 
 	Window::~Window() noexcept
@@ -169,6 +188,11 @@ namespace Cinnamon {
 	std::pair<uint32_t, uint32_t> Window::GetSize() const
 	{
 		return { m_Properties.Width, m_Properties.Height };
+	}
+
+	EventCallbackFunction Window::GetEventCallback() const
+	{
+		return m_EventCallback;
 	}
 
 	const PlatformWindowState* Window::GetState() const
@@ -316,6 +340,11 @@ namespace Cinnamon {
 		m_Properties.Height = windowSize.second;
 	}
 
+	void Window::SetEventCallback(const EventCallbackFunction callback)
+	{
+		m_EventCallback = callback;
+	}
+
 	LRESULT CALLBACK Windows32ProcessMessage(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam)
 	{
 		Window* window{ reinterpret_cast<Window*>(GetWindowLongPtr(hwnd, GWLP_USERDATA)) };
@@ -376,10 +405,15 @@ namespace Cinnamon {
 
 				return 0;
 			}
+
+			case WM_QUIT:
+			{
+				return 0;
+			}
 			
 			case WM_DESTROY:
 			{
-				return DefWindowProcA(hwnd, message, wParam, lParam);
+				return 0;
 			}
 
 			case WM_KEYUP: /* Nonsystem key */
@@ -401,6 +435,27 @@ namespace Cinnamon {
 		}
 
 		return DefWindowProcA(hwnd, message, wParam, lParam);
+	}
+
+	void DefaultEventCallback(Event& event)
+	{
+		/* Window Events */
+		LOG_UNHANDLED_EVENT(WindowClosedEvent);
+		LOG_UNHANDLED_EVENT(WindowMinimizedEvent);
+		LOG_UNHANDLED_EVENT(WindowMaximizedEvent);
+		LOG_UNHANDLED_EVENT(WindowResizedEvent);
+		LOG_UNHANDLED_EVENT(WindowSurfaceUpdatedEvent);
+		/* Application Events */
+		LOG_UNHANDLED_EVENT(ApplicationTickEvent);
+		LOG_UNHANDLED_EVENT(ApplicationRenderEvent);
+		/* Key events */
+		LOG_UNHANDLED_EVENT(KeyPressedEvent);
+		LOG_UNHANDLED_EVENT(KeyReleasedEvent);
+		LOG_UNHANDLED_EVENT(KeyHeldEvent);
+		/* Mouse events */
+		LOG_UNHANDLED_EVENT(MousePressedEvent);
+		LOG_UNHANDLED_EVENT(MouseReleasedEvent);
+		LOG_UNHANDLED_EVENT(MouseScrolledEvent);
 	}
 }
 #endif

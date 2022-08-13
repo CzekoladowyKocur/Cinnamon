@@ -7,6 +7,7 @@ EditorProjectName = "CinnamonEditor"
 VulkanSDK = os.getenv("VULKAN_SDK");
 VulkanLibrary = VulkanSDK .. "/Lib/vulkan-1.lib"
 VulkanSDKInclude = VulkanSDK .. "/Include"
+FMTInclude = "Cinnamon/include/ThirdParty/fmt/include"
 
 -- Use volk as a static lib from SDK? (Can't use debug symbols)
 -- VolkInclude = VulkanSDK;
@@ -85,6 +86,7 @@ workspace (WorkspaceName)
 group "ThirdParty"
 include "Cinnamon/include/ThirdParty/xdg"
 include "Cinnamon/include/ThirdParty/volk"
+include "Cinnamon/include/ThirdParty/fmt"
 group ""
 
 project (CoreProjectName)
@@ -123,6 +125,7 @@ project (CoreProjectName)
 	{
 		"%{prj.name}/include",
 		VulkanSDKInclude,
+		FMTInclude,
 	}
 	
 	links
