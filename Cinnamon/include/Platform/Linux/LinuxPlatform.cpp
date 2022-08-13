@@ -1,5 +1,4 @@
 #ifdef CIN_PLATFORM_LINUX
-#include "Platform/Platform.h"
 #include "Cinnamon/include/Core/Core.h"
 
 namespace Cinnamon {
@@ -60,6 +59,11 @@ namespace Cinnamon {
 	void Platform::WriteToConsole(const char* message, const EConsoleTextColor color)
 	{
         CIN_UNUSED(color); printf(message);
+	}
+
+	[[nodiscard]] STL::String Platform::GetBuildDate()
+	{
+		return CIN_TIMESTAMP;
 	}
 }
 #endif

@@ -113,9 +113,10 @@ namespace Cinnamon {
 
 		return true;
 	}
-
 	bool Application::OnKeyPressed(KeyPressedEvent& event)
 	{
+
+    #ifndef CIN_PLATFORM_LINUX // Fix
 		const Key key{ event.GetKey() };
 		switch(key)
 		{
@@ -136,6 +137,10 @@ namespace Cinnamon {
 
 		/* Handled for now */
 		return true;
+    #else
+        (void)event;
+        return true;
+    #endif
 	}
 
 	const Application* Application::Get()
