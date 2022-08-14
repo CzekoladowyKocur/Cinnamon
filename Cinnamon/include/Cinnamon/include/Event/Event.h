@@ -6,14 +6,13 @@ namespace Cinnamon {
 	class Event;
 	using EventCallbackFunction = std::function<void(Event& event)>;
 #define BIND_EVENT_FUNCTION(function) std::bind(&##function, this, std::placeholders::_1)
-#define GLUE_ME_BABY(token) token::
-#define EVENT_TYPE(event_)																																										\
-	static consteval EEventType GetEventTypeStatic() { static_assert(std::is_base_of<Event, event_##Event>::value, "Class is not derived from Event!"); return GLUE_ME_BABY(EEventType) event_; }			\
+#define EVENT_TYPE(event_) \
+	static consteval EEventType GetEventTypeStatic() { static_assert(std::is_base_of<Event, event_##Event>::value, "Class is not derived from Event!"); return EEventType::event_; } \
 	CIN_FORCE_INLINE EEventType GetEventType() const override final { return GetEventTypeStatic(); }
 
-#define EVENT_CATEGORY(event_)																																									\
-	CIN_FORCE_INLINE EEventCategory GetEventCategory() const override final { return GLUE_ME_BABY(EEventCategory) event_; } 
-	
+#define EVENT_CATEGORY(event_) \
+	CIN_FORCE_INLINE EEventCategory GetEventCategory() const override final { return EEventCategory::event_; }
+
 	template<typename T>
 	concept EventClassDerivative = std::is_base_of<Event, T>::value;
 }
