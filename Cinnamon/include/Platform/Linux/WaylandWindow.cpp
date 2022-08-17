@@ -2,12 +2,15 @@
 #include "Cinnamon/include/Core/Window.h"
 #include "Cinnamon/include/Event/WindowEvent.h"
 #include "Cinnamon/include/Event/ApplicationEvent.h"
+#include "Cinnamon/include/Event/KeyEvent.h"
 
 #include <wayland-client.h>
 extern "C"
 {
 #include "ThirdParty/xdg/xdg-shell-unstable-v6.h"
 }
+#include <xkbcommon/xkbcommon.h>
+#include <sys/mman.h>
 
 #define wl_array_for_each_casted(pos, array, type) \
 	for \
@@ -58,86 +61,291 @@ namespace Cinnamon {
 	    wl_registry* registry { nullptr };
 	    zxdg_shell_v6* xdgShell { nullptr };
 	    wl_output* output { nullptr };
-	    wl_seat* seat { nullptr };
+	    wl_seat* wlSeat { nullptr };
 
 	    // Objects
-	    wl_surface* waylandSurface { nullptr };
+
+		/* Surfaces*/
+	    wl_surface* wlSurface { nullptr };
 	    zxdg_surface_v6* xdgSurface { nullptr };
 	    zxdg_toplevel_v6* xdgToplevel { nullptr };
+
+		/* Input */
+		xkb_context* xkbContext { nullptr };
+		xkb_state* xkbState { nullptr };
+		xkb_keymap* xkbKeymap { nullptr };
+		wl_keyboard* wlKeyboard { nullptr };
 	};
 
 	// -- wayland surface
-	InternalScope void WaylandSurfaceEnter
+	InternalScope void wlSurfaceEnter
 	(
 	    void* data,
-	    wl_surface* waylandSurface,
+	    wl_surface* wlSurface,
 	    wl_output* output
 	)
 	{
 	    /* Todo: implement */
 	    (void)data;
-	    (void)waylandSurface;
+	    (void)wlSurface;
 	    (void)output;
 	}
 
-	InternalScope void WaylandSurfaceLeave
+	InternalScope void wlSurfaceLeave
 	(
 	    void* data,
-	    wl_surface* waylandSurface,
+	    wl_surface* wlSurface,
 	    wl_output* output
 	)
 	{
 	    /* Todo: implement */
 	    (void)data;
-	    (void)waylandSurface;
+	    (void)wlSurface;
 	    (void)output;
 	}
 
-	InternalScope constexpr wl_surface_listener waylandSurfaceListener
+	InternalScope constexpr wl_surface_listener wlSurfaceListener
 	{
-	    .enter = WaylandSurfaceEnter,
-	    .leave = WaylandSurfaceLeave
+	    .enter = wlSurfaceEnter,
+	    .leave = wlSurfaceLeave 
 	};
 	// wayland surface --
 
 	// -- frame callback
 	InternalScope void FrameCallback(void* data, wl_callback* frameCallback, uint32_t time);
 
-	InternalScope constexpr wl_callback_listener waylandSurfaceFrameListener
+	InternalScope constexpr wl_callback_listener wlSurfaceFrameListener
 	{
 	    .done = FrameCallback
 	};
 
-	InternalScope void FrameCallback(void* data, wl_callback* frameCallback, uint32_t time)
+	InternalScope void FrameCallback(void* data, wl_callback* callback, uint32_t time)
 	{
 	    /* Todo: properly manage frame callback */
 
 	    (void)time;
 
-	    wl_callback_destroy(frameCallback);
+	    wl_callback_destroy(callback);
 
 		Window* window = reinterpret_cast<Window*>(data);
-		const PlatformWindowState* state { window->GetState() };
+		const PlatformWindowState* windowState { window->GetState() };
 
-	    wl_callback* newFrameCallback = wl_surface_frame(state->waylandSurface);
-	    wl_callback_add_listener(newFrameCallback, &waylandSurfaceFrameListener, window);
+	    wl_callback* newCallback = wl_surface_frame(windowState->wlSurface);
+	    wl_callback_add_listener(newCallback, &wlSurfaceFrameListener, window);
 
         ApplicationRenderEvent event;
         window->SendEvent(event);
 	}
 	// frame callback --
 
+	// -- wl keyboard
+	InternalScope void wlKeyboardEnter
+	(
+		void *data,
+		wl_keyboard *wlKeyboard,
+		uint32_t serial,
+		wl_surface *wlSurface,
+		wl_array *keys
+	)
+	{
+		(void)data;
+		(void)wlKeyboard;
+		(void)serial;
+		(void)wlSurface;
+
+		/* CIN_TRACE("wl-keyboard: Received keyboard focus"); */
+
+		uint32_t *key;
+		wl_array_for_each_casted(key, keys, uint32_t*)
+		{
+			/* Manage properly? */
+		}
+	}
+
+	InternalScope void wlKeyboardKey
+	(
+		void *data,
+		wl_keyboard *wlKeyboard,
+		uint32_t serial,
+		uint32_t time,
+		uint32_t key,
+		uint32_t keyState
+	)
+	{
+		(void)wlKeyboard;
+		(void)serial;
+		(void)time;
+
+		Window* window = reinterpret_cast<Window*>(data);
+
+		if(keyState == WL_KEYBOARD_KEY_STATE_PRESSED)
+		{
+			KeyPressedEvent event(key);
+			window->SendEvent(event);
+		}
+		else
+		{
+			KeyReleasedEvent event(key);
+			window->SendEvent(event);
+		}
+	}
+
+	InternalScope void wlKeyboardKeymap
+	(
+		void *data,
+		wl_keyboard *wlKeyboard,
+		uint32_t format,
+		int32_t fd,
+		uint32_t size
+	)
+	{
+		(void)wlKeyboard;
+
+		Window* window = reinterpret_cast<Window*>(data);
+		PlatformWindowState* windowState = const_cast<PlatformWindowState*>(window->GetState());
+
+		CIN_ASSERT(format == WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1);
+
+		char* map_shm = reinterpret_cast<char*>(mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0));
+		CIN_ASSERT(map_shm != MAP_FAILED);
+
+		xkb_keymap *xkbKeymap = xkb_keymap_new_from_string(windowState->xkbContext, map_shm, XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
+
+		munmap(map_shm, size);
+		close(fd);
+
+		xkb_state *xkbState = xkb_state_new(xkbKeymap);
+		xkb_keymap_unref(windowState->xkbKeymap);
+		xkb_state_unref(windowState->xkbState);
+		windowState->xkbKeymap = xkbKeymap;
+		windowState->xkbState = xkbState;
+
+		CIN_TRACE("wl-keyboard: Got keymap");
+	}
+
+	InternalScope void wlKeyboardLeave
+	(
+		void *data,
+		wl_keyboard *wlKeyboard,
+	    uint32_t serial,
+		wl_surface *wlSurface
+	)
+	{
+		(void)data;
+		(void)wlKeyboard;
+		(void)serial;
+		(void)wlSurface;
+
+		/* CIN_TRACE("wl-keyboard: Lost keyboard focus"); */
+	}
+
+	InternalScope void wlKeyboardModifiers
+	(
+		void *data,
+		wl_keyboard *wlKeyboard,
+	    uint32_t serial,
+		uint32_t modsDepressed,
+	    uint32_t modsLatched,
+		uint32_t modsLocked,
+	    uint32_t group
+	)
+	{
+		(void)data;
+		(void)wlKeyboard;
+		(void)serial;
+		(void)modsDepressed;
+		(void)modsLatched;
+		(void)modsLocked;
+		(void)group;
+	}
+
+	InternalScope void wlKeyboardRepeatInfo
+	(
+		void *data,
+		wl_keyboard *wlKeyboard,
+	    int32_t rate,
+		int32_t delay
+	)
+	{
+		(void)data;
+		(void)wlKeyboard;
+	    (void)rate;
+		(void)delay;
+
+	    /* Todo: Implement */
+	}
+
+	InternalScope constexpr wl_keyboard_listener wlKeyboardListener
+	{
+		.keymap = wlKeyboardKeymap,
+		.enter = wlKeyboardEnter,
+		.leave = wlKeyboardLeave,
+		.key = wlKeyboardKey,
+		.modifiers = wlKeyboardModifiers,
+		.repeat_info = wlKeyboardRepeatInfo
+	};
+	// wl keyboard --
+
+	// -- wl seat
+	InternalScope void wlSeatCapabilities
+	(
+		void *data,
+		wl_seat *wlSeat,
+		uint32_t capabilities
+	)
+	{
+		(void)data;
+		(void)wlSeat;
+		(void)capabilities;
+
+		Window* window = reinterpret_cast<Window*>(data);
+		PlatformWindowState* windowState = const_cast<PlatformWindowState*>(window->GetState());
+
+		bool keyboardCapability { bool(capabilities & WL_SEAT_CAPABILITY_KEYBOARD) };
+
+		if(keyboardCapability && windowState->wlKeyboard == NULL)
+		{
+			windowState->wlKeyboard = wl_seat_get_keyboard(windowState->wlSeat);
+			wl_keyboard_add_listener(windowState->wlKeyboard, &wlKeyboardListener, window);
+		}
+		else if(!keyboardCapability && windowState->wlKeyboard != NULL)
+		{
+			wl_keyboard_release(windowState->wlKeyboard);
+			windowState->wlKeyboard = nullptr;
+		}
+	}
+
+	InternalScope void wlSeatName
+	(
+		void *data,
+		wl_seat *wlSeat,
+		const char *name
+	)
+	{
+		(void)data;
+		(void)wlSeat;
+
+		CIN_TRACE("wl-seat: Seat name: {0}", name);
+	}
+
+	InternalScope constexpr wl_seat_listener wlSeatListener
+	{
+		.capabilities = wlSeatCapabilities,
+		.name = wlSeatName
+	};
+	// wl seat --
+
 	// -- xdg shell
 	InternalScope void xdgShellPingHandler
 	(
 	    void *data,
-	    zxdg_shell_v6 *xdg_shell,
+	    zxdg_shell_v6 *xdgShell,
 	    uint32_t serial
 	)
 	{
 	    (void)data;
 
-	    zxdg_shell_v6_pong(xdg_shell, serial);
+	    zxdg_shell_v6_pong(xdgShell, serial);
 	}
 
 	InternalScope constexpr zxdg_shell_v6_listener xdgShellListener
@@ -150,12 +358,12 @@ namespace Cinnamon {
 	InternalScope void xdgSurfaceConfigureHandler
 	(
 	    void *data,
-	    zxdg_surface_v6 *xdg_surface,
+	    zxdg_surface_v6 *xdgSurface,
 	    uint32_t serial
 	)
 	{
 	    (void)data;
-	    zxdg_surface_v6_ack_configure(xdg_surface, serial);
+	    zxdg_surface_v6_ack_configure(xdgSurface, serial);
 	}
 
 	InternalScope constexpr zxdg_surface_v6_listener xdgSurfaceListener
@@ -177,6 +385,9 @@ namespace Cinnamon {
 	    (void)xdgToplevel;
 
 	    Window* window = reinterpret_cast<Window*>(data);
+		WindowProperties& windowProperties { window->GetProperties() };
+
+		windowProperties.Mode = EWindowMode::Windowed;
 
 	    const zxdg_toplevel_v6_state* state;
 	    wl_array_for_each_casted(state, states, zxdg_toplevel_v6_state*) // c++ being a crybaby about assigning void* to zxdg_toplevel_v6_state*
@@ -189,24 +400,27 @@ namespace Cinnamon {
 
 	        case ZXDG_TOPLEVEL_V6_STATE_FULLSCREEN:
 	            CIN_INFO("xdg-shell: Fullscreen");
-	            window->SetWindowMode(EWindowMode::WindowedFullscreen);
+	            /* window->SetWindowMode(EWindowMode::Fullscreen); */
+				windowProperties.Mode = EWindowMode::Fullscreen;
 	            break;
 
 	        case ZXDG_TOPLEVEL_V6_STATE_MAXIMIZED:
 	            CIN_INFO("xdg-shell: Maximized");
-	            window->SetWindowMode(EWindowMode::Maximized);
+	            /* window->SetWindowMode(EWindowMode::Maximized); */
+				windowProperties.Mode = EWindowMode::Maximized;
 	            break;
 
 	        case ZXDG_TOPLEVEL_V6_STATE_RESIZING:
-	            window->SetWindowMode(EWindowMode::Windowed);
+				/* window->SetWindowMode(EWindowMode::Windowed); */
+				/* windowProperties.Mode = EWindowMode::Windowed; */
 	            break;
 
 	        default:
-	            CIN_WARN("should not happenTM at {0}", __FILE__);
 	            break;
 	        }
 	    }
 
+		/* Todo: Properly manage { 0, 0 } */
 	    if(width && height)
 	    {
 	        const auto [ windowWidth, windowHeight ] { window->GetSize() };
@@ -282,7 +496,7 @@ namespace Cinnamon {
 	    }
 	    else if(strcmp(interface, wl_seat_interface.name) == 0)
 	    {
-	        reinterpret_cast<PlatformWindowState*>(data)->seat =
+	        reinterpret_cast<PlatformWindowState*>(data)->wlSeat =
 	        (wl_seat*)wl_registry_bind(registry, name, &wl_seat_interface, version);
 
 	        if(wl_seat_interface.version != int32_t(version))
@@ -340,24 +554,33 @@ namespace Cinnamon {
         if(!WaylandSetup(m_State))
         {
             CIN_CRITICAL("Failed connecting to the display or retrieving globals from the registry");
+
             /* Todo: Add wayland cleanup */
+
+			cindel m_State;
+
             exit(EXIT_FAILURE);
         }
 
-        m_State->waylandSurface = wl_compositor_create_surface(m_State->compositor);
-        wl_surface_add_listener(m_State->waylandSurface, &waylandSurfaceListener, this);
+		m_State->xkbContext = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 
-		wl_callback* newFrameCallback = wl_surface_frame(m_State->waylandSurface);
-        wl_callback_add_listener(newFrameCallback, &waylandSurfaceFrameListener, this);
+		wl_seat_add_listener(m_State->wlSeat, &wlSeatListener, this);
 
-        m_State->xdgSurface = zxdg_shell_v6_get_xdg_surface(m_State->xdgShell, m_State->waylandSurface);
+        m_State->wlSurface = wl_compositor_create_surface(m_State->compositor);
+        wl_surface_add_listener(m_State->wlSurface, &wlSurfaceListener, this);
+
+		wl_callback* newFrameCallback = wl_surface_frame(m_State->wlSurface);
+        wl_callback_add_listener(newFrameCallback, &wlSurfaceFrameListener, this);
+
+        m_State->xdgSurface = zxdg_shell_v6_get_xdg_surface(m_State->xdgShell, m_State->wlSurface);
         m_State->xdgToplevel = zxdg_surface_v6_get_toplevel(m_State->xdgSurface);
 
         zxdg_shell_v6_add_listener(m_State->xdgShell, &xdgShellListener, NULL);
         zxdg_surface_v6_add_listener(m_State->xdgSurface, &xdgSurfaceListener, this);
         zxdg_toplevel_v6_add_listener(m_State->xdgToplevel, &xdgToplevelListener, this);
 
-        wl_surface_commit(m_State->waylandSurface);
+        wl_surface_commit(m_State->wlSurface);
+
         wl_display_roundtrip(m_State->display);
 
         m_Properties.Mode = EWindowMode::Unspecified;
@@ -412,6 +635,11 @@ namespace Cinnamon {
         return m_State;
     }
 
+	WindowProperties& Window::GetProperties()
+	{
+		return m_Properties;
+	}
+
 	const void* Window::GetNativeHandle() const
     {
         CIN_UNIMPLEMENTED(); return nullptr;
@@ -435,7 +663,46 @@ namespace Cinnamon {
 
 	void Window::SetWindowMode(const EWindowMode windowMode)
     {
-        m_Properties.Mode = windowMode;
+		switch(windowMode)
+		{
+			case EWindowMode::Fullscreen:
+			{
+				if(m_Properties.Mode != EWindowMode::Fullscreen)
+				{
+					/* m_Properties.Mode = EWindowMode::Fullscreen; */
+					zxdg_toplevel_v6_set_fullscreen(m_State->xdgToplevel, m_State->output);
+				}
+
+				break;
+			}
+
+			case EWindowMode::Maximized:
+			{
+				if(m_Properties.Mode != EWindowMode::Maximized)
+				{
+					/* m_Properties.Mode = EWindowMode::Maximized; */
+					zxdg_toplevel_v6_set_maximized(m_State->xdgToplevel);
+				}
+
+				break;
+			}
+
+			case EWindowMode::Windowed:
+			{
+				if(m_Properties.Mode != EWindowMode::Windowed)
+				{
+					if(m_Properties.Mode == EWindowMode::Fullscreen)
+						zxdg_toplevel_v6_unset_fullscreen(m_State->xdgToplevel);
+					else if(m_Properties.Mode == EWindowMode::Maximized)
+						zxdg_toplevel_v6_unset_maximized(m_State->xdgToplevel);
+				}
+
+				break;
+			}
+
+			default:
+				break;
+		}
     }
 
 	void Window::SetSize(std::pair<uint32_t, uint32_t> windowSize) // Huh

@@ -58,7 +58,7 @@ namespace Cinnamon {
 
 	void Platform::WriteToConsole(const char* message, const EConsoleTextColor color)
 	{
-        CIN_UNUSED(color); printf(message);
+        CIN_UNUSED(color); printf("%s", message);
 	}
 
 	[[nodiscard]] STL::String Platform::GetBuildDate()

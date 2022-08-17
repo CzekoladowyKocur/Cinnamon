@@ -9,8 +9,8 @@ namespace Cinnamon {
 	{
 		Unspecified = 0,
 		Windowed = 1,
-		WindowedFullscreen = 2,
-		Maximized = 3
+		Maximized = 2,
+		Fullscreen = 3,
 	};
 
 	struct WindowProperties
@@ -54,6 +54,7 @@ namespace Cinnamon {
 		std::pair<uint32_t, uint32_t> GetSize() const;
 		EventCallbackFunction GetEventCallback() const;
 		const PlatformWindowState* GetState() const;
+		WindowProperties& GetProperties();
 		const void* GetNativeHandle() const;
 
 		void SetName(const char8_t* windowName);

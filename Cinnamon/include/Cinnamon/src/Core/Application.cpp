@@ -25,7 +25,7 @@ namespace Cinnamon {
 	bool Application::Initialize()
 	{
 		/* TODO: Set window event callbacks after context creation? */
-		m_Window = cinew Window(WindowProperties{ u8"Cinnamon Application", 800U, 600U, EWindowMode::WindowedFullscreen });
+		m_Window = cinew Window(WindowProperties{ u8"Cinnamon Application", 800U, 600U, EWindowMode::Fullscreen });
 
 		if (!GraphicsContext::Initialize())
 		{
@@ -115,32 +115,31 @@ namespace Cinnamon {
 	}
 	bool Application::OnKeyPressed(KeyPressedEvent& event)
 	{
-
-    #ifndef CIN_PLATFORM_LINUX // Fix
 		const Key key{ event.GetKey() };
 		switch(key)
 		{
 			case Key::F10:
 			{
 				const EWindowMode currentWindowMode{ m_Window->GetWindowMode() };
-				m_Window->SetWindowMode(currentWindowMode != EWindowMode::WindowedFullscreen ? EWindowMode::WindowedFullscreen : EWindowMode::Windowed);
-				
+				m_Window->SetWindowMode(currentWindowMode != EWindowMode::Maximized ? EWindowMode::Maximized : EWindowMode::Windowed);
+
 				break;
 			}
 
 			case Key::F11:
 			{
-				m_Window->SetWindowMode(EWindowMode::Maximized);
+				const EWindowMode currentWindowMode{ m_Window->GetWindowMode() };
+				m_Window->SetWindowMode(currentWindowMode != EWindowMode::Fullscreen ? EWindowMode::Fullscreen : EWindowMode::Windowed);
+
 				break;
 			}
+
+			default:
+				break;
 		}
 
 		/* Handled for now */
 		return true;
-    #else
-        (void)event;
-        return true;
-    #endif
 	}
 
 	const Application* Application::Get()

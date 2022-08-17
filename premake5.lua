@@ -138,6 +138,7 @@ project (CoreProjectName)
         {
             "wayland-client",
             "xdg",
+			"xkbcommon"
         }
 
 project (EditorProjectName)
