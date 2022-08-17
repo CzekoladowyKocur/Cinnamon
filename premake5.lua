@@ -136,8 +136,8 @@ project (CoreProjectName)
 	filter "system:linux"
 		links
         {
-            "wayland-client",
-            "xdg",
+			"wayland-client",
+			"xdg",
 			"xkbcommon"
         }
 

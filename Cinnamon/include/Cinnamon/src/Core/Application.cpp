@@ -25,7 +25,7 @@ namespace Cinnamon {
 	bool Application::Initialize()
 	{
 		/* TODO: Set window event callbacks after context creation? */
-		m_Window = cinew Window(WindowProperties{ u8"Cinnamon Application", 800U, 600U, EWindowMode::Fullscreen });
+		m_Window = cinew Window(WindowProperties{ "Cinnamon Application", 800U, 600U, EWindowMode::Fullscreen });
 
 		if (!GraphicsContext::Initialize())
 		{
@@ -132,6 +132,12 @@ namespace Cinnamon {
 				m_Window->SetWindowMode(currentWindowMode != EWindowMode::Fullscreen ? EWindowMode::Fullscreen : EWindowMode::Windowed);
 
 				break;
+			}
+
+			case Key::A:
+			{
+				CIN_CRITICAL("A IS NOT REAL");
+				m_Window->SetName("A IS NOT REAL");
 			}
 
 			default:

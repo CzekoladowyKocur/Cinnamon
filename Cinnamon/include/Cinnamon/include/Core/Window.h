@@ -16,14 +16,14 @@ namespace Cinnamon {
 	struct WindowProperties
 	{
 		/* TODO: Change to string class */
-		const char8_t* Name;
+		const char* Name;
 		uint32_t Width;
 		uint32_t Height;
 		EWindowMode Mode;
 		/* TODO: Add vsync */
 
 		explicit WindowProperties(
-			const char8_t* windowName,
+			const char* windowName,
 			const uint32_t windowWidth,
 			const uint32_t windowHeight,
 			const EWindowMode windowMode) noexcept
@@ -47,7 +47,7 @@ namespace Cinnamon {
 		void PollEvents();
 		void SendEvent(Event& event);
 
-		const char8_t* GetName() const;
+		const char* GetName() const;
 		uint32_t GetWidth() const;
 		uint32_t GetHeight() const;
 		EWindowMode GetWindowMode() const;
@@ -57,7 +57,7 @@ namespace Cinnamon {
 		WindowProperties& GetProperties();
 		const void* GetNativeHandle() const;
 
-		void SetName(const char8_t* windowName);
+		void SetName(const char* windowName);
 		void SetWidth(const uint32_t windowWidth);
 		void SetHeight(const uint32_t windowHeight);
 		void SetWindowMode(const EWindowMode windowMode);

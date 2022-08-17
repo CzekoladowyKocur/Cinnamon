@@ -272,7 +272,7 @@ namespace Cinnamon {
 	    (void)rate;
 		(void)delay;
 
-	    /* Todo: Implement */
+	    /* Todo: Implement? */
 	}
 
 	InternalScope constexpr wl_keyboard_listener wlKeyboardListener
@@ -501,7 +501,6 @@ namespace Cinnamon {
 
 	        if(wl_seat_interface.version != int32_t(version))
 	            CIN_INFO("using wl_seat_interface version {0} but the desired version is {1}", version, wl_seat_interface.version);
-
 	    }
 	}
 
@@ -524,24 +523,60 @@ namespace Cinnamon {
 	};
 	// registry --
 
-	InternalScope bool WaylandSetup(PlatformWindowState* state)
+	InternalScope CIN_FORCE_INLINE void InputSetup(Window* window)
 	{
-	    state->display = wl_display_connect(NULL);
-	    if(!state->display)
-	        return 0;
+		PlatformWindowState* windowState = const_cast<PlatformWindowState*>(window->GetState());
 
-	    state->registry = wl_display_get_registry(state->display);
-	    if(!state->registry)
-	        return 0;
+		windowState->xkbContext = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+		wl_seat_add_listener(windowState->wlSeat, &wlSeatListener, window);
+	}
 
-	    wl_registry_add_listener(state->registry, &registryListener, state);
+	InternalScope CIN_FORCE_INLINE void SurfaceSetup(Window* window)
+	{
+		PlatformWindowState* windowState = const_cast<PlatformWindowState*>(window->GetState());
 
-	    wl_display_roundtrip(state->display);
+	    if(!windowState->xdgShell)
+		{
+			CIN_CRITICAL("Couldn't find xdg-shell resource, make sure your compositor supports xdg-shell extension");
+			CIN_PANIC_EXIT();
+		}
 
-	    if(!state->compositor) { return 0; }
-	    if(!state->xdgShell) { CIN_CRITICAL("Couldn't find xdg-shell resource, make sure your compositor supports xdg-shell extension"); return 0; }
+        windowState->wlSurface = wl_compositor_create_surface(windowState->compositor);
+        wl_surface_add_listener(windowState->wlSurface, &wlSurfaceListener, window);
 
-	    return 1;
+		wl_callback* fCallback = wl_surface_frame(windowState->wlSurface);
+        wl_callback_add_listener(fCallback, &wlSurfaceFrameListener, window);
+
+        windowState->xdgSurface = zxdg_shell_v6_get_xdg_surface(windowState->xdgShell, windowState->wlSurface);
+        windowState->xdgToplevel = zxdg_surface_v6_get_toplevel(windowState->xdgSurface);
+
+        zxdg_shell_v6_add_listener(windowState->xdgShell, &xdgShellListener, NULL);
+        zxdg_surface_v6_add_listener(windowState->xdgSurface, &xdgSurfaceListener, window);
+        zxdg_toplevel_v6_add_listener(windowState->xdgToplevel, &xdgToplevelListener, window);
+
+        wl_surface_commit(windowState->wlSurface);
+	}
+
+	InternalScope CIN_FORCE_INLINE void WaylandSetup(Window* window)
+	{
+		PlatformWindowState* windowState = const_cast<PlatformWindowState*>(window->GetState());
+
+	    windowState->display = wl_display_connect(NULL);
+	    if(!windowState->display)
+		{
+			CIN_CRITICAL("Couldn't connect to a wayland display");
+			CIN_PANIC_EXIT();
+		}
+
+		/* Registry */
+	    windowState->registry = wl_display_get_registry(windowState->display);
+	    wl_registry_add_listener(windowState->registry, &registryListener, windowState);
+	    wl_display_roundtrip(windowState->display);
+
+		InputSetup(window);
+		SurfaceSetup(window);
+
+        wl_display_roundtrip(windowState->display);
 	}
 
 	Window::Window(WindowProperties&& windowProperties, const EventCallbackFunction callback) noexcept
@@ -551,37 +586,7 @@ namespace Cinnamon {
 	{
         m_State = cinew PlatformWindowState;
 
-        if(!WaylandSetup(m_State))
-        {
-            CIN_CRITICAL("Failed connecting to the display or retrieving globals from the registry");
-
-            /* Todo: Add wayland cleanup */
-
-			cindel m_State;
-
-            exit(EXIT_FAILURE);
-        }
-
-		m_State->xkbContext = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
-
-		wl_seat_add_listener(m_State->wlSeat, &wlSeatListener, this);
-
-        m_State->wlSurface = wl_compositor_create_surface(m_State->compositor);
-        wl_surface_add_listener(m_State->wlSurface, &wlSurfaceListener, this);
-
-		wl_callback* newFrameCallback = wl_surface_frame(m_State->wlSurface);
-        wl_callback_add_listener(newFrameCallback, &wlSurfaceFrameListener, this);
-
-        m_State->xdgSurface = zxdg_shell_v6_get_xdg_surface(m_State->xdgShell, m_State->wlSurface);
-        m_State->xdgToplevel = zxdg_surface_v6_get_toplevel(m_State->xdgSurface);
-
-        zxdg_shell_v6_add_listener(m_State->xdgShell, &xdgShellListener, NULL);
-        zxdg_surface_v6_add_listener(m_State->xdgSurface, &xdgSurfaceListener, this);
-        zxdg_toplevel_v6_add_listener(m_State->xdgToplevel, &xdgToplevelListener, this);
-
-        wl_surface_commit(m_State->wlSurface);
-
-        wl_display_roundtrip(m_State->display);
+        WaylandSetup(this);
 
         m_Properties.Mode = EWindowMode::Unspecified;
     }
@@ -605,7 +610,7 @@ namespace Cinnamon {
         m_EventCallback(event);
     }
 
-	const char8_t* Window::GetName() const
+	const char* Window::GetName() const
     {
         return m_Properties.Name;
     }
@@ -642,13 +647,13 @@ namespace Cinnamon {
 
 	const void* Window::GetNativeHandle() const
     {
-        CIN_UNIMPLEMENTED(); return nullptr;
+		CIN_UNIMPLEMENTED(); return nullptr;
     }
 
-	void Window::SetName(const char8_t* windowName)
+	void Window::SetName(const char* windowName)
     {
         m_Properties.Name = windowName;
-        zxdg_toplevel_v6_set_title(m_State->xdgToplevel, reinterpret_cast<const char*>(m_Properties.Name));
+        zxdg_toplevel_v6_set_title(m_State->xdgToplevel, m_Properties.Name);
     }
 
 	void Window::SetWidth(const uint32_t windowWidth)
