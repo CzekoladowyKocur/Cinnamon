@@ -9,8 +9,6 @@ extern "C"
 {
 #include "ThirdParty/xdg/xdg-shell-unstable-v6.h"
 }
-#include <xkbcommon/xkbcommon.h>
-#include <sys/mman.h>
 
 #define wl_array_for_each_casted(pos, array, type) \
 	for \
@@ -19,36 +17,6 @@ extern "C"
     (pos)++)
 
 /* Todo: Manage closing the window and destroying this object properly */
-
-//InternalScope void WaylandCleanup(Cinnamon::PlatformWindowState* state)
-//{
-//    if(state->seat)
-//        wl_seat_destroy(state->seat);
-//
-//    if(state->output)
-//        wl_output_destroy(state->output);
-//
-//    if(state->xdgToplevel)
-//        zxdg_toplevel_v6_destroy(state->xdgToplevel);
-//
-//    if(state->xdgSurface)
-//        zxdg_surface_v6_destroy(state->xdgSurface);
-//
-//    if(state->xdgShell)
-//        zxdg_shell_v6_destroy(state->xdgShell);
-//
-//    if(state->waylandSurface)
-//        wl_surface_destroy(state->waylandSurface);
-//
-//    if(state->compositor)
-//        wl_compositor_destroy(state->compositor);
-//    
-//    if(state->registry)
-//        wl_registry_destroy(state->registry);
-//
-//    if(state->display)
-//        wl_display_disconnect(state->display);
-//}
 
 namespace Cinnamon {
 
@@ -71,9 +39,6 @@ namespace Cinnamon {
 	    zxdg_toplevel_v6* xdgToplevel { nullptr };
 
 		/* Input */
-		xkb_context* xkbContext { nullptr };
-		xkb_state* xkbState { nullptr };
-		xkb_keymap* xkbKeymap { nullptr };
 		wl_keyboard* wlKeyboard { nullptr };
 	};
 
@@ -199,28 +164,14 @@ namespace Cinnamon {
 		uint32_t size
 	)
 	{
+		(void)data;
 		(void)wlKeyboard;
+		(void)format;
+		(void)size;
 
-		Window* window = reinterpret_cast<Window*>(data);
-		PlatformWindowState* windowState = const_cast<PlatformWindowState*>(window->GetState());
-
-		CIN_ASSERT(format == WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1);
-
-		char* map_shm = reinterpret_cast<char*>(mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0));
-		CIN_ASSERT(map_shm != MAP_FAILED);
-
-		xkb_keymap *xkbKeymap = xkb_keymap_new_from_string(windowState->xkbContext, map_shm, XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
-
-		munmap(map_shm, size);
 		close(fd);
 
-		xkb_state *xkbState = xkb_state_new(xkbKeymap);
-		xkb_keymap_unref(windowState->xkbKeymap);
-		xkb_state_unref(windowState->xkbState);
-		windowState->xkbKeymap = xkbKeymap;
-		windowState->xkbState = xkbState;
-
-		CIN_TRACE("wl-keyboard: Got keymap");
+		CIN_TRACE("wl-keyboard: Keymap event");
 	}
 
 	InternalScope void wlKeyboardLeave
@@ -527,7 +478,6 @@ namespace Cinnamon {
 	{
 		PlatformWindowState* windowState = const_cast<PlatformWindowState*>(window->GetState());
 
-		windowState->xkbContext = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 		wl_seat_add_listener(windowState->wlSeat, &wlSeatListener, window);
 	}
 
