@@ -31,7 +31,8 @@ cat << EOF > c_cpp_propertires.json
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/**"
+                "\${workspaceFolder}/**",
+                "\${workspaceFolder}/Cinnamon/include"
             ],
             "defines": [
                 "CIN_DEBUG",
@@ -55,12 +56,12 @@ cat << EOF > launch.json
         "name": "Debug",
         "type": "cppdbg",
         "request": "launch",
-        "program": "${workspaceFolder}/bin/Debug-linux-x86_64/Cinnamon/Cinnamon",
+        "program": "\${workspaceFolder}/bin/Debug-linux-x86_64/Cinnamon/Cinnamon",
         "args": [],
         "stopAtEntry": false,
-        "cwd": "${fileDirname}",
+        "cwd": "\${fileDirname}",
         "environment": [],
-        "externalConsole": true,
+        "externalConsole": false,
         "MIMode": "gdb",
         "miDebuggerPath": "/usr/bin/gdb",
     }
