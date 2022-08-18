@@ -22,7 +22,6 @@ then
    exit 1
 fi
 
-rm *.json
 rm *.log
 
 cat << EOF > c_cpp_propertires.json
