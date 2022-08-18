@@ -1,8 +1,24 @@
-cd ../../.vscode
+cd ../../
 
+currentDirectory=$(echo "${PWD##*/}")
+if [[ "$currentDirectory" != "Cinnamon" ]]
+then
+	echo "Executing in wrong directory, aborting"
+	exit 1
+fi
+
+if [[ -d ".vscode" ]]
+then
+	echo "Found .vscode directory"
+else
+	echo "Did not found .vscode directory, making one..."
+	mkdir .vscode
+fi
+
+cd .vscode
 if [ $? != 0 ]
 then
-   echo "Failed changing directory, aborting" 
+   echo "Failed entering directory .vscode"
    exit 1
 fi
 
