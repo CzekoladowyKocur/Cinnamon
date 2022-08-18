@@ -165,7 +165,7 @@ namespace Cinnamon {
 		m_EventCallback(event);
 	}
 
-	const char8_t* Window::GetName() const
+	const char* Window::GetName() const
 	{
 		return m_Properties.Name;
 	}
@@ -205,7 +205,7 @@ namespace Cinnamon {
 		return m_State->Handle;
 	}
 
-	void Window::SetName(const char8_t* windowName)
+	void Window::SetName(const char* windowName)
 	{
 		m_Properties.Name = windowName;
 	}
@@ -222,6 +222,7 @@ namespace Cinnamon {
 
 	void Window::SetWindowMode(const EWindowMode windowMode)
 	{
+		[[unlikely]]
 		if (m_Properties.Mode == windowMode)
 			return;
 
@@ -232,9 +233,10 @@ namespace Cinnamon {
 		
 		switch (windowMode)
 		{
+			case EWindowMode::Unspecified:
 			case EWindowMode::Windowed:
 			{
-				if (currentWindowMode == EWindowMode::Maximized)
+				if (currentWindowMode == EWindowMode::Fullscreen)
 				{
 					CIN_VERIFY(SetWindowLong(
 						windowHandle,
@@ -254,9 +256,9 @@ namespace Cinnamon {
 				break;
 			}
 
-			case EWindowMode::WindowedFullscreen:
+			case EWindowMode::Maximized:
 			{
-				if (currentWindowMode == EWindowMode::Maximized)
+				if (currentWindowMode == EWindowMode::Fullscreen)
 				{
 					CIN_VERIFY(SetWindowLong(
 						windowHandle,
@@ -276,7 +278,7 @@ namespace Cinnamon {
 				break;
 			}
 
-			case EWindowMode::Maximized:
+			case EWindowMode::Fullscreen:
 			{
 				CIN_VERIFY(SetWindowLong(
 					windowHandle,

@@ -32,6 +32,15 @@
 #error Define me!
 #endif
 
+#ifdef CIN_PLATFORM_WINDOWS
+#define CIN_DISABLE_WARNINGS pragma warning(push, 0)
+#define CIN_ENABLE_WARNINGS pragma warning(pop)
+#elif defined CIN_PLATFORM_LINUX
+#define CIN_DISABLE_WARNINGS 
+#define CIN_ENABLE_WARNINGS 
+#error Define me!
+#endif
+
 #define BIT(n) 1 << (n - 1)
 
 #ifdef CIN_PLATFORM_WINDOWS

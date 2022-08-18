@@ -1,6 +1,7 @@
 #include "Cinnamon/include/Renderer/GraphicsContext.h"
 #include "Cinnamon/include/Renderer/Surface.h"
 #include "Cinnamon/include/Renderer/Swapchain.h"
+#include "Cinnamon/include/Core/Window.h"
 #include "Platform/Platform.h"
 
 namespace Cinnamon {
@@ -141,24 +142,26 @@ namespace Cinnamon {
 			}
 		}
 
-		VkApplicationInfo applicationInfo;
-		applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-		applicationInfo.pEngineName = "Cinnamon";
-		applicationInfo.pApplicationName = "Application"; /* TODO: Get from application */
-		applicationInfo.engineVersion = VK_MAKE_VERSION(0, 0, 1);
-		applicationInfo.applicationVersion = VK_MAKE_VERSION(0, 0, 1);
-		applicationInfo.apiVersion = VK_MAKE_API_VERSION(0, 1, 3, 0);
-		applicationInfo.pNext = nullptr;
+		constexpr VkApplicationInfo applicationInfo{
+			.sType{ VK_STRUCTURE_TYPE_APPLICATION_INFO },
+			.pNext{ nullptr },
+			.pApplicationName{ "Application" },
+			.applicationVersion{ VK_MAKE_VERSION(0, 0, 1) },
+			.pEngineName{ "Cinnamon" },
+			.engineVersion{ VK_MAKE_VERSION(0, 0, 1) },
+			.apiVersion{ VK_MAKE_API_VERSION(0, 1, 3, 0) },
+		};
 
-		VkInstanceCreateInfo instanceCreateInfo;
-		instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-		instanceCreateInfo.pApplicationInfo = &applicationInfo;
-		instanceCreateInfo.enabledLayerCount = requestedLayers.empty() ? 0 : static_cast<uint32_t>(requestedLayers.size());
-		instanceCreateInfo.ppEnabledLayerNames = requestedLayers.empty() ? nullptr : &requestedLayers[0];
-		instanceCreateInfo.enabledExtensionCount = requiredExtensions.empty() ? 0 : static_cast<uint32_t>(requiredExtensions.size());
-		instanceCreateInfo.ppEnabledExtensionNames = requiredExtensions.empty() ? nullptr : &requiredExtensions[0];
-		instanceCreateInfo.flags = 0;
-		instanceCreateInfo.pNext = nullptr;
+		const VkInstanceCreateInfo instanceCreateInfo{
+			.sType{ VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO },
+			.pNext{ nullptr },
+			.flags{ 0U },
+			.pApplicationInfo{ &applicationInfo },
+			.enabledLayerCount{ requestedLayers.empty() ? 0 : static_cast<uint32_t>(requestedLayers.size()) },
+			.ppEnabledLayerNames{ requestedLayers.empty() ? nullptr : &requestedLayers[0] },
+			.enabledExtensionCount{ requiredExtensions.empty() ? 0 : static_cast<uint32_t>(requiredExtensions.size()) },
+			.ppEnabledExtensionNames{  requiredExtensions.empty() ? nullptr : &requiredExtensions[0] },
+		};
 
 		VK_CHECK(vkCreateInstance(
 			&instanceCreateInfo,
@@ -169,11 +172,15 @@ namespace Cinnamon {
 #ifdef CIN_DEBUG
 		const auto _vkCreateDebugReportCallbackEXT{ (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(s_Instance, "vkCreateDebugReportCallbackEXT") };
 		CIN_ASSERT(_vkCreateDebugReportCallbackEXT != nullptr);
-		VkDebugReportCallbackCreateInfoEXT debugReportCreateInfo = {};
-		debugReportCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
-		debugReportCreateInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
-		debugReportCreateInfo.pfnCallback = VulkanDebugReportCallback;
-		debugReportCreateInfo.pUserData = nullptr;
+		
+		const VkDebugReportCallbackCreateInfoEXT debugReportCreateInfo{
+			.sType{ VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT },
+			.pNext{ nullptr },
+			.flags{ 0U },
+			.pfnCallback{ VulkanDebugReportCallback },
+			.pUserData{ nullptr },
+		};
+
 		_vkCreateDebugReportCallbackEXT(s_Instance, &debugReportCreateInfo, s_Allocator, &s_DebugObject);
 #endif
 		uint32_t physicalDeviceCount{ 0 };
@@ -284,20 +291,19 @@ namespace Cinnamon {
 		}
 
 		/* Graphics only for now */
-		STL::Vector<VkDeviceQueueCreateInfo> deviceQueueCreateInfos(1);
 		constexpr float queuePriority{ 1.0f };
+		const VkDeviceQueueCreateInfo queueCreateInfo{
+			.sType{ VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO },
+			.pNext{ nullptr },
+			.flags{ 0U },
+			.queueFamilyIndex{ static_cast<uint32_t>(s_QueueFamilies.Graphics) },
+			.queueCount{ 1U },
+			.pQueuePriorities{ &queuePriority },
+		};
 
-		VkDeviceQueueCreateInfo queueCreateInfo;
-		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		queueCreateInfo.queueFamilyIndex = s_QueueFamilies.Graphics;
-		queueCreateInfo.queueCount = 1;
-		queueCreateInfo.pQueuePriorities = &queuePriority;
-		queueCreateInfo.flags = 0;
-		queueCreateInfo.pNext = nullptr;
-		deviceQueueCreateInfos[0] = std::move(queueCreateInfo);
-
+		const STL::Vector<VkDeviceQueueCreateInfo> deviceQueueCreateInfos{ queueCreateInfo };
 		/* None for now */
-		VkPhysicalDeviceFeatures enabledFeatures{};
+		const VkPhysicalDeviceFeatures enabledFeatures{};
 
 		auto requestedLayers{ Platform::GetRequestedVulkanDeviceLayers() };
 		auto requiredExtensions{ Platform::GetRequiredVulkanDeviceExtensions() };
@@ -305,19 +311,19 @@ namespace Cinnamon {
 		/* Check device layer support */
 		if (!requestedLayers.empty())
 		{
-			uint32_t availableLayerCount{ 0 };
+			uint32_t availableLayerCount{ 0U };
 			VK_CHECK(vkEnumerateDeviceLayerProperties(s_PhysicalDevice, &availableLayerCount, nullptr));
-			if (availableLayerCount != 0)
+			if (availableLayerCount != 0U)
 			{
 				STL::Vector<VkLayerProperties> availableLayers(availableLayerCount);
 				VK_CHECK(vkEnumerateDeviceLayerProperties(s_PhysicalDevice, &availableLayerCount, &availableLayers[0]));
 
 				/* Continues program even if requested layer isn't supported */
-				for (uint32_t i{ 0 }; i < requestedLayers.size(); ++i)
+				for (uint32_t i{ 0U }; i < requestedLayers.size(); ++i)
 				{
 					bool found{ false };
 					CIN_TRACE("Requested layer: {0}", requestedLayers[i]);
-					for (uint32_t j{ 0 }; j < availableLayers.size(); ++j)
+					for (uint32_t j{ 0U }; j < availableLayers.size(); ++j)
 						if (strcmp(requestedLayers[i], availableLayers[j].layerName) == 0)
 						{
 							found = true;
@@ -341,10 +347,10 @@ namespace Cinnamon {
 		/* Check device extension support */
 		if (!requiredExtensions.empty())
 		{
-			uint32_t availableExtensionCount{ 0 };
+			uint32_t availableExtensionCount{ 0U };
 			VK_CHECK(vkEnumerateDeviceExtensionProperties(s_PhysicalDevice, nullptr, &availableExtensionCount, nullptr));
 
-			if (availableExtensionCount == 0 && !requiredExtensions.empty())
+			if (availableExtensionCount == 0U && !requiredExtensions.empty())
 			{
 				CIN_CRITICAL("Requested vulkan extensions, but none are available");
 				return false;
@@ -353,11 +359,11 @@ namespace Cinnamon {
 			STL::Vector<VkExtensionProperties> availableExtensions(availableExtensionCount);
 			VK_CHECK(vkEnumerateDeviceExtensionProperties(s_PhysicalDevice, nullptr, &availableExtensionCount, &availableExtensions[0]));
 
-			for (uint32_t i{ 0 }; i < requiredExtensions.size(); ++i)
+			for (uint32_t i{ 0U }; i < requiredExtensions.size(); ++i)
 			{
 				bool found{ false };
 				CIN_TRACE("Requested extension: {0}", requiredExtensions[i]);
-				for (uint32_t j{ 0 }; j < availableExtensions.size(); ++j)
+				for (uint32_t j{ 0U }; j < availableExtensions.size(); ++j)
 					if (strcmp(requiredExtensions[i], availableExtensions[j].extensionName) == 0)
 					{
 						CIN_TRACE("Found extension: {0}", requiredExtensions[i]);
@@ -374,17 +380,18 @@ namespace Cinnamon {
 		}
 
 		CIN_ASSERT(not deviceQueueCreateInfos.empty(), "No device queues requested");
-		VkDeviceCreateInfo deviceCreateInfo;
-		deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-		deviceCreateInfo.enabledLayerCount = requestedLayers.empty() ? 0 : static_cast<uint32_t>(requestedLayers.size());
-		deviceCreateInfo.ppEnabledLayerNames = requestedLayers.empty() ? nullptr : &requestedLayers[0];
-		deviceCreateInfo.enabledExtensionCount = requiredExtensions.empty() ? 0 : static_cast<uint32_t>(requiredExtensions.size());
-		deviceCreateInfo.ppEnabledExtensionNames = requiredExtensions.empty() ? nullptr : &requiredExtensions[0];
-		deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(deviceQueueCreateInfos.size());
-		deviceCreateInfo.pQueueCreateInfos = &deviceQueueCreateInfos[0];
-		deviceCreateInfo.pEnabledFeatures = &enabledFeatures;
-		deviceCreateInfo.flags = 0;
-		deviceCreateInfo.pNext = nullptr;
+		const VkDeviceCreateInfo deviceCreateInfo{
+			.sType{ VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO },
+			.pNext{ nullptr },
+			.flags{ 0U },
+			.queueCreateInfoCount{ static_cast<uint32_t>(deviceQueueCreateInfos.size()) },
+			.pQueueCreateInfos{ &deviceQueueCreateInfos[0U] },
+			.enabledLayerCount{ requestedLayers.empty() ? 0U : static_cast<uint32_t>(requestedLayers.size()) },
+			.ppEnabledLayerNames{ requestedLayers.empty() ? nullptr : &requestedLayers[0U] },
+			.enabledExtensionCount{ requiredExtensions.empty() ? 0U : static_cast<uint32_t>(requiredExtensions.size()) },
+			.ppEnabledExtensionNames{  requiredExtensions.empty() ? nullptr : &requiredExtensions[0U] },
+			.pEnabledFeatures{ &enabledFeatures },
+		};
 
 		VK_CHECK(vkCreateDevice(
 			s_PhysicalDevice,
@@ -397,7 +404,7 @@ namespace Cinnamon {
 		vkGetDeviceQueue(
 			s_LogicalDevice,
 			s_QueueFamilies.Graphics,
-			0, /* Pick first queue */
+			0U, /* Pick first queue */
 			&s_Queues.Graphics);
 
 		CIN_ASSERT(s_Queues.Graphics != VK_NULL_HANDLE, "Failed to pick graphics queue");
@@ -419,6 +426,16 @@ namespace Cinnamon {
 		swapchain->Recreate(width, height, surface->GetHandle());
 		
 		cindel oldSurface;
+	}
+
+	void GraphicsContext::ResizeSurface(const Swapchain* const swapchain)
+	{
+		for (const auto& [window, drawContext] : s_ContextMap)
+			if (drawContext.SwapchainContext == swapchain)
+			{
+				const auto [width, height] { window->GetSize() };
+				ResizeSurface(window, width, height);
+			}
 	}
 
 	void GraphicsContext::AcquireNextImage(const Window* const windowContext)

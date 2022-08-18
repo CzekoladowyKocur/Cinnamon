@@ -11,7 +11,7 @@ namespace Cinnamon {
 		m_Window(nullptr)
 	{
 		CIN_ASSERT(s_ApplicationInstance == nullptr, "Application already initialized!");
-		CIN_TRACE("Running cinnamon build {0}", Platform::GetBuildDate());
+		CIN_TRACE("Running cinnamon build {}", Platform::GetBuildDate());
 
 		s_ApplicationInstance = this;
 	}
@@ -51,6 +51,7 @@ namespace Cinnamon {
 
 	bool Application::Run()
 	{
+		[[likely]]
 		while (m_Running)
 		{
 			m_Window->PollEvents();
@@ -86,6 +87,7 @@ namespace Cinnamon {
 		CIN_UNUSED(event);
 
 		/* Clear swapchain image for now */
+		[[likely]]
 		if (not m_Minimized)
 		{
 			GraphicsContext::AcquireNextImage(m_Window);
@@ -98,8 +100,9 @@ namespace Cinnamon {
 	bool Application::OnWindowResized(WindowResizedEvent& event)
 	{
 		const auto [width, height] { event.GetResize() };
-		m_Minimized = (width == 0) or (height == 0);
+		m_Minimized = (width == 0U) or (height == 0U);
 
+		[[likely]]
 		if(not m_Minimized)
 			GraphicsContext::ResizeSurface(m_Window, width, height);
 		
@@ -129,7 +132,7 @@ namespace Cinnamon {
 			case Key::F11:
 			{
 				const EWindowMode currentWindowMode{ m_Window->GetWindowMode() };
-				m_Window->SetWindowMode(currentWindowMode != EWindowMode::Fullscreen ? EWindowMode::Fullscreen : EWindowMode::Windowed);
+				m_Window->SetWindowMode(currentWindowMode != EWindowMode::Fullscreen ? EWindowMode::Fullscreen : EWindowMode::Maximized);
 
 				break;
 			}

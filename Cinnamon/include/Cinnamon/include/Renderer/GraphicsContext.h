@@ -1,8 +1,10 @@
 #pragma once
-#include "Cinnamon/include/Core/Window.h"
 #include "Cinnamon/include/Renderer/VulkanTypes.h"
 
 namespace Cinnamon {
+	class Window;
+	class Swapchain;
+
 	class GraphicsContext
 	{
 	public:
@@ -21,6 +23,7 @@ namespace Cinnamon {
 		[[nodiscard]] static bool Shutdown();
 		[[nodiscard]] static bool CreateSurface(const Window* const windowContext);
 		static void ResizeSurface(const Window* const windowContext, const uint32_t width, const uint32_t height);
+		static void ResizeSurface(const Swapchain* const swapchain);
 
 		static void AcquireNextImage(const Window* const windowContext);
 		static void PresentImage(const Window* const windowContext);

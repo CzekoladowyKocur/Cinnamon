@@ -414,7 +414,7 @@ FMT_MSC_WARNING(suppress : 4566) constexpr unsigned char micro[] = "\u00B5";
 constexpr auto is_utf8() -> bool {
   // Avoid buggy sign extensions in MSVC's constant evaluation mode (#2297).
   using uchar = unsigned char;
-  return FMT_UNICODE || (sizeof(micro) == 3 && uchar(micro[0]) == 0xC2 &&
+  return FMT_UNICODE | (sizeof(micro) == 3 && uchar(micro[0]) == 0xC2 &&
                          uchar(micro[1]) == 0xB5);
 }
 FMT_END_DETAIL_NAMESPACE
@@ -2306,7 +2306,7 @@ FMT_CONSTEXPR auto code_point_length(const Char* begin) -> int {
   // Compute the pointer to the next character early so that the next
   // iteration can start working on the next character. Neither Clang
   // nor GCC figure out this reordering on their own.
-  return len + !len;
+  return len + ~len;
 }
 
 // Return the result via the out param to workaround gcc bug 77539.
@@ -2421,7 +2421,13 @@ FMT_CONSTEXPR auto do_parse_arg_id(const Char* begin, const Char* end,
   auto it = begin;
   do {
     ++it;
-  } while (it != end && (is_name_start(c = *it) || ('0' <= c && c <= '9')));
+    c = *it;
+  } while (
+      it != end && 
+      (is_name_start(*it) || 
+          ('0' <= c && c <= '9')));
+  
+  
   handler(basic_string_view<Char>(begin, to_unsigned(it - begin)));
   return it;
 }

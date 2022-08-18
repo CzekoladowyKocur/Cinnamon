@@ -4,20 +4,29 @@
 namespace Cinnamon {
 	Swapchain::Swapchain(const uint32_t width, const uint32_t height, VkSurfaceKHR surface) noexcept
 		:
+		m_Handle(VK_NULL_HANDLE),
+		m_CachedSwapchain(VK_NULL_HANDLE),
+		m_RenderPass(VK_NULL_HANDLE),
+		m_CommandPool(VK_NULL_HANDLE),
 		m_SurfaceFormat({ VK_FORMAT_UNDEFINED, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR }),
 		m_PresentMode(VK_PRESENT_MODE_FIFO_KHR), /* The only one guaranteed by specification */
 		m_SurfaceCapabilities({}),
 		m_Extent({ width, height }),
-		m_Handle(VK_NULL_HANDLE),
+		m_Images({}),
+		m_ImageViews({}),
+		m_Framebuffers({}),
+		m_Semaphores({}),
+		m_Fences({}),
 		m_ImageIndex(0U),
 		m_FrameIndex(0U),
-		m_FramesInFlight(2)
+		m_FramesInFlight(2U)
 	{
-		VkCommandPoolCreateInfo commandPoolCreateInfo;
-		commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		commandPoolCreateInfo.queueFamilyIndex = GraphicsContext::GetQueueFamily(GraphicsContext::EQueueFamily::Graphics);
-		commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-		commandPoolCreateInfo.pNext = nullptr;
+		const VkCommandPoolCreateInfo commandPoolCreateInfo{
+			.sType{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO },
+			.pNext{ nullptr },
+			.flags{ 0U },
+			.queueFamilyIndex{ static_cast<uint32_t>(GraphicsContext::GetQueueFamily(GraphicsContext::EQueueFamily::Graphics)) },
+		};
 
 		VK_CHECK(vkCreateCommandPool(
 			GraphicsContext::GetDevice(),
@@ -30,40 +39,45 @@ namespace Cinnamon {
 
 	Swapchain::~Swapchain() noexcept
 	{
-		VK_CHECK(vkDeviceWaitIdle(GraphicsContext::GetDevice()));
+		VK_CHECK(vkDeviceWaitIdle(
+			GraphicsContext::GetDevice()));
 
+		Cleanup();
 		vkDestroyCommandPool(
 			GraphicsContext::GetDevice(),
 			m_CommandPool,
 			GraphicsContext::GetAllocator());
-
-		Cleanup();
+		
+		vkDestroySwapchainKHR(
+			GraphicsContext::GetDevice(),
+			m_Handle,
+			GraphicsContext::GetAllocator());
 	}
 
 	void Swapchain::Create(const uint32_t width, const uint32_t height, VkSurfaceKHR surface)
 	{
-		m_ImageIndex = 0;
-		m_FrameIndex = 0;
-		CIN_ASSERT(width >= 1 && width <= 15360, "Invalid swapchain width");
-		CIN_ASSERT(height >= 1 && height <= 8640, "Invalid swapchain height");
+		m_ImageIndex = 0U;
+		m_FrameIndex = 0U;
+		CIN_ASSERT(width >= 1U && width <= 15360U, "Invalid swapchain width");
+		CIN_ASSERT(height >= 1U && height <= 8640U, "Invalid swapchain height");
 		CIN_TRACE("Recreating swapchain: {0}, {1}", width, height);
 
 		/* Pick surface format */
 		{
-			uint32_t availableSurfaceFormatCount{ 0 };
+			uint32_t availableSurfaceFormatCount{ 0U };
 			VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(
 				GraphicsContext::GetPhysicalDevice(),
 				surface,
 				&availableSurfaceFormatCount,
 				nullptr));
 
-			CIN_ASSERT(availableSurfaceFormatCount > 0, "No available surface format!");
+			CIN_ASSERT(availableSurfaceFormatCount > 0U, "No available surface format!");
 			STL::Vector<VkSurfaceFormatKHR> availableSurfaceFormats(availableSurfaceFormatCount);
 			VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(
 				GraphicsContext::GetPhysicalDevice(),
 				surface,
 				&availableSurfaceFormatCount,
-				&availableSurfaceFormats[0]));
+				&availableSurfaceFormats[0U]));
 
 			bool found{ false };
 			for (const VkSurfaceFormatKHR availableFormat : availableSurfaceFormats)
@@ -75,19 +89,19 @@ namespace Cinnamon {
 				}
 
 			if (!found)
-				m_SurfaceFormat = availableSurfaceFormats[0];
+				m_SurfaceFormat = availableSurfaceFormats[0U];
 		}
 
 		/* Pick present mode */
 		{
-			uint32_t availablePresentModeCount{ 0 };
+			uint32_t availablePresentModeCount{ 0U };
 			VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(
 				GraphicsContext::GetPhysicalDevice(),
 				surface,
 				&availablePresentModeCount,
 				nullptr));
 
-			CIN_ASSERT(availablePresentModeCount > 0, "No available present mode");
+			CIN_ASSERT(availablePresentModeCount > 0U, "No available present mode");
 			STL::Vector<VkPresentModeKHR> availablePresentModes(availablePresentModeCount);
 
 			bool found{ false };
@@ -113,14 +127,14 @@ namespace Cinnamon {
 
 		/* Adjust swapchain extent if needed */
 		{
-			const auto& capabilities = m_SurfaceCapabilities;
+			const auto& capabilities{ m_SurfaceCapabilities };
 			if (capabilities.currentExtent.width != std::numeric_limits<std::uint32_t>::max() && capabilities.currentExtent.height != std::numeric_limits<std::uint32_t>::max())
 				m_Extent = capabilities.currentExtent;
 			else
 			{
-				VkExtent2D extent = {
-					width,
-					height
+				VkExtent2D extent{
+					.width{ width },
+					.height{ height },
 				};
 
 				extent.width = CIN_CLAMP(extent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
@@ -130,29 +144,30 @@ namespace Cinnamon {
 			}
 		}
 
-		uint32_t imageCount{ m_SurfaceCapabilities.minImageCount + 1 };
-		if (m_SurfaceCapabilities.maxImageCount > 0 && imageCount > m_SurfaceCapabilities.maxImageCount)
+		uint32_t imageCount{ m_SurfaceCapabilities.minImageCount + 1U };
+		if (m_SurfaceCapabilities.maxImageCount > 0U && imageCount > m_SurfaceCapabilities.maxImageCount)
 			imageCount = m_SurfaceCapabilities.maxImageCount;
 
-		VkSwapchainCreateInfoKHR swapchainCreateInfo;
-		swapchainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-		swapchainCreateInfo.surface = surface;
-		swapchainCreateInfo.imageFormat = m_SurfaceFormat.format;
-		swapchainCreateInfo.imageColorSpace = m_SurfaceFormat.colorSpace;
-		swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-		swapchainCreateInfo.presentMode = m_PresentMode;
-		swapchainCreateInfo.minImageCount = imageCount;
-		swapchainCreateInfo.imageExtent = m_Extent;
-		swapchainCreateInfo.imageArrayLayers = 1; /* One image layer */
-		swapchainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-		swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE; /* Currently only graphics queue */
-		swapchainCreateInfo.queueFamilyIndexCount = VK_QUEUE_FAMILY_IGNORED;
-		swapchainCreateInfo.pQueueFamilyIndices = nullptr;
-		swapchainCreateInfo.preTransform = m_SurfaceCapabilities.currentTransform;
-		swapchainCreateInfo.clipped = VK_TRUE;
-		swapchainCreateInfo.oldSwapchain = VK_NULL_HANDLE; /* TODO: Cache old handle */
-		swapchainCreateInfo.flags = 0;
-		swapchainCreateInfo.pNext = nullptr;
+		const VkSwapchainCreateInfoKHR swapchainCreateInfo{
+			.sType{ VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR },
+			.pNext{ nullptr },
+			.flags{ 0U },
+			.surface{ surface },
+			.minImageCount{ imageCount },
+			.imageFormat{ m_SurfaceFormat.format },
+			.imageColorSpace{ m_SurfaceFormat.colorSpace },
+			.imageExtent{ m_Extent },
+			.imageArrayLayers{ 1U },
+			.imageUsage{ VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT },
+			.imageSharingMode{ VK_SHARING_MODE_EXCLUSIVE },
+			.queueFamilyIndexCount{ VK_QUEUE_FAMILY_IGNORED },
+			.pQueueFamilyIndices{ nullptr },
+			.preTransform{ m_SurfaceCapabilities.currentTransform },
+			.compositeAlpha{ VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR },
+			.presentMode{ m_PresentMode },
+			.clipped{ VK_TRUE },
+			.oldSwapchain{ m_CachedSwapchain },
+		};
 
 		VK_CHECK(vkCreateSwapchainKHR(
 			GraphicsContext::GetDevice(),
@@ -160,36 +175,46 @@ namespace Cinnamon {
 			GraphicsContext::GetAllocator(),
 			&m_Handle));
 
-		VkAttachmentDescription colorAttachmentDescription;
-		colorAttachmentDescription.format = m_SurfaceFormat.format;
-		colorAttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; /* is the layout the attachment image subresource will be in when a render pass instance begins. */
-		colorAttachmentDescription.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; /* is the layout the attachment image subresource will be transitioned to when a render pass instance ends. */
-		colorAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		colorAttachmentDescription.storeOp = VK_ATTACHMENT_STORE_OP_STORE; /* For presenting the image to surface */
-		colorAttachmentDescription.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		colorAttachmentDescription.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		colorAttachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
-		colorAttachmentDescription.flags = 0;
+		/* Main color attachment */
+		const VkAttachmentDescription colorAttachmentDescription{
+			.flags{ 0U },
+			.format{ m_SurfaceFormat.format },
+			.samples{ VK_SAMPLE_COUNT_1_BIT },
+			.loadOp{ VK_ATTACHMENT_LOAD_OP_CLEAR }, /* Clear previous frame before drawing to it*/
+			.storeOp{ VK_ATTACHMENT_STORE_OP_STORE }, /* Store for present */
+			.stencilLoadOp{ VK_ATTACHMENT_LOAD_OP_DONT_CARE },
+			.stencilStoreOp{ VK_ATTACHMENT_STORE_OP_DONT_CARE },
+			.initialLayout{ VK_IMAGE_LAYOUT_UNDEFINED }, /* Unknown initial layout of the attachment */
+			.finalLayout{ VK_IMAGE_LAYOUT_PRESENT_SRC_KHR }, /* Transfer the layout to swapchain presentable format*/
+		};
 
-		VkAttachmentReference colorAttachmentReference;
-		colorAttachmentReference.attachment = 0;
-		colorAttachmentReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; /* is a VkImageLayout value specifying the layout the attachment uses during the subpass. */
+		constexpr VkAttachmentReference colorAttachmentReference{
+			.attachment{ 0U },
+			.layout{ VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL } /* Specifies the layout of the attachment during subpass */
+		};
 
-		VkSubpassDescription subpassDescription;
-		subpassDescription.colorAttachmentCount = 1;
-		subpassDescription.pColorAttachments = &colorAttachmentReference;
-		subpassDescription.pDepthStencilAttachment = nullptr;
-		subpassDescription.inputAttachmentCount = 0;
-		subpassDescription.pInputAttachments = nullptr;
-		subpassDescription.preserveAttachmentCount = 0;
-		subpassDescription.pPreserveAttachments = nullptr;
-		subpassDescription.pResolveAttachments = nullptr;
-		subpassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-		subpassDescription.flags = 0;
+		const VkSubpassDescription subpassDescription{
+			.flags{ 0U },
+			.pipelineBindPoint{ VK_PIPELINE_BIND_POINT_GRAPHICS },
+			.inputAttachmentCount{ 0U },
+			.pInputAttachments{ nullptr },
+			.colorAttachmentCount{ 1U },
+			.pColorAttachments{ &colorAttachmentReference },
+			.pResolveAttachments{ 0U },
+			.pDepthStencilAttachment{ nullptr },
+			.preserveAttachmentCount{ 0U },
+			.pPreserveAttachments{ nullptr },
+		};
 
-		VkSubpassDependency subpassDependency;
-		subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL; /* is the subpass index of the first subpass in the dependency, or VK_SUBPASS_EXTERNAL. */
-		subpassDependency.dstSubpass = 0; /* is the subpass index of the second subpass in the dependency, or VK_SUBPASS_EXTERNAL. */
+		constexpr VkSubpassDependency subpassDependency{
+			.srcSubpass{ VK_SUBPASS_EXTERNAL }, /* Is the subpass index of the first subpass in the dependency, or VK_SUBPASS_EXTERNAL. */
+			.dstSubpass{ 0U }, /* Is the subpass index of the second subpass in the dependency, or VK_SUBPASS_EXTERNAL. */
+			.srcStageMask{ VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT },
+			.dstStageMask{ VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT },
+			.srcAccessMask{ 0U },
+			.dstAccessMask{ VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT },
+			.dependencyFlags{ 0U },
+		};
 		/*
 		If srcSubpass is equal to VK_SUBPASS_EXTERNAL, the first synchronization scope includes commands that
 		occur earlier in submission order than the vkCmdBeginRenderPass used to begin the render pass instance.
@@ -198,28 +223,24 @@ namespace Cinnamon {
 		srcSubpass. In either case, the first synchronization scope is limited to operations on the pipeline
 		stages determined by the source stage mask specified by srcStageMask.
 		*/
-		subpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		subpassDependency.srcAccessMask = 0;
-		subpassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		subpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-		subpassDependency.dependencyFlags = 0;
 
-		VkRenderPassCreateInfo renderPassCreateInfo;
-		renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		renderPassCreateInfo.attachmentCount = 1;
-		renderPassCreateInfo.pAttachments = &colorAttachmentDescription;
-		renderPassCreateInfo.subpassCount = 1;
-		renderPassCreateInfo.pSubpasses = &subpassDescription;
-		renderPassCreateInfo.dependencyCount = 1;
-		renderPassCreateInfo.pDependencies = &subpassDependency;
-		renderPassCreateInfo.flags = 0;
-		renderPassCreateInfo.pNext = nullptr;
+		const VkRenderPassCreateInfo renderPassCreateInfo{
+			.sType{ VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO },
+			.pNext{ nullptr },
+			.flags{ 0U },
+			.attachmentCount{ 1U },
+			.pAttachments{ &colorAttachmentDescription },
+			.subpassCount{ 1U },
+			.pSubpasses{ &subpassDescription },
+			.dependencyCount{ 1U },
+			.pDependencies{ &subpassDependency },
+		};
 
-		vkCreateRenderPass(
+		VK_CHECK(vkCreateRenderPass(
 			GraphicsContext::GetDevice(),
 			&renderPassCreateInfo,
 			GraphicsContext::GetAllocator(),
-			&m_RenderPass);
+			&m_RenderPass));
 
 		/* Retrieve vulkan-side created swapchain images */
 		VK_CHECK(vkGetSwapchainImagesKHR(
@@ -228,33 +249,38 @@ namespace Cinnamon {
 			&imageCount,
 			nullptr));
 
-		CIN_ASSERT(imageCount > 0, "Invalid image count");
+		CIN_ASSERT(imageCount > 0U, "Invalid image count");
 		m_Images.resize(imageCount);
 		VK_CHECK(vkGetSwapchainImagesKHR(
 			GraphicsContext::GetDevice(),
 			m_Handle,
 			&imageCount,
-			&m_Images[0]));
+			&m_Images[0U]));
 
-		VkImageViewCreateInfo imageViewCreateInfo;
-		imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-		imageViewCreateInfo.image = VK_NULL_HANDLE;
-		imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-		imageViewCreateInfo.format = m_SurfaceFormat.format;
-		imageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_R;
-		imageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_G;
-		imageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_B;
-		imageViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_A;
-		imageViewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		imageViewCreateInfo.subresourceRange.layerCount = 1;
-		imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
-		imageViewCreateInfo.subresourceRange.levelCount = 1;
-		imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
-		imageViewCreateInfo.flags = 0;
-		imageViewCreateInfo.pNext = nullptr;
+		VkImageViewCreateInfo imageViewCreateInfo{
+			.sType{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO },
+			.pNext{ nullptr },
+			.flags{ 0U },
+			.image{ nullptr },
+			.viewType{ VK_IMAGE_VIEW_TYPE_2D },
+			.format{ m_SurfaceFormat.format },
+			.components{ 
+				.r { VK_COMPONENT_SWIZZLE_R },
+				.g { VK_COMPONENT_SWIZZLE_G },
+				.b { VK_COMPONENT_SWIZZLE_B },
+				.a { VK_COMPONENT_SWIZZLE_A },
+			},
+			.subresourceRange{
+				.aspectMask{ VK_IMAGE_ASPECT_COLOR_BIT },
+				.baseMipLevel{ 0U },
+				.levelCount{ 1U },
+				.baseArrayLayer{ 0U },
+				.layerCount{ 1U },
+			},
+		};
 
 		m_ImageViews.resize(imageCount);
-		for (uint32_t i{ 0 }; i < m_ImageViews.size(); ++i)
+		for (uint32_t i{ 0U }; i < imageCount; ++i)
 		{
 			imageViewCreateInfo.image = m_Images[i];
 
@@ -265,19 +291,20 @@ namespace Cinnamon {
 				&m_ImageViews[i]));
 		}
 
-		VkFramebufferCreateInfo framebufferCreateInfo;
-		framebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferCreateInfo.attachmentCount = 1;
-		framebufferCreateInfo.pAttachments = VK_NULL_HANDLE;
-		framebufferCreateInfo.renderPass = m_RenderPass;
-		framebufferCreateInfo.width = m_Extent.width;
-		framebufferCreateInfo.height = m_Extent.height;
-		framebufferCreateInfo.layers = 1;
-		framebufferCreateInfo.flags = 0;
-		framebufferCreateInfo.pNext = nullptr;
+		VkFramebufferCreateInfo framebufferCreateInfo{
+			.sType{ VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO },
+			.pNext{ nullptr },
+			.flags{ 0U },
+			.renderPass{ m_RenderPass },
+			.attachmentCount{ 1U },
+			.pAttachments{ nullptr }, /* Set in loop for each image */
+			.width{ m_Extent.width },
+			.height{ m_Extent.height },
+			.layers{ 1U },
+		};
 
 		m_Framebuffers.resize(imageCount);
-		for (uint32_t i{ 0 }; i < m_Framebuffers.size(); ++i)
+		for (uint32_t i{ 0U }; i < imageCount; ++i)
 		{
 			framebufferCreateInfo.pAttachments = &m_ImageViews[i];
 
@@ -289,12 +316,13 @@ namespace Cinnamon {
 		}
 
 		m_CommandBuffers.resize(imageCount);
-		VkCommandBufferAllocateInfo commandBufferAllocateInfo;
-		commandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		commandBufferAllocateInfo.commandPool = m_CommandPool;
-		commandBufferAllocateInfo.commandBufferCount = static_cast<uint32_t>(m_CommandBuffers.size());
-		commandBufferAllocateInfo.pNext = nullptr;
+		const VkCommandBufferAllocateInfo commandBufferAllocateInfo{
+			.sType{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO },
+			.pNext{ nullptr },
+			.commandPool{ m_CommandPool },
+			.level{ VK_COMMAND_BUFFER_LEVEL_PRIMARY },
+			.commandBufferCount{ imageCount },
+		};
 
 		VK_CHECK(vkAllocateCommandBuffers(
 			GraphicsContext::GetDevice(),
@@ -305,17 +333,19 @@ namespace Cinnamon {
 		m_Semaphores.ImageAvailable.resize(m_FramesInFlight);
 		m_Semaphores.RenderingFinished.resize(m_FramesInFlight);
 
-		VkFenceCreateInfo fenceCreateInfo;
-		fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-		fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT; /* Make it signaled (like a finished queue operation would) so no deadlock occurs */
-		fenceCreateInfo.pNext = nullptr;
+		constexpr VkFenceCreateInfo fenceCreateInfo{
+			.sType{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO },
+			.pNext{ nullptr },
+			.flags{ VK_FENCE_CREATE_SIGNALED_BIT },
+		};
 
-		VkSemaphoreCreateInfo semaphoreCreateInfo;
-		semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-		semaphoreCreateInfo.flags = VK_SEMAPHORE_TYPE_BINARY;
-		semaphoreCreateInfo.pNext = nullptr;
+		constexpr VkSemaphoreCreateInfo semaphoreCreateInfo{
+			.sType{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO },
+			.pNext{ nullptr },
+			.flags{ VK_SEMAPHORE_TYPE_BINARY },
+		};
 
-		for (uint32_t i = 0; i < m_FramesInFlight; ++i)
+		for (uint32_t i{ 0U }; i < m_FramesInFlight; ++i)
 		{
 			VK_CHECK(vkCreateFence(
 				GraphicsContext::GetDevice(),
@@ -336,25 +366,32 @@ namespace Cinnamon {
 				&m_Semaphores.RenderingFinished[i]));
 		}
 
-		CIN_TRACE("Created swapchain with {0} images", imageCount);
+		CIN_TRACE("Created swapchain with {} images", imageCount);
 	}
 
 	void Swapchain::Recreate(const uint32_t width, const uint32_t height, VkSurfaceKHR surface)
 	{
-		VK_CHECK(vkDeviceWaitIdle(GraphicsContext::GetDevice()));
+		VK_CHECK(vkDeviceWaitIdle(
+			GraphicsContext::GetDevice()));
 
+		m_CachedSwapchain = m_Handle;
 		Cleanup();
 		Create(width, height, surface);
+
+		vkDestroySwapchainKHR(
+			GraphicsContext::GetDevice(),
+			m_CachedSwapchain,
+			GraphicsContext::GetAllocator());
 	}
 
 	void Swapchain::AcquireNextSwapchainImage()
 	{
-		VkFence imageInFlightFence{ m_Fences.InFlightFences[m_FrameIndex] };
-		VkSemaphore presentCompleteSemaphore{ m_Semaphores.ImageAvailable[m_FrameIndex] };
+		const VkFence imageInFlightFence{ m_Fences.InFlightFences[m_FrameIndex] };
+		const VkSemaphore presentCompleteSemaphore{ m_Semaphores.ImageAvailable[m_FrameIndex] };
 
 		VK_CHECK(vkWaitForFences(
 			GraphicsContext::GetDevice(),
-			1,
+			1U,
 			&imageInFlightFence,
 			VK_TRUE,
 			std::numeric_limits<std::uint64_t>::max()));
@@ -371,176 +408,199 @@ namespace Cinnamon {
 
 			switch (result)
 			{
-            case VK_SUCCESS:
-            {
-            } break;
+				case VK_SUCCESS:
+				{
+				} break;
 
-			case VK_ERROR_OUT_OF_DATE_KHR:
-			{
-				//Resize();
-			} break;
+				case VK_ERROR_OUT_OF_DATE_KHR:
+				{
+					GraphicsContext::ResizeSurface(this);
+				} break;
 
-			case VK_SUBOPTIMAL_KHR:
-			{
-			} break;
+				case VK_SUBOPTIMAL_KHR:
+				{
+					GraphicsContext::ResizeSurface(this);
+				} break;
 
-			case VK_ERROR_SURFACE_LOST_KHR:
-			{
-				//GraphicsContext::RecreateSurface();
-				//Resize();
-				return;
-			} break;
+				case VK_ERROR_SURFACE_LOST_KHR:
+				{
+					/* TODO: Recreate surface? */
+					GraphicsContext::ResizeSurface(this);
+					return;
+				} break;
 
-		    default:
-		    {
-		    	CIN_WARN("Unhandled acquire result: {0}", VKResultToString(result));
-		    } break;
+				default:
+				{
+					CIN_WARN("Unhandled acquire result: {0}", VKResultToString(result));
+				} break;
 			}
 		} while (result != VK_SUCCESS);
 
 		/* Unsignal the fence */
 		VK_CHECK(vkResetFences(
 			GraphicsContext::GetDevice(),
-			1,
+			1U,
 			&imageInFlightFence));
 	}
 
 	void Swapchain::PresentSwapchainImage()
 	{
-		VkFence imageInFlightFence{ m_Fences.InFlightFences[m_FrameIndex] };
-		VkSemaphore presentCompleteSemaphore{ m_Semaphores.ImageAvailable[m_FrameIndex] };
-		VkSemaphore renderCompleteSemaphore{ m_Semaphores.RenderingFinished[m_FrameIndex] };
-		VkCommandBuffer commandBuffer{ m_CommandBuffers[m_FrameIndex] };
+		/* Signals images in flight */
+		const VkFence imageInFlightFence{ m_Fences.InFlightFences[m_FrameIndex] };
+		/* Signals whether presenting the image has finished (image is available) */
+		const VkSemaphore presentCompleteSemaphore{ m_Semaphores.ImageAvailable[m_FrameIndex] };
+		/* Signals whether rendering the image has finished (image was rendered to) */
+		const VkSemaphore renderCompleteSemaphore{ m_Semaphores.RenderingFinished[m_FrameIndex] };
+		/* Current frmae command buffer */
+		const VkCommandBuffer commandBuffer{ m_CommandBuffers[m_FrameIndex] };
 
 		/* Color attachment output */
-		constexpr STL::Array<VkPipelineStageFlags, 1> waitStages = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-		VkSubmitInfo submitInfo;
-		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &commandBuffer;
-		submitInfo.waitSemaphoreCount = 1;
-		submitInfo.pWaitSemaphores = &presentCompleteSemaphore; /* Will be signaled after image is acquired */
-		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = &renderCompleteSemaphore; /* Will be signaled after executing the command buffer */
-		submitInfo.pWaitDstStageMask = waitStages.data();
-		submitInfo.pNext = nullptr;
+		constexpr STL::Array<VkPipelineStageFlags, 1U> waitStages{ VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+		const VkSubmitInfo submitInfo{
+			.sType{ VK_STRUCTURE_TYPE_SUBMIT_INFO },
+			.pNext{ nullptr},
+			.waitSemaphoreCount{ 1U },
+			.pWaitSemaphores{ &presentCompleteSemaphore },
+			.pWaitDstStageMask{ &waitStages[0U] },
+			.commandBufferCount{ 1U },
+			.pCommandBuffers{ &commandBuffer },
+			.signalSemaphoreCount{ 1U },
+			.pSignalSemaphores{ &renderCompleteSemaphore },
+		};
 
+		/* Record default clear command buffers */
 		{
-			/* Record default clear command buffers */
-			constexpr STL::Array<VkClearValue, 1> clearValues{
-					{ {0.3f, 0.1f, 0.12f, 1.0f} }
+			constexpr STL::Array<VkClearValue, 1U> clearValues{
+				VkClearValue{
+					.color{
+						.float32{
+							0.3f, 0.1f, 0.12f, 1.0f
+						}
+					},
+				}
 			};
 
-			VkCommandBufferBeginInfo commandBufferBeginInfo;
-			commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			commandBufferBeginInfo.pInheritanceInfo = nullptr;
-			commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-			commandBufferBeginInfo.pNext = nullptr;
+			constexpr VkCommandBufferBeginInfo commandBufferBeginInfo{
+				.sType{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO },
+				.pNext{ nullptr },
+				.flags{ VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT },
+				.pInheritanceInfo{ nullptr },
+			};
 
-			VkRenderPassBeginInfo renderPassBeginInfo;
-			renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassBeginInfo.renderPass = m_RenderPass;
-			renderPassBeginInfo.framebuffer = m_Framebuffers[m_ImageIndex];
-			renderPassBeginInfo.renderArea.extent = m_Extent;
-			renderPassBeginInfo.renderArea.offset = { 0, 0 };
-			renderPassBeginInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-			renderPassBeginInfo.pClearValues = clearValues.data();
-			renderPassBeginInfo.pNext = nullptr;
+			const VkRenderPassBeginInfo renderPassBeginInfo{
+				.sType{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO },
+				.pNext{ nullptr },
+				.renderPass{ m_RenderPass },
+				.framebuffer{ m_Framebuffers[m_ImageIndex] },
+				.renderArea{
+					.offset{
+						.x{ 0 },
+						.y{ 0 },
+					},
+					.extent{ m_Extent },
+				},
+				.clearValueCount{ static_cast<uint32_t>(clearValues.size()) },
+				.pClearValues{ &clearValues[0U] },
+			};
 
-			VK_CHECK(vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo));
+			VK_CHECK(vkBeginCommandBuffer(
+				commandBuffer, 
+				&commandBufferBeginInfo));
 
-			vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-			vkCmdEndRenderPass(commandBuffer);
+			vkCmdBeginRenderPass(
+				commandBuffer, 
+				&renderPassBeginInfo, 
+				VK_SUBPASS_CONTENTS_INLINE);
+			
+			vkCmdEndRenderPass(
+				commandBuffer);
 
-			VK_CHECK(vkEndCommandBuffer(commandBuffer));
+			VK_CHECK(vkEndCommandBuffer(
+				commandBuffer));
 		}
 
 		VK_CHECK(vkQueueSubmit(
 			GraphicsContext::GetGraphicsQueue(),
-			1,
+			1U,
 			&submitInfo,
 			imageInFlightFence));
 
-		VkPresentInfoKHR presentInfo;
-		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-		presentInfo.swapchainCount = 1;
-		presentInfo.pSwapchains = &m_Handle;
-		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores = &renderCompleteSemaphore; /* Wait till the image is rendered to */
-		presentInfo.pImageIndices = &m_ImageIndex;
-		presentInfo.pResults = nullptr;
-		presentInfo.pNext = nullptr;
+		const VkPresentInfoKHR presentInfo{
+			.sType{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR },
+			.pNext{ nullptr },
+			.waitSemaphoreCount{ 1U },
+			.pWaitSemaphores{ &renderCompleteSemaphore }, /* Don't present before the image is rendered to */
+			.swapchainCount{ 1U },
+			.pSwapchains{ &m_Handle },
+			.pImageIndices{ &m_ImageIndex },
+			.pResults{ nullptr },
+		};
 
 		/* TODO: Add support for present queue */
-		VkResult result{
+		const VkResult result{
 			vkQueuePresentKHR(
 				GraphicsContext::GetGraphicsQueue(),
 				&presentInfo) };
 
 		switch (result)
 		{
-		case VK_SUCCESS:
-		{
-		} break;
+			case VK_SUCCESS:
+			{
+			} break;
 
-		case VK_ERROR_OUT_OF_DATE_KHR:
-		{
-			//Resize();
-		} break;
+			case VK_ERROR_OUT_OF_DATE_KHR:
+			{
+				GraphicsContext::ResizeSurface(this);
+			} break;
 
-		case VK_SUBOPTIMAL_KHR:
-		{
-			//Resize();
+			case VK_SUBOPTIMAL_KHR:
+			{
+				GraphicsContext::ResizeSurface(this);
+			} break;
 
-		} break;
+			case VK_ERROR_SURFACE_LOST_KHR:
+			{
+				/* TODO: Recreate surface? */
+				GraphicsContext::ResizeSurface(this);
+				return;
+			} break;
 
-		case VK_ERROR_SURFACE_LOST_KHR:
-		{
-			//GraphicsContext::RecreateSurface();
-			//Resize();
-		} break;
-
-		default:
-		{
-			CIN_WARN("Unhandled present result: {0}", VKResultToString(result));
-		} break;
+			default:
+			{
+				CIN_WARN("Unhandled present result: {}", VKResultToString(result));
+			} break;
 		}
 
-		m_FrameIndex = (m_FrameIndex + 1) % m_FramesInFlight;
+		m_FrameIndex = (m_FrameIndex + 1U) % m_FramesInFlight;
 	}
 
 	void Swapchain::Cleanup()
 	{
-		vkDestroySwapchainKHR(
-			GraphicsContext::GetDevice(),
-			m_Handle,
-			GraphicsContext::GetAllocator());
-
-		for (uint32_t i{ 0 }; i < m_ImageViews.size(); ++i)
+		for (uint32_t i{ 0U }; i < m_ImageViews.size(); ++i)
 			vkDestroyImageView(
 				GraphicsContext::GetDevice(),
 				m_ImageViews[i],
 				GraphicsContext::GetAllocator());
 
-		for (uint32_t i{ 0 }; i < m_Framebuffers.size(); ++i)
+		for (uint32_t i{ 0U }; i < m_Framebuffers.size(); ++i)
 			vkDestroyFramebuffer(
 				GraphicsContext::GetDevice(),
 				m_Framebuffers[i],
 				GraphicsContext::GetAllocator());
 
-		for (uint32_t i{ 0 }; i < m_Semaphores.ImageAvailable.size(); ++i)
+		for (uint32_t i{ 0U }; i < m_Semaphores.ImageAvailable.size(); ++i)
 			vkDestroySemaphore(
 				GraphicsContext::GetDevice(),
 				m_Semaphores.ImageAvailable[i],
 				GraphicsContext::GetAllocator());
 
-		for (uint32_t i{ 0 }; i < m_Semaphores.RenderingFinished.size(); ++i)
+		for (uint32_t i{ 0U }; i < m_Semaphores.RenderingFinished.size(); ++i)
 			vkDestroySemaphore(
 				GraphicsContext::GetDevice(),
 				m_Semaphores.RenderingFinished[i],
 				GraphicsContext::GetAllocator());
 
-		for (uint32_t i{ 0 }; i < m_Fences.InFlightFences.size(); ++i)
+		for (uint32_t i{ 0U }; i < m_Fences.InFlightFences.size(); ++i)
 			vkDestroyFence(
 				GraphicsContext::GetDevice(),
 				m_Fences.InFlightFences[i],
@@ -555,6 +615,6 @@ namespace Cinnamon {
 		//	GraphicsContext::GetDevice(),
 		//	m_CommandPool,
 		//	static_cast<uint32_t>(m_CommandBuffers.size()),
-		//	&m_CommandBuffers[0]);
+		//	&m_CommandBuffers[0U]);
 	}
 }

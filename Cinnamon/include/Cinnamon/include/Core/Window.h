@@ -15,7 +15,6 @@ namespace Cinnamon {
 
 	struct WindowProperties
 	{
-		/* TODO: Change to string class */
 		const char* Name;
 		uint32_t Width;
 		uint32_t Height;
@@ -34,7 +33,7 @@ namespace Cinnamon {
 			Mode(windowMode)
 		{}
 
-		~WindowProperties() = default;
+		constexpr ~WindowProperties() noexcept = default;
 	};
 
 	class Window

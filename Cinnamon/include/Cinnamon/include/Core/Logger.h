@@ -1,10 +1,22 @@
 #pragma once
 #include "Cinnamon/include/Core/Core.h"
 
+/* Disable fmt warnings */
+#ifdef CIN_PLATFORM_WINDOWS
+#pragma warning(push, 0)
+#elif defined CIN_PLATFORM_LINUX
+#error Define me!
+#endif
+
 #define FMT_HEADER_ONLY
 #include "fmt/format.h"
 #include "fmt/chrono.h"
-#include "fmt/core.h"
+
+#ifdef CIN_PLATFORM_WINDOWS
+#pragma warning(pop)
+#elif defined CIN_PLATFORM_LINUX
+#error Define me!
+#endif
 
 namespace Cinnamon {
 	enum class ELogLevel

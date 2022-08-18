@@ -37,7 +37,7 @@ namespace Cinnamon {
 		HANDLE StandardError{ nullptr };
 
 		CONSOLE_SCREEN_BUFFER_INFO DefaultConsoleBufferSpecification;
-	} static s_PlatformState{};
+	} constinit static s_PlatformState{};
 
 	struct DistinctAttributes
 	{
@@ -197,7 +197,7 @@ namespace Cinnamon {
 		}
 	}
 
-	[[nodiscard]] STL::String Platform::GetBuildDate()
+	STL::String Platform::GetBuildDate()
 	{
 		return CIN_TIMESTAMP;
 	}

@@ -17,19 +17,19 @@ namespace Cinnamon {
 	private:
 		void Cleanup();
 	private:
+		VkSwapchainKHR m_Handle;
+		VkSwapchainKHR m_CachedSwapchain;
+		VkRenderPass m_RenderPass;
+		VkCommandPool m_CommandPool;
+		
 		VkSurfaceFormatKHR m_SurfaceFormat;
 		VkPresentModeKHR m_PresentMode;
 		VkSurfaceCapabilitiesKHR m_SurfaceCapabilities;
 		VkExtent2D m_Extent;
 
-		VkSwapchainKHR m_Handle;
-		VkRenderPass m_RenderPass;
-
 		STL::Vector<VkImage> m_Images;
 		STL::Vector<VkImageView> m_ImageViews;
 		STL::Vector<VkFramebuffer> m_Framebuffers;
-
-		VkCommandPool m_CommandPool;
 		STL::Vector<VkCommandBuffer> m_CommandBuffers;
 
 		struct {
