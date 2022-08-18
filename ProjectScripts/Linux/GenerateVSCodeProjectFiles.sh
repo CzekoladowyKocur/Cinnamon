@@ -11,7 +11,7 @@ if [[ -d ".vscode" ]]
 then
 	echo "Found .vscode directory"
 else
-	echo "Did not found .vscode directory, making one..."
+	echo "No .vscode directory, making one"
 	mkdir .vscode
 fi
 
@@ -22,27 +22,74 @@ then
    exit 1
 fi
 
-rm *.log
+if [[ -f *.log ]]
+then
+	rm *.log
+fi
 
-cat << EOF > c_cpp_propertires.json
+cat << EOF > c_cpp_properties.json
 {
     "configurations": [
         {
-            "name": "Linux",
+            "name": "linux-gcc-debug",
+            "intelliSenseMode": "linux-gcc-x64",
             "includePath": [
-                "\${workspaceFolder}/**",
-                "\${workspaceFolder}/Cinnamon/include"
+				"\${workspaceFolder}",
+				"\${workspaceFolder}/Cinnamon/include"
             ],
             "defines": [
-                "CIN_DEBUG",
+				"CIN_DEBUG",
                 "CIN_PLATFORM_LINUX",
-                "VK_USE_PLATFORM_WAYLAND_KHR"
+				"VK_USE_PLATFORM_WAYLAND_KHR"
             ],
+            "forcedInclude": [
+
+			],
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "gnu17",
-            "cppStandard": "gnu++20",
-            "intelliSenseMode": "linux-gcc-x64"
+            "cppStandard": "gnu++20"
+        },
+        { /* Todo */
+            "name": "linux-gcc-release",
+            "intelliSenseMode": "linux-gcc-x64",
+            "includePath": [
+				"\${workspaceFolder}",
+				"\${workspaceFolder}/Cinnamon/include"
+            ],
+            "defines": [
+				"CIN_RELEASE",
+				"NDEBUG",
+                "CIN_PLATFORM_LINUX",
+				"VK_USE_PLATFORM_WAYLAND_KHR"
+            ],
+            "forcedInclude": [
+
+			],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "gnu17",
+            "cppStandard": "gnu++20"
+        },
+        { /* Todo */
+            "name": "linux-gcc-distribution",
+            "intelliSenseMode": "linux-gcc-x64",
+            "includePath": [
+				"\${workspaceFolder}",
+				"\${workspaceFolder}/Cinnamon/include"
+            ],
+            "defines": [
+				"CIN_DISTRIBUTION",
+				"NDEBUG",
+                "CIN_PLATFORM_LINUX",
+				"VK_USE_PLATFORM_WAYLAND_KHR"
+            ],
+            "forcedInclude": [
+
+			],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "gnu17",
+            "cppStandard": "gnu++20"
         }
+
     ],
     "version": 4
 }
@@ -56,13 +103,15 @@ cat << EOF > launch.json
         "type": "cppdbg",
         "request": "launch",
         "program": "\${workspaceFolder}/bin/Debug-linux-x86_64/Cinnamon/Cinnamon",
-        "args": [],
+        "args": [
+
+		],
         "stopAtEntry": false,
         "cwd": "\${fileDirname}",
         "environment": [],
-        "externalConsole": false,
+        "externalConsole": true,
         "MIMode": "gdb",
-        "miDebuggerPath": "/usr/bin/gdb",
+        "miDebuggerPath": "/usr/bin/gdb"
     }
     ]
 }
