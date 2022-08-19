@@ -281,6 +281,7 @@ namespace Cinnamon {
 	{
 		(void)data;
 		(void)wlSeat;
+		(void)name;
 	}
 
 	InternalScope constexpr wl_seat_listener wlSeatListener
@@ -335,9 +336,38 @@ namespace Cinnamon {
 		}
 	}
 
-	InternalScope constexpr zxdg_surface_v6_listener xdgSurfaceListener
+	InternalScope  zxdg_surface_v6_listener xdgSurfaceListener
 	{
-	    .configure = xdgSurfaceConfigureHandler
+	    .configure {
+		[]
+		(
+			void *data,
+			zxdg_surface_v6 *xdgSurface,
+			uint32_t serial
+		)
+		{
+			zxdg_surface_v6_ack_configure(xdgSurface, serial);
+
+			Window* window = reinterpret_cast<Window*>(data);
+			WindowProperties& windowProperties { window->GetProperties() };
+
+			windowProperties.Mode = pending.mode;
+			windowProperties.focused = pending.focused;
+
+			if(windowProperties.Width != pending.width || windowProperties.Height != pending.height)
+			{
+				CIN_INFO("The desired window dimensions are ({0}, {1}), but the compositor requested a window of size ({2}, {3})",
+				windowProperties.Width,
+				windowProperties.Height,
+				pending.width,
+				pending.height);
+
+				windowProperties.Width = pending.width;
+				windowProperties.Height = pending.height;
+
+				/* Don't call WindowResizedEvent before Vulkan is ready */
+			}
+		} }
 	};
 	// xdg surface --
 
@@ -384,7 +414,6 @@ namespace Cinnamon {
 	        }
 	    }
 
-		/* Potential crash: we don't get { 0, 0 } for the first time, depends on compositor */
 	    if(width && height)
 	    {
 			pending.width = width;
@@ -544,12 +573,12 @@ namespace Cinnamon {
 	{
         m_State = cinew PlatformWindowState;
 
-		EWindowMode windowModeCopy = m_Properties.Mode;
+		if(m_Properties.Mode != EWindowMode::Unspecified)
+			CIN_INFO("The compositor is going to decide on our window's mode");
 
         WaylandSetup(this);
 
 		SetName(m_Properties.Name);
-		SetWindowMode(windowModeCopy);
     }
 
 	Window::~Window() noexcept
@@ -711,7 +740,8 @@ namespace Cinnamon {
 
     void Window::SetEventCallback(const EventCallbackFunction callback)
     {
-        m_EventCallback = callback;
+		xdgSurfaceListener.configure = xdgSurfaceConfigureHandler;
+		m_EventCallback = callback;
     }
 } // namespace Cinnamon
 #endif // #define CIN_PLATFORM_LINUX
