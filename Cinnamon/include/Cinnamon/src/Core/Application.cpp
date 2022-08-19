@@ -25,7 +25,7 @@ namespace Cinnamon {
 	bool Application::Initialize()
 	{
 		/* TODO: Set window event callbacks after context creation? */
-		m_Window = cinew Window(WindowProperties{ "Cinnamon Application", 800U, 600U, EWindowMode::Fullscreen });
+		m_Window = cinew Window(WindowProperties{ "Cinnamon Application", 800U, 600U, EWindowMode::Windowed });
 
 		if (!GraphicsContext::Initialize())
 		{
@@ -39,11 +39,11 @@ namespace Cinnamon {
 			return false;
 		}
 
-		CIN_TRACE("Logger test, {0}, {1}, {2}", 1, 2, "Trace");
+		/*CIN_TRACE("Logger test, {0}, {1}, {2}", 1, 2, "Trace");
 		CIN_INFO("Logger test, {0}, {1}, {2}", 1, 2, "Info");
 		CIN_WARN("Logger test, {0}, {1}, {2}", 1, 2, "Warn");
 		CIN_ERROR("Logger test, {0}, {1}, {2}", 1, 2, "Error");
-		CIN_CRITICAL("Logger test, {0}, {1}, {2}", 1, 2, "Critical");
+		CIN_CRITICAL("Logger test, {0}, {1}, {2}", 1, 2, "Critical");*/
 
 		m_Window->SetEventCallback(std::bind(&Application::OnEvent, this, std::placeholders::_1));
 		return true;
@@ -132,7 +132,7 @@ namespace Cinnamon {
 			case Key::F11:
 			{
 				const EWindowMode currentWindowMode{ m_Window->GetWindowMode() };
-				m_Window->SetWindowMode(currentWindowMode != EWindowMode::Fullscreen ? EWindowMode::Fullscreen : EWindowMode::Maximized);
+				m_Window->SetWindowMode(currentWindowMode != EWindowMode::Fullscreen ? EWindowMode::Fullscreen : EWindowMode::Windowed);
 
 				break;
 			}
@@ -141,6 +141,29 @@ namespace Cinnamon {
 			{
 				CIN_CRITICAL("A IS NOT REAL");
 				m_Window->SetName("A IS NOT REAL");
+
+				break;
+			}
+
+			case Key::W:
+			{
+				m_Window->SetWidth(1000U);
+
+				break;
+			}
+
+			case Key::S:
+			{
+				m_Window->SetHeight(500U);
+
+				break;
+			}
+
+			case Key::D:
+			{
+				m_Window->SetSize({ 300U, 300U });
+
+				break;
 			}
 
 			default:

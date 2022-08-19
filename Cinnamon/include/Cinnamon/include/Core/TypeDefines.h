@@ -38,7 +38,7 @@
 #elif defined CIN_PLATFORM_LINUX
 #define CIN_DISABLE_WARNINGS 
 #define CIN_ENABLE_WARNINGS 
-#error Define me!
+/* Todo */
 #endif
 
 #define BIT(n) 1 << (n - 1)

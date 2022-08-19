@@ -5,7 +5,7 @@
 #ifdef CIN_PLATFORM_WINDOWS
 #pragma warning(push, 0)
 #elif defined CIN_PLATFORM_LINUX
-#error Define me!
+/* no */
 #endif
 
 #define FMT_HEADER_ONLY
@@ -15,7 +15,7 @@
 #ifdef CIN_PLATFORM_WINDOWS
 #pragma warning(pop)
 #elif defined CIN_PLATFORM_LINUX
-#error Define me!
+/* no */
 #endif
 
 namespace Cinnamon {

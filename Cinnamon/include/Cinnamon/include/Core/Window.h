@@ -19,6 +19,7 @@ namespace Cinnamon {
 		uint32_t Width;
 		uint32_t Height;
 		EWindowMode Mode;
+		bool focused;
 		/* TODO: Add vsync */
 
 		explicit WindowProperties(

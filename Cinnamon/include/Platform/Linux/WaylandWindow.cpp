@@ -20,15 +20,23 @@ extern "C"
 
 namespace Cinnamon {
 
+	struct {
+		uint32_t width;
+		uint32_t height;
+
+		EWindowMode mode;
+		bool focused;
+	} InternalScope pending;
+
 	/* Declared in Window.h */
 	struct PlatformWindowState
 	{
 	    // Globals
 	    wl_display* display { nullptr };
-	    wl_compositor* compositor { nullptr };
+	    wl_compositor* wlCompositor { nullptr };
 	    wl_registry* registry { nullptr };
 	    zxdg_shell_v6* xdgShell { nullptr };
-	    wl_output* output { nullptr };
+	    wl_output* wlOutput { nullptr };
 	    wl_seat* wlSeat { nullptr };
 
 	    // Objects
@@ -170,8 +178,6 @@ namespace Cinnamon {
 		(void)size;
 
 		close(fd);
-
-		CIN_TRACE("wl-keyboard: Keymap event");
 	}
 
 	InternalScope void wlKeyboardLeave
@@ -223,7 +229,7 @@ namespace Cinnamon {
 	    (void)rate;
 		(void)delay;
 
-	    /* Todo: Implement? */
+	    /* Todo: Implement */
 	}
 
 	InternalScope constexpr wl_keyboard_listener wlKeyboardListener
@@ -275,8 +281,6 @@ namespace Cinnamon {
 	{
 		(void)data;
 		(void)wlSeat;
-
-		CIN_TRACE("wl-seat: Seat name: {0}", name);
 	}
 
 	InternalScope constexpr wl_seat_listener wlSeatListener
@@ -313,8 +317,22 @@ namespace Cinnamon {
 	    uint32_t serial
 	)
 	{
-	    (void)data;
 	    zxdg_surface_v6_ack_configure(xdgSurface, serial);
+
+	    Window* window = reinterpret_cast<Window*>(data);
+		WindowProperties& windowProperties { window->GetProperties() };
+
+		windowProperties.Mode = pending.mode;
+		windowProperties.focused = pending.focused;
+
+		if(windowProperties.Width != pending.width || windowProperties.Height != pending.height)
+		{
+			windowProperties.Width = pending.width;
+			windowProperties.Height = pending.height;
+
+			WindowResizedEvent event(window, windowProperties.Width, windowProperties.Height);
+			window->SendEvent(event);
+		}
 	}
 
 	InternalScope constexpr zxdg_surface_v6_listener xdgSurfaceListener
@@ -338,7 +356,8 @@ namespace Cinnamon {
 	    Window* window = reinterpret_cast<Window*>(data);
 		WindowProperties& windowProperties { window->GetProperties() };
 
-		windowProperties.Mode = EWindowMode::Windowed;
+		pending.mode = EWindowMode::Windowed;
+		pending.focused = false;
 
 	    const zxdg_toplevel_v6_state* state;
 	    wl_array_for_each_casted(state, states, zxdg_toplevel_v6_state*) // c++ being a crybaby about assigning void* to zxdg_toplevel_v6_state*
@@ -346,24 +365,18 @@ namespace Cinnamon {
 	        switch (*state)
 	        {
 	        case ZXDG_TOPLEVEL_V6_STATE_ACTIVATED:
-	            /* Todo: implement */
+				pending.focused = false;
 	            break;
 
 	        case ZXDG_TOPLEVEL_V6_STATE_FULLSCREEN:
-	            CIN_INFO("xdg-shell: Fullscreen");
-	            /* window->SetWindowMode(EWindowMode::Fullscreen); */
-				windowProperties.Mode = EWindowMode::Fullscreen;
+				pending.mode = EWindowMode::Fullscreen;
 	            break;
 
 	        case ZXDG_TOPLEVEL_V6_STATE_MAXIMIZED:
-	            CIN_INFO("xdg-shell: Maximized");
-	            /* window->SetWindowMode(EWindowMode::Maximized); */
-				windowProperties.Mode = EWindowMode::Maximized;
+				pending.mode = EWindowMode::Maximized;
 	            break;
 
 	        case ZXDG_TOPLEVEL_V6_STATE_RESIZING:
-				/* window->SetWindowMode(EWindowMode::Windowed); */
-				/* windowProperties.Mode = EWindowMode::Windowed; */
 	            break;
 
 	        default:
@@ -371,21 +384,17 @@ namespace Cinnamon {
 	        }
 	    }
 
-		/* Todo: Properly manage { 0, 0 } */
+		/* Potential crash: we don't get { 0, 0 } for the first time, depends on compositor */
 	    if(width && height)
 	    {
-	        const auto [ windowWidth, windowHeight ] { window->GetSize() };
-	        const uint32_t uWidth = (uint32_t)width;
-	        const uint32_t uHeight = (uint32_t)height;
-
-	        if(uWidth != windowWidth || uHeight != windowHeight)
-	        {
-	            window->SetSize({ uWidth, uHeight });
-
-	            WindowResizedEvent event(window, uWidth, uHeight);
-	            window->SendEvent(event);
-	        }
+			pending.width = width;
+			pending.height = height;
 	    }
+		else
+		{
+			pending.width = windowProperties.Width;
+			pending.height = windowProperties.Height;
+		}
 	}
 
 	InternalScope void xdgToplevelCloseHandler
@@ -423,7 +432,7 @@ namespace Cinnamon {
 	{
 	    if (strcmp(interface, wl_compositor_interface.name) == 0)
 	    {
-	        reinterpret_cast<PlatformWindowState*>(data)->compositor =
+	        reinterpret_cast<PlatformWindowState*>(data)->wlCompositor =
 	        (wl_compositor*)wl_registry_bind(registry, name, &wl_compositor_interface, version);
 
 	        if(wl_compositor_interface.version != int32_t(version))
@@ -439,7 +448,7 @@ namespace Cinnamon {
 	    }
 	    else if(strcmp(interface, wl_output_interface.name) == 0)
 	    {
-	        reinterpret_cast<PlatformWindowState*>(data)->output =
+	        reinterpret_cast<PlatformWindowState*>(data)->wlOutput =
 	        (wl_output*)wl_registry_bind(registry, name, &wl_output_interface, version);
 
 	        if(wl_output_interface.version != int32_t(version))
@@ -477,7 +486,6 @@ namespace Cinnamon {
 	InternalScope CIN_FORCE_INLINE void InputSetup(Window* window)
 	{
 		PlatformWindowState* windowState = const_cast<PlatformWindowState*>(window->GetState());
-
 		wl_seat_add_listener(windowState->wlSeat, &wlSeatListener, window);
 	}
 
@@ -491,7 +499,7 @@ namespace Cinnamon {
 			CIN_PANIC_EXIT();
 		}
 
-        windowState->wlSurface = wl_compositor_create_surface(windowState->compositor);
+        windowState->wlSurface = wl_compositor_create_surface(windowState->wlCompositor);
         wl_surface_add_listener(windowState->wlSurface, &wlSurfaceListener, window);
 
 		wl_callback* fCallback = wl_surface_frame(windowState->wlSurface);
@@ -536,9 +544,12 @@ namespace Cinnamon {
 	{
         m_State = cinew PlatformWindowState;
 
+		EWindowMode windowModeCopy = m_Properties.Mode;
+
         WaylandSetup(this);
 
-        m_Properties.Mode = EWindowMode::Unspecified;
+		SetName(m_Properties.Name);
+		SetWindowMode(windowModeCopy);
     }
 
 	Window::~Window() noexcept
@@ -608,12 +619,30 @@ namespace Cinnamon {
 
 	void Window::SetWidth(const uint32_t windowWidth)
     {
-        CIN_UNIMPLEMENTED(); CIN_UNUSED(windowWidth);
+		if(m_Properties.Mode != EWindowMode::Windowed)
+			return;
+
+		if(m_Properties.Width == windowWidth)
+			return;
+
+		m_Properties.Width = windowWidth;
+
+		WindowResizedEvent event(this, m_Properties.Width, m_Properties.Height);
+		SendEvent(event);
     }
 
 	void Window::SetHeight(const uint32_t windowHeight)
     {
-        CIN_UNIMPLEMENTED(); CIN_UNUSED(windowHeight);
+		if(m_Properties.Mode != EWindowMode::Windowed)
+			return;
+
+		if(m_Properties.Height == windowHeight)
+			return;
+
+		m_Properties.Height = windowHeight;
+
+	    WindowResizedEvent event(this, m_Properties.Width, m_Properties.Height);
+	    SendEvent(event);
     }
 
 	void Window::SetWindowMode(const EWindowMode windowMode)
@@ -624,8 +653,8 @@ namespace Cinnamon {
 			{
 				if(m_Properties.Mode != EWindowMode::Fullscreen)
 				{
-					/* m_Properties.Mode = EWindowMode::Fullscreen; */
-					zxdg_toplevel_v6_set_fullscreen(m_State->xdgToplevel, m_State->output);
+					zxdg_toplevel_v6_set_fullscreen(m_State->xdgToplevel, m_State->wlOutput);
+					m_Properties.Mode = EWindowMode::Fullscreen;
 				}
 
 				break;
@@ -635,8 +664,8 @@ namespace Cinnamon {
 			{
 				if(m_Properties.Mode != EWindowMode::Maximized)
 				{
-					/* m_Properties.Mode = EWindowMode::Maximized; */
 					zxdg_toplevel_v6_set_maximized(m_State->xdgToplevel);
+					m_Properties.Mode = EWindowMode::Maximized;
 				}
 
 				break;
@@ -648,8 +677,11 @@ namespace Cinnamon {
 				{
 					if(m_Properties.Mode == EWindowMode::Fullscreen)
 						zxdg_toplevel_v6_unset_fullscreen(m_State->xdgToplevel);
+
 					else if(m_Properties.Mode == EWindowMode::Maximized)
 						zxdg_toplevel_v6_unset_maximized(m_State->xdgToplevel);
+
+					m_Properties.Mode = EWindowMode::Windowed;
 				}
 
 				break;
@@ -660,12 +692,21 @@ namespace Cinnamon {
 		}
     }
 
-	void Window::SetSize(std::pair<uint32_t, uint32_t> windowSize) // Huh
+	void Window::SetSize(std::pair<uint32_t, uint32_t> windowSize)
     {
+		if(m_Properties.Mode != EWindowMode::Windowed)
+			return;
+
         const auto [ width, height ] { std::pair<uint32_t, uint32_t>(windowSize.first, windowSize.second) };
 
-        m_Properties.Width = width;
-        m_Properties.Height = height;
+		if(m_Properties.Width != width || m_Properties.Height != height)
+		{
+        	m_Properties.Width = width;
+        	m_Properties.Height = height;
+
+	    	WindowResizedEvent event(this, width, height);
+	    	SendEvent(event);
+		}
     }
 
     void Window::SetEventCallback(const EventCallbackFunction callback)
