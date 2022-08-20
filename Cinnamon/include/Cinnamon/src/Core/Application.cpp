@@ -51,10 +51,29 @@ namespace Cinnamon {
 
 	bool Application::Run()
 	{
+		double lastFrameTime{ Platform::GetAbsoluteTime() };
+		double timer{ 0.0 };
+		uint32_t fpsCounter{ 0U };
+
 		[[likely]]
 		while (m_Running)
 		{
+			const double currentTime{ Platform::GetAbsoluteTime() };
+			double timestep{ currentTime - lastFrameTime };
+			lastFrameTime = currentTime;
+
+			timer += timestep;
+			[[unlikely]]
+			if (timer > 1.0)
+			{
+				printf("FPS: %d\n", fpsCounter);
+				//CIN_WARN("FPS: {}", fpsCounter);
+				fpsCounter = 0;
+				timer = 0.0;
+			}
+			
 			m_Window->PollEvents();
+			++fpsCounter;
 		}
 
 		return true;
@@ -90,8 +109,8 @@ namespace Cinnamon {
 		[[likely]]
 		if (not m_Minimized)
 		{
-			GraphicsContext::AcquireNextImage(m_Window);
-			GraphicsContext::PresentImage(m_Window);
+			GraphicsContext::AcquireNextImage();
+			GraphicsContext::PresentImage();
 		}
 
 		return true;
@@ -104,7 +123,7 @@ namespace Cinnamon {
 
 		[[likely]]
 		if(not m_Minimized)
-			GraphicsContext::ResizeSurface(m_Window, width, height);
+			GraphicsContext::ResizeSwapchain();
 		
 		return true;
 	}
@@ -143,6 +162,7 @@ namespace Cinnamon {
 				m_Window->SetName("A IS NOT REAL");
 
 				break;
+<<<<<<< Updated upstream
 			}
 
 			case Key::W:
@@ -164,10 +184,14 @@ namespace Cinnamon {
 				m_Window->SetSize({ 300U, 300U });
 
 				break;
+=======
+>>>>>>> Stashed changes
 			}
 
 			default:
+			{
 				break;
+			}
 		}
 
 		/* Handled for now */

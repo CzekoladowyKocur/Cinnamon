@@ -16,6 +16,8 @@
 #include <string>
 #include <cstring>
 #include <string_view>
+#include <type_traits>
+#include <queue>
 
 #ifdef CIN_PLATFORM_WINDOWS
 #undef UNICODE

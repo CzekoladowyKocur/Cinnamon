@@ -8,6 +8,9 @@ namespace Cinnamon {
 		using Array = std::array<T, size>;
 
 		template<typename T>
+		using Queue = std::queue<T>;
+
+		template<typename T>
 		using Vector = std::vector<T>;
 
 		template <typename KeyType, typename ValueType>
@@ -22,5 +25,20 @@ namespace Cinnamon {
 		using StringU8 = std::u8string;
 		using StringU16 = std::u16string;
 		using StringU32 = std::u32string;
+
+		template<typename F>
+		concept IsFunction = std::is_function_v<F>;
+
+		template<typename Sig>
+		struct FunctionSignatureRetriever;
+
+		template<typename R, typename ...Args>
+		struct FunctionSignatureRetriever<R(Args...)>
+		{
+			using type = std::tuple<Args...>;
+		};
+
+		template<IsFunction F>
+		auto FunctionSignature(const F&) -> typename FunctionSignatureRetriever<F>::type;
 	}
 }

@@ -32,11 +32,16 @@ constexpr WORD C_BACKGROUND_INTENSITY = 0x0080;
 namespace Cinnamon {
 	struct
 	{
+		/* Time */
+		double ClockFrequency{ 0.0 };
+		LARGE_INTEGER ClockStartTime{ 0 };
+
+		/* Console output */
 		HANDLE StandardOutput{ nullptr };
 		HANDLE StandardInput{ nullptr };
 		HANDLE StandardError{ nullptr };
 
-		CONSOLE_SCREEN_BUFFER_INFO DefaultConsoleBufferSpecification;
+		CONSOLE_SCREEN_BUFFER_INFO DefaultConsoleBufferSpecification{};
 	} constinit static s_PlatformState{};
 
 	struct DistinctAttributes
@@ -87,7 +92,7 @@ namespace Cinnamon {
 
 			SetConsoleTextAttribute(
 				s_PlatformState.StandardOutput,
-				distinct.Third | distinct.Fourth | color | C_FOREGROUND_INTENSITY);
+				static_cast<WORD>(distinct.Third | distinct.Fourth | color | C_FOREGROUND_INTENSITY));
 		}
 
 		~ScopedOutputColor() noexcept
@@ -103,19 +108,26 @@ namespace Cinnamon {
 
 	bool Platform::Initialize()
 	{
+		LARGE_INTEGER frequency;
+		QueryPerformanceFrequency(&frequency);
+		s_PlatformState.ClockFrequency = 1.0 / static_cast<double>(frequency.QuadPart);
+		QueryPerformanceCounter(&s_PlatformState.ClockStartTime);
+
 		s_PlatformState.StandardOutput = GetStdHandle(STD_OUTPUT_HANDLE);
 		s_PlatformState.StandardInput = GetStdHandle(STD_INPUT_HANDLE);
 		s_PlatformState.StandardError = GetStdHandle(STD_ERROR_HANDLE);
 	
 		if (!s_PlatformState.StandardOutput or !s_PlatformState.StandardInput or !s_PlatformState.StandardError)
 		{
-			/* TODO: Create new ones */
+			/* TODO: Create new ones? */
 			return false;
 		}
 
-		if (!GetConsoleScreenBufferInfo(s_PlatformState.StandardOutput, &s_PlatformState.DefaultConsoleBufferSpecification))
+		if (!GetConsoleScreenBufferInfo(
+			s_PlatformState.StandardOutput, 
+			&s_PlatformState.DefaultConsoleBufferSpecification))
 		{
-			/* TODO: Handle */
+			/* TODO: Handle? */
 			return false;
 		}
 
@@ -129,8 +141,10 @@ namespace Cinnamon {
 
 	double Platform::GetAbsoluteTime()
 	{
-		CIN_UNIMPLEMENTED();
-		return 0.0;
+		LARGE_INTEGER currentTime;
+		QueryPerformanceCounter(&currentTime);
+
+		return static_cast<double>(currentTime.QuadPart) * s_PlatformState.ClockFrequency;
 	}
 
 	/* Vulkan */
@@ -143,8 +157,8 @@ namespace Cinnamon {
 			/* "VK_KHR_bind_memory2", core in 1.1 */
 			/* VK_KHR_dedicated_allocation, core in 1.1 */
 #ifdef CIN_DEBUG
-			"VK_EXT_debug_report",
-			"VK_EXT_debug_utils",
+			//"VK_EXT_debug_report",
+			//"VK_EXT_debug_utils",
 #endif
 		};
 	}
@@ -153,7 +167,7 @@ namespace Cinnamon {
 	{
 		return {
 #ifdef CIN_DEBUG
-			"VK_LAYER_KHRONOS_validation",
+			//"VK_LAYER_KHRONOS_validation",
 #endif
 		};
 	}

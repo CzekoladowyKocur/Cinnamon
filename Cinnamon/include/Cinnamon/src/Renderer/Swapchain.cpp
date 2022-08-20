@@ -1,5 +1,6 @@
 #include "Cinnamon/include/Renderer/Swapchain.h"
 #include "Cinnamon/include/Renderer/GraphicsContext.h"
+#include "Cinnamon/include/Renderer/Surface.h"
 
 namespace Cinnamon {
 	Swapchain::Swapchain(const uint32_t width, const uint32_t height, VkSurfaceKHR surface) noexcept
@@ -24,7 +25,7 @@ namespace Cinnamon {
 		const VkCommandPoolCreateInfo commandPoolCreateInfo{
 			.sType{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO },
 			.pNext{ nullptr },
-			.flags{ 0U },
+			.flags{ VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT },
 			.queueFamilyIndex{ static_cast<uint32_t>(GraphicsContext::GetQueueFamily(GraphicsContext::EQueueFamily::Graphics)) },
 		};
 
@@ -103,6 +104,12 @@ namespace Cinnamon {
 
 			CIN_ASSERT(availablePresentModeCount > 0U, "No available present mode");
 			STL::Vector<VkPresentModeKHR> availablePresentModes(availablePresentModeCount);
+			
+			VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(
+				GraphicsContext::GetPhysicalDevice(),
+				surface,
+				&availablePresentModeCount,
+				&availablePresentModes[0]));
 
 			bool found{ false };
 			for (const VkPresentModeKHR availablePresentMode : availablePresentModes)
@@ -148,6 +155,13 @@ namespace Cinnamon {
 		if (m_SurfaceCapabilities.maxImageCount > 0U && imageCount > m_SurfaceCapabilities.maxImageCount)
 			imageCount = m_SurfaceCapabilities.maxImageCount;
 
+		const bool queuesFamiliesShared{ GraphicsContext::PresentAndGraphicsFamiliesShared() };
+		const STL::Array<uint32_t, 2> queueFamilyIndices
+		{
+			static_cast<uint32_t>(GraphicsContext::GetQueueFamily(GraphicsContext::EQueueFamily::Graphics)), 
+			static_cast<uint32_t>(GraphicsContext::GetQueueFamily(GraphicsContext::EQueueFamily::Present)), 
+		};
+
 		const VkSwapchainCreateInfoKHR swapchainCreateInfo{
 			.sType{ VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR },
 			.pNext{ nullptr },
@@ -160,8 +174,8 @@ namespace Cinnamon {
 			.imageArrayLayers{ 1U },
 			.imageUsage{ VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT },
 			.imageSharingMode{ VK_SHARING_MODE_EXCLUSIVE },
-			.queueFamilyIndexCount{ VK_QUEUE_FAMILY_IGNORED },
-			.pQueueFamilyIndices{ nullptr },
+			.queueFamilyIndexCount{ queuesFamiliesShared ? VK_QUEUE_FAMILY_IGNORED : static_cast<uint32_t>(queueFamilyIndices.size()) },
+			.pQueueFamilyIndices{ queuesFamiliesShared ? nullptr : &queueFamilyIndices[0U] },
 			.preTransform{ m_SurfaceCapabilities.currentTransform },
 			.compositeAlpha{ VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR },
 			.presentMode{ m_PresentMode },
@@ -366,7 +380,7 @@ namespace Cinnamon {
 				&m_Semaphores.RenderingFinished[i]));
 		}
 
-		CIN_TRACE("Created swapchain with {} images", imageCount);
+		CIN_TRACE("Created {0}-buffered swapchain with present and graphics queue {1}", imageCount, queuesFamiliesShared ? "shared" : "not shared");
 	}
 
 	void Swapchain::Recreate(const uint32_t width, const uint32_t height, VkSurfaceKHR surface)
@@ -374,10 +388,10 @@ namespace Cinnamon {
 		VK_CHECK(vkDeviceWaitIdle(
 			GraphicsContext::GetDevice()));
 
-		m_CachedSwapchain = m_Handle;
+		/* If surface hasn't changed, cache handle */
+		m_CachedSwapchain = GraphicsContext::GetSurface()->GetHandle() == surface ? m_Handle : VK_NULL_HANDLE;
 		Cleanup();
 		Create(width, height, surface);
-
 		vkDestroySwapchainKHR(
 			GraphicsContext::GetDevice(),
 			m_CachedSwapchain,
@@ -414,23 +428,23 @@ namespace Cinnamon {
 
 				case VK_ERROR_OUT_OF_DATE_KHR:
 				{
-					GraphicsContext::ResizeSurface(this);
+					GraphicsContext::ResizeSwapchain();
 				} break;
 
 				case VK_SUBOPTIMAL_KHR:
 				{
-					GraphicsContext::ResizeSurface(this);
+					GraphicsContext::ResizeSwapchain();
 				} break;
 
 				case VK_ERROR_SURFACE_LOST_KHR:
 				{
-					/* TODO: Recreate surface? */
-					GraphicsContext::ResizeSurface(this);
+					GraphicsContext::RecreateSurface();
 					return;
 				} break;
 
 				default:
 				{
+					GraphicsContext::RecreateSurface();
 					CIN_WARN("Unhandled acquire result: {0}", VKResultToString(result));
 				} break;
 			}
@@ -519,6 +533,10 @@ namespace Cinnamon {
 				commandBuffer));
 		}
 
+		GraphicsContext::PerformSingleSubmitMemoryTransferOperation([](VkCommandBuffer lolz) {
+			CIN_UNUSED(lolz);
+			});
+
 		VK_CHECK(vkQueueSubmit(
 			GraphicsContext::GetGraphicsQueue(),
 			1U,
@@ -539,7 +557,7 @@ namespace Cinnamon {
 		/* TODO: Add support for present queue */
 		const VkResult result{
 			vkQueuePresentKHR(
-				GraphicsContext::GetGraphicsQueue(),
+				GraphicsContext::GetPresentQueue(),
 				&presentInfo) };
 
 		switch (result)
@@ -550,23 +568,23 @@ namespace Cinnamon {
 
 			case VK_ERROR_OUT_OF_DATE_KHR:
 			{
-				GraphicsContext::ResizeSurface(this);
+				GraphicsContext::ResizeSwapchain();
 			} break;
 
 			case VK_SUBOPTIMAL_KHR:
 			{
-				GraphicsContext::ResizeSurface(this);
+				GraphicsContext::ResizeSwapchain();
 			} break;
 
 			case VK_ERROR_SURFACE_LOST_KHR:
 			{
-				/* TODO: Recreate surface? */
-				GraphicsContext::ResizeSurface(this);
+				GraphicsContext::RecreateSurface();
 				return;
 			} break;
 
 			default:
 			{
+				GraphicsContext::RecreateSurface();
 				CIN_WARN("Unhandled present result: {}", VKResultToString(result));
 			} break;
 		}
@@ -610,11 +628,5 @@ namespace Cinnamon {
 			GraphicsContext::GetDevice(),
 			m_RenderPass,
 			GraphicsContext::GetAllocator());
-
-		//vkFreeCommandBuffers(
-		//	GraphicsContext::GetDevice(),
-		//	m_CommandPool,
-		//	static_cast<uint32_t>(m_CommandBuffers.size()),
-		//	&m_CommandBuffers[0U]);
 	}
 }

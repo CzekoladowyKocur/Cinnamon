@@ -19,12 +19,13 @@ namespace Cinnamon {
 	{
 		CIN_ASSERT(m_WindowState, "Window state is invalid");
 
-		VkWin32SurfaceCreateInfoKHR win32SurfaceCreateInfo;
-		win32SurfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-		win32SurfaceCreateInfo.hinstance = m_WindowState->Instance;
-		win32SurfaceCreateInfo.hwnd = m_WindowState->Handle;
-		win32SurfaceCreateInfo.flags = 0;
-		win32SurfaceCreateInfo.pNext = nullptr;
+		const VkWin32SurfaceCreateInfoKHR win32SurfaceCreateInfo{
+			.sType{ VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR },
+			.pNext{ nullptr },
+			.flags{ 0U },
+			.hinstance{ m_WindowState->Instance },
+			.hwnd{ m_WindowState->Handle },
+		};
 
 		VK_CHECK(vkCreateWin32SurfaceKHR(
 			GraphicsContext::GetInstance(),

@@ -5,13 +5,7 @@
 #include "Platform/Platform.h"
 
 namespace Cinnamon {
-	struct DrawContext
-	{
-		Surface* SurfaceContext;
-		Swapchain* SwapchainContext;
-	};
-
-	InternalScope STL::UMap<const Window*, DrawContext> s_ContextMap;
+	InternalScope const Window* s_WindowContext{ nullptr };
 	/* TODO: Change to GPU score system */
 	InternalScope bool PhysicalDeviceMeetsRequirements(const VkPhysicalDevice physicalDevice)
 	{
@@ -20,7 +14,7 @@ namespace Cinnamon {
 
 		return physicalDeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
 	}
-#if CIN_DEBUG
+#if CIN_DEeG
 	InternalScope VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugReportCallback(
 		VkDebugReportFlagsEXT flags,
 		VkDebugReportObjectTypeEXT objectType,
@@ -36,24 +30,21 @@ namespace Cinnamon {
 		CIN_UNUSED(messageCode);
 		CIN_UNUSED(pLayerPrefix);
 		CIN_UNUSED(pUserData);
-		/* TODO: Remove */
-		CIN_UNUSED(pMessage);
-		CIN_UNUSED(objectType);
 
 		if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)
-			CIN_INFO("Vulkan:\n  Object: {0}\n  Message: {1}", static_cast<int>(objectType), pMessage);
+			CIN_INFO("Vulkan:\n  Object: {0}\n  Message: {1}", objectType, pMessage);
 
 		if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
-			CIN_WARN("Vulkan:\n  Object: {0}\n  Message: {1}", static_cast<int>(objectType), pMessage);
+			CIN_WARN("Vulkan:\n  Object: {0}\n  Message: {1}", objectType, pMessage);
 
 		if (flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT)
-			CIN_WARN("Vulkan:\n  Object: {0}\n  Message: {1}", static_cast<int>(objectType), pMessage);
+			CIN_WARN("Vulkan:\n  Object: {0}\n  Message: {1}", objectType, pMessage);
 
 		if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
-			CIN_ERROR("Vulkan:\n  Object: {0}\n  Message: {1}", static_cast<int>(objectType), pMessage);
+			CIN_ERROR("Vulkan:\n  Object: {0}\n  Message: {1}", objectType, pMessage);
 
 		if (flags & VK_DEBUG_REPORT_DEBUG_BIT_EXT)
-			CIN_WARN("Vulkan:\n  Object: {0}\n  Message: {1}", static_cast<int>(objectType), pMessage);
+			CIN_WARN("Vulkan:\n  Object: {0}\n  Message: {1}", objectType, pMessage);
 
 		return VK_FALSE;
 	}
@@ -169,7 +160,7 @@ namespace Cinnamon {
 			&s_Instance));
 
 		volkLoadInstance(s_Instance);
-#ifdef CIN_DEBUG
+#ifdef ldldl
 		const auto _vkCreateDebugReportCallbackEXT{ (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(s_Instance, "vkCreateDebugReportCallbackEXT") };
 		CIN_ASSERT(_vkCreateDebugReportCallbackEXT != nullptr);
 		
@@ -181,7 +172,11 @@ namespace Cinnamon {
 			.pUserData{ nullptr },
 		};
 
-		_vkCreateDebugReportCallbackEXT(s_Instance, &debugReportCreateInfo, s_Allocator, &s_DebugObject);
+		VK_CHECK(_vkCreateDebugReportCallbackEXT(
+			s_Instance, 
+			&debugReportCreateInfo, 
+			s_Allocator, 
+			&s_DebugObject));
 #endif
 		uint32_t physicalDeviceCount{ 0 };
 		VK_CHECK(vkEnumeratePhysicalDevices(s_Instance, &physicalDeviceCount, nullptr));
@@ -190,7 +185,7 @@ namespace Cinnamon {
 
 		if (availablePhysicalDevices.empty())
 		{
-			CIN_CRITICAL("Failed to find a physical device");
+			CIN_CRITICAL("Failed to find a supported physical device");
 			return false;
 		}
 
@@ -209,25 +204,33 @@ namespace Cinnamon {
 		if (!s_PhysicalDevice)
 			s_PhysicalDevice = availablePhysicalDevices.front();
 
-		s_ContextMap.clear();
 		CIN_TRACE("Initialized graphics context");
 		return true;
 	}
 
 	bool GraphicsContext::Shutdown()
 	{
-		VK_CHECK(vkDeviceWaitIdle(s_LogicalDevice));
-		for (const auto& [window, drawContext] : s_ContextMap)
-		{
-			CIN_UNUSED(window);
-			cindel drawContext.SwapchainContext;
-			cindel drawContext.SurfaceContext;
-		}
+		VK_CHECK(vkDeviceWaitIdle(
+			s_LogicalDevice));
+
+		cindel s_Swapchain;
+		cindel s_Surface;
+
+		vkDestroyCommandPool(
+			s_LogicalDevice,
+			s_CommandPools.Graphics,
+			s_Allocator);
+
+		vkDestroyCommandPool(
+			s_LogicalDevice,
+			s_CommandPools.Transfer,
+			s_Allocator);
 
 		vkDestroyDevice(
 			s_LogicalDevice,
 			s_Allocator);
-#ifdef CIN_DEBUG
+		
+#ifdef dldl
 		const auto _vkDestroyDebugReportCallbackEXT{ (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(s_Instance, "vkDestroyDebugReportCallbackEXT") };
 		CIN_ASSERT(_vkDestroyDebugReportCallbackEXT != nullptr);
 
@@ -245,13 +248,17 @@ namespace Cinnamon {
 
 	bool GraphicsContext::CreateSurface(const Window* const windowContext)
 	{
-		uint32_t queueFamilyPropertiesCount{ 0 };
+		/* Surface is created before picking any queue families to select a dedicated present queue */
+		s_WindowContext = windowContext;
+		s_Surface = cinew Surface(windowContext);
+
+		uint32_t queueFamilyPropertiesCount{ 0U };
 		vkGetPhysicalDeviceQueueFamilyProperties(
 			s_PhysicalDevice,
 			&queueFamilyPropertiesCount,
 			nullptr);
 
-		if (queueFamilyPropertiesCount == 0)
+		if (queueFamilyPropertiesCount == 0U)
 		{
 			CIN_CRITICAL("Failed to retrieve queue family properties");
 			return false;
@@ -261,49 +268,129 @@ namespace Cinnamon {
 		vkGetPhysicalDeviceQueueFamilyProperties(
 			s_PhysicalDevice,
 			&queueFamilyPropertiesCount,
-			&queueFamilyProperties[0]);
+			&queueFamilyProperties[0U]);
 
-		CIN_WARN("Add present queue support");
-		for (uint32_t i{ 0 }; i < queueFamilyProperties.size(); ++i)
+		CIN_TRACE("Vulkan queue families:");
+		for (uint32_t queueFamilyIndex{ 0U }; queueFamilyIndex < static_cast<uint32_t>(queueFamilyProperties.size()); ++queueFamilyIndex)
 		{
-			const VkQueueFamilyProperties& queueFamily{ queueFamilyProperties[i] };
+			const uint32_t queueCount{ queueFamilyProperties[queueFamilyIndex].queueCount };
+			const uint32_t queueFlags{ queueFamilyProperties[queueFamilyIndex].queueFlags };
 
-			if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+			if (queueCount > 0U)
 			{
-				CIN_TRACE("Found graphics queue with index {0}", i);
-				s_QueueFamilies.Graphics = i;
-				continue;
-			}
+				VkBool32 presentationSupported{ VK_FALSE };
+				VK_CHECK(vkGetPhysicalDeviceSurfaceSupportKHR(
+					s_PhysicalDevice,
+					queueFamilyIndex,
+					s_Surface->GetHandle(),
+					&presentationSupported));
 
-			if (queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)
-			{
-				CIN_TRACE("Found compute queue with index {0}", i);
-				s_QueueFamilies.Compute = i;
-				continue;
-			}
+				if (presentationSupported)
+				{
+					CIN_TRACE("--Found present queue family with index {0} with count of {1} queues", queueFamilyIndex, queueCount);
+					s_QueueFamilies.Present = static_cast<int32_t>(queueFamilyIndex);
+					s_QueueFamilies.PresentQueueCount = queueCount;
+				}
 
-			if (queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT)
-			{
-				CIN_TRACE("Found transer queue with index {0}", i);
-				s_QueueFamilies.Transfer = i;
-				continue;
+				if (queueFlags & VK_QUEUE_GRAPHICS_BIT)
+				{
+					CIN_TRACE("--Found graphics queue family with index {0} with count of {1} queues", queueFamilyIndex, queueCount);
+					s_QueueFamilies.Graphics = static_cast<int32_t>(queueFamilyIndex);
+					s_QueueFamilies.GraphicsQueueCount = queueCount;
+					continue;
+				}
+
+				if (queueFlags & VK_QUEUE_COMPUTE_BIT)
+				{
+					CIN_TRACE("--Found compute queue family with index {0} with count of {1} queues", queueFamilyIndex, queueCount);
+					s_QueueFamilies.Compute = static_cast<int32_t>(queueFamilyIndex);
+					s_QueueFamilies.ComputeQueueCount = queueCount;
+					continue;
+				}
+
+				/* Used for fast memory copying operations */
+				if (queueFlags & VK_QUEUE_TRANSFER_BIT)
+				{
+					CIN_TRACE("--Found transfer queue family with index {0} with count of {1} queues", queueFamilyIndex, queueCount);
+					s_QueueFamilies.Transfer = static_cast<int32_t>(queueFamilyIndex);
+					s_QueueFamilies.TransferQueueCount = queueCount;
+					continue;
+				}
 			}
 		}
 
-		/* Graphics only for now */
-		constexpr float queuePriority{ 1.0f };
-		const VkDeviceQueueCreateInfo queueCreateInfo{
-			.sType{ VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO },
-			.pNext{ nullptr },
-			.flags{ 0U },
-			.queueFamilyIndex{ static_cast<uint32_t>(s_QueueFamilies.Graphics) },
-			.queueCount{ 1U },
-			.pQueuePriorities{ &queuePriority },
-		};
+		if (s_QueueFamilies.Present == QueueFamilies::Absent)
+		{
+			CIN_ERROR("Failed to find a suitable present family");
+			return false;
+		}
 
-		const STL::Vector<VkDeviceQueueCreateInfo> deviceQueueCreateInfos{ queueCreateInfo };
+		if (s_QueueFamilies.Graphics == QueueFamilies::Absent)
+		{
+			CIN_ERROR("Failed to find a suitable graphics family");
+			return false;
+		}
+
+		constexpr float defaultQueuePriority{ 1.0f };
+		STL::Vector<VkDeviceQueueCreateInfo> deviceQueueCreateInfos;
+		if (PresentAndGraphicsFamiliesShared())
+		{
+			CIN_ASSERT(s_QueueFamilies.Graphics == s_QueueFamilies.Present);
+			CIN_ASSERT(s_QueueFamilies.GraphicsQueueCount == s_QueueFamilies.PresentQueueCount);
+			constexpr STL::Array<float, 2U> defaultQueuePriorities{ defaultQueuePriority, defaultQueuePriority };
+
+			VkDeviceQueueCreateInfo graphicsQueueCreateInfo{
+				.sType{ VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO },
+				.pNext{ nullptr },
+				.flags{ 0U },
+				.queueFamilyIndex{ static_cast<uint32_t>(s_QueueFamilies.Graphics) },
+				.queueCount{ s_QueueFamilies.GraphicsQueueCount > 1U ? 2U : 1U }, /* If queue family is shared, attempt using a different queue if more than 1 is available */
+				.pQueuePriorities{ s_QueueFamilies.GraphicsQueueCount > 1U ? defaultQueuePriorities.data() : &defaultQueuePriority },
+			};
+
+			deviceQueueCreateInfos.emplace_back(std::move(graphicsQueueCreateInfo));
+		}
+		else
+		{
+			VkDeviceQueueCreateInfo presentQueueCreateInfo{
+				.sType{ VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO },
+				.pNext{ nullptr },
+				.flags{ 0U },
+				.queueFamilyIndex{ static_cast<uint32_t>(s_QueueFamilies.Present) },
+				.queueCount{ 1U },
+				.pQueuePriorities{ &defaultQueuePriority },
+			};
+
+			deviceQueueCreateInfos.emplace_back(std::move(presentQueueCreateInfo));
+			VkDeviceQueueCreateInfo graphicsQueueCreateInfo{
+				.sType{ VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO },
+				.pNext{ nullptr },
+				.flags{ 0U },
+				.queueFamilyIndex{ static_cast<uint32_t>(s_QueueFamilies.Graphics) },
+				.queueCount{ 1U },
+				.pQueuePriorities{ &defaultQueuePriority },
+			};
+
+			deviceQueueCreateInfos.emplace_back(std::move(graphicsQueueCreateInfo));
+		}
+
+		/* Transfer queue */
+		if (s_QueueFamilies.Transfer != QueueFamilies::Absent)
+		{
+			VkDeviceQueueCreateInfo transferQueueCreateInfo{
+				.sType{ VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO },
+				.pNext{ nullptr },
+				.flags{ 0U },
+				.queueFamilyIndex{ static_cast<uint32_t>(s_QueueFamilies.Transfer) },
+				.queueCount{ 1U },
+				.pQueuePriorities{ &defaultQueuePriority },
+			};
+
+			deviceQueueCreateInfos.emplace_back(std::move(transferQueueCreateInfo));
+		}
+
 		/* None for now */
-		const VkPhysicalDeviceFeatures enabledFeatures{};
+		constexpr VkPhysicalDeviceFeatures enabledFeatures{};
 
 		auto requestedLayers{ Platform::GetRequestedVulkanDeviceLayers() };
 		auto requiredExtensions{ Platform::GetRequiredVulkanDeviceExtensions() };
@@ -316,18 +403,18 @@ namespace Cinnamon {
 			if (availableLayerCount != 0U)
 			{
 				STL::Vector<VkLayerProperties> availableLayers(availableLayerCount);
-				VK_CHECK(vkEnumerateDeviceLayerProperties(s_PhysicalDevice, &availableLayerCount, &availableLayers[0]));
+				VK_CHECK(vkEnumerateDeviceLayerProperties(s_PhysicalDevice, &availableLayerCount, &availableLayers[0U]));
 
 				/* Continues program even if requested layer isn't supported */
 				for (uint32_t i{ 0U }; i < requestedLayers.size(); ++i)
 				{
 					bool found{ false };
-					CIN_TRACE("Requested layer: {0}", requestedLayers[i]);
+					CIN_TRACE("Requested layer: {}", requestedLayers[i]);
 					for (uint32_t j{ 0U }; j < availableLayers.size(); ++j)
-						if (strcmp(requestedLayers[i], availableLayers[j].layerName) == 0)
+						if (strcmp(requestedLayers[i], availableLayers[j].layerName) == 0U)
 						{
 							found = true;
-							CIN_TRACE("Found layer: {0}", requestedLayers[i]);
+							CIN_TRACE("Found layer: {}", requestedLayers[i]);
 							break;
 						}
 
@@ -338,7 +425,7 @@ namespace Cinnamon {
 						CIN_ASSERT(iter != requestedLayers.end());
 						requestedLayers.erase(iter);
 
-						CIN_WARN("Failed to find requested layer: {0}", requestedLayers[i]);
+						CIN_WARN("Failed to find requested layer: {}", requestedLayers[i]);
 					}
 				}
 			}
@@ -362,24 +449,24 @@ namespace Cinnamon {
 			for (uint32_t i{ 0U }; i < requiredExtensions.size(); ++i)
 			{
 				bool found{ false };
-				CIN_TRACE("Requested extension: {0}", requiredExtensions[i]);
+				CIN_TRACE("Requested extension: {}", requiredExtensions[i]);
 				for (uint32_t j{ 0U }; j < availableExtensions.size(); ++j)
-					if (strcmp(requiredExtensions[i], availableExtensions[j].extensionName) == 0)
+					if (strcmp(requiredExtensions[i], availableExtensions[j].extensionName) == 0U)
 					{
-						CIN_TRACE("Found extension: {0}", requiredExtensions[i]);
+						CIN_TRACE("Found extension: {}", requiredExtensions[i]);
 						found = true;
 						break;
 					}
 
 				if (!found)
 				{
-					CIN_CRITICAL("Failed to find extension with name: {0}", requiredExtensions[i]);
+					CIN_CRITICAL("Failed to find extension with name: {}", requiredExtensions[i]);
 					return false;
 				}
 			}
 		}
 
-		CIN_ASSERT(not deviceQueueCreateInfos.empty(), "No device queues requested");
+		CIN_ASSERT(!deviceQueueCreateInfos.empty(), "No device queues requested");
 		const VkDeviceCreateInfo deviceCreateInfo{
 			.sType{ VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO },
 			.pNext{ nullptr },
@@ -399,52 +486,140 @@ namespace Cinnamon {
 			s_Allocator,
 			&s_LogicalDevice));
 
-		/* Pick a single graphics queue for now */
-		CIN_TRACE("Picking first graphics queue from family index {0}", s_QueueFamilies.Graphics);
-		vkGetDeviceQueue(
-			s_LogicalDevice,
-			s_QueueFamilies.Graphics,
-			0U, /* Pick first queue */
-			&s_Queues.Graphics);
+		if (PresentAndGraphicsFamiliesShared())
+		{
+			CIN_ASSERT(s_QueueFamilies.Graphics == s_QueueFamilies.Present);
+			if (PresentAndGraphicsQueuesCanBeSeparate())
+			{
+				CIN_ASSERT(s_QueueFamilies.GraphicsQueueCount > 1U);
+				vkGetDeviceQueue(
+					s_LogicalDevice,
+					static_cast<uint32_t>(s_QueueFamilies.Graphics),
+					0U, /* Pick first queue in a queue family */
+					&s_Queues.Graphics);
 
-		CIN_ASSERT(s_Queues.Graphics != VK_NULL_HANDLE, "Failed to pick graphics queue");
+				vkGetDeviceQueue(
+					s_LogicalDevice,
+					static_cast<uint32_t>(s_QueueFamilies.Present),
+					1U, /* Pick second queue in a queue family */
+					&s_Queues.Present);
+			}
+			else
+			{
+				vkGetDeviceQueue(
+					s_LogicalDevice,
+					static_cast<uint32_t>(s_QueueFamilies.Graphics),
+					0U, /* Pick first queue in a queue family */
+					&s_Queues.Graphics);
 
-		Surface* surf{ cinew Surface(windowContext) };
+				s_Queues.Present = s_Queues.Graphics;
+			}
+		}
+		else
+		{
+			vkGetDeviceQueue(
+				s_LogicalDevice,
+				static_cast<uint32_t>(s_QueueFamilies.Graphics),
+				0U,
+				&s_Queues.Graphics);
+
+			vkGetDeviceQueue(
+				s_LogicalDevice,
+				static_cast<uint32_t>(s_QueueFamilies.Present),
+				0U,
+				&s_Queues.Present);
+		}
+
+		/* Pick a transfer queue if available, if not - default to graphics queue */
+		if (s_QueueFamilies.Transfer != QueueFamilies::Absent)
+			vkGetDeviceQueue(
+				s_LogicalDevice,
+				static_cast<uint32_t>(s_QueueFamilies.Transfer),
+				0U, /* Pick first queue in a queue family */
+				&s_Queues.Transfer);
+		else
+		{
+			CIN_WARN("Transfer queue family was not found. Defaulting transfer queue to a graphics queue");
+			s_Queues.Transfer = s_Queues.Graphics;
+		}
+
+		CIN_ASSERT(s_Queues.Graphics != VK_NULL_HANDLE, "Graphics queue is invalid");
+		CIN_ASSERT(s_Queues.Present != VK_NULL_HANDLE, "Present is invalid");
+		CIN_ASSERT(s_Queues.Transfer != VK_NULL_HANDLE, "Transfer queue is invalid");
+
+		/* Create graphics command pool */
+		{
+			const VkCommandPoolCreateInfo graphicsCommandPoolCreateInfo{
+				.sType{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO },
+				.pNext{ nullptr },
+				.flags{ 0U },
+				.queueFamilyIndex{ static_cast<uint32_t>(s_QueueFamilies.Graphics) },
+			};
+
+			VK_CHECK(vkCreateCommandPool(
+				s_LogicalDevice,
+				&graphicsCommandPoolCreateInfo,
+				s_Allocator,
+				&s_CommandPools.Graphics));
+		}
+
+		CIN_TRACE("Created graphics command pool from queue family {}", s_QueueFamilies.Graphics);
+		/* Create a transfer command pool if transfer queue family is available, if not - default to graphics command pool */
+		if (s_QueueFamilies.Transfer != s_QueueFamilies.Graphics)
+		{
+			/* Create transfer command pool */
+			const VkCommandPoolCreateInfo transferCommandPoolCreateInfo{
+				.sType{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO },
+				.pNext{ nullptr },
+				.flags{ 0U },
+				.queueFamilyIndex{ static_cast<uint32_t>(s_QueueFamilies.Transfer) },
+			};
+
+			VK_CHECK(vkCreateCommandPool(
+				s_LogicalDevice,
+				&transferCommandPoolCreateInfo,
+				s_Allocator,
+				&s_CommandPools.Transfer));
+			
+			CIN_TRACE("Created transfer command pool from queue family {}", s_QueueFamilies.Transfer);
+		}
+		else
+			s_CommandPools.Transfer = s_CommandPools.Graphics;
+
 		const auto [width, height] { windowContext->GetSize() };
-		s_ContextMap[windowContext] = { surf, cinew Swapchain(width, height, surf->GetHandle()) };
+		s_Swapchain = cinew Swapchain(width, height, s_Surface->GetHandle());
 
 		return true;
 	}
 
-	void GraphicsContext::ResizeSurface(const Window* const windowContext, const uint32_t width, const uint32_t height)
+	void GraphicsContext::RecreateSurface()
 	{
-		Swapchain*& swapchain = s_ContextMap[windowContext].SwapchainContext;
-		Surface*& surface = s_ContextMap[windowContext].SurfaceContext;
+		CIN_ASSERT(s_WindowContext, "Invalid window context");
+		/* No surface recreation */
+		Surface* oldSurface{ s_Surface };
+		s_Surface = cinew Surface(s_WindowContext);
 
-		Surface* oldSurface{ surface };
-		surface = cinew Surface(windowContext);
-		swapchain->Recreate(width, height, surface->GetHandle());
+		const auto [width, height] { s_WindowContext->GetSize() };
+		s_Swapchain->Recreate(width, height, s_Surface->GetHandle());
 		
 		cindel oldSurface;
 	}
 
-	void GraphicsContext::ResizeSurface(const Swapchain* const swapchain)
+	void GraphicsContext::ResizeSwapchain()
 	{
-		for (const auto& [window, drawContext] : s_ContextMap)
-			if (drawContext.SwapchainContext == swapchain)
-			{
-				const auto [width, height] { window->GetSize() };
-				ResizeSurface(window, width, height);
-			}
+		CIN_ASSERT(s_WindowContext, "Invalid window context");
+		/* No surface recreation */
+		const auto [width, height] { s_WindowContext->GetSize() };
+		s_Swapchain->Recreate(width, height, s_Surface->GetHandle());
 	}
 
-	void GraphicsContext::AcquireNextImage(const Window* const windowContext)
+	void GraphicsContext::AcquireNextImage()
 	{
-		s_ContextMap[windowContext].SwapchainContext->AcquireNextSwapchainImage();
+		s_Swapchain->AcquireNextSwapchainImage();
 	}
 
-	void GraphicsContext::PresentImage(const Window* const windowContext)
+	void GraphicsContext::PresentImage()
 	{
-		s_ContextMap[windowContext].SwapchainContext->PresentSwapchainImage();
+		s_Swapchain->PresentSwapchainImage();
 	}
 }

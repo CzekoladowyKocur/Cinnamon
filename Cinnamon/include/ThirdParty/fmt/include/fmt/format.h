@@ -1402,7 +1402,7 @@ template <typename F> struct basic_fp {
     static_assert(std::numeric_limits<Float>::digits <= 113, "unsupported FP");
     // Assume Float is in the format [sign][exponent][significand].
     using carrier_uint = typename dragonbox::float_info<Float>::carrier_uint;
-    const auto num_float_significand_bits =
+    constexpr auto num_float_significand_bits =
         detail::num_significand_bits<Float>();
     const auto implicit_bit = carrier_uint(1) << num_float_significand_bits;
     const auto significand_mask = implicit_bit - 1;
@@ -3238,7 +3238,7 @@ FMT_CONSTEXPR20 auto write(OutputIt out, T value) -> OutputIt {
   constexpr auto specs = basic_format_specs<Char>();
   using floaty = conditional_t<std::is_same<T, long double>::value, double, T>;
   using uint = typename dragonbox::float_info<floaty>::carrier_uint;
-  uint mask = exponent_mask<floaty>();
+  constexpr uint mask = exponent_mask<floaty>();
   if ((bit_cast<uint>(value) & mask) == mask)
     return write_nonfinite(out, std::isnan(value), specs, fspecs);
 

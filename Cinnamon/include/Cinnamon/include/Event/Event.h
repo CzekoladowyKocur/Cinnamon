@@ -38,8 +38,8 @@ namespace Cinnamon {
 	class Event
 	{
 	public:
-		Event() noexcept = default;
-		virtual ~Event() noexcept = default;
+		constexpr Event() noexcept = default;
+		constexpr virtual ~Event() noexcept = default;
 
 		virtual EEventType GetEventType() const = 0;
 		virtual EEventCategory GetEventCategory() const = 0;

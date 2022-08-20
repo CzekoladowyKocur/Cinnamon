@@ -113,7 +113,7 @@ namespace Cinnamon {
 		m_State->Handle = windowHandle;
 		/* TODO: if the window should not accept input, this should be false */
 		const bool shouldActivate{ TRUE };
-		int32_t showWindowCommandFlags = shouldActivate ? SW_SHOW : SW_SHOWNOACTIVATE;
+		const int32_t showWindowCommandFlags = shouldActivate ? SW_SHOW : SW_SHOWNOACTIVATE;
 
 		ShowWindow(windowHandle, showWindowCommandFlags);
 		if (!SetForegroundWindow(windowHandle))

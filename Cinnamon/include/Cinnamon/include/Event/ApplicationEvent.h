@@ -6,8 +6,8 @@ namespace Cinnamon {
 	{
 	private:
 	public:
-		ApplicationTickEvent() noexcept = default;
-		virtual ~ApplicationTickEvent() noexcept = default;
+		constexpr ApplicationTickEvent() noexcept = default;
+		constexpr virtual ~ApplicationTickEvent() noexcept = default;
 
 		EVENT_TYPE(ApplicationTick)
 		EVENT_CATEGORY(Application)
@@ -17,8 +17,8 @@ namespace Cinnamon {
 	{
 	private:
 	public:
-		ApplicationRenderEvent() noexcept = default;
-		virtual ~ApplicationRenderEvent() noexcept = default;
+		constexpr ApplicationRenderEvent() noexcept = default;
+		constexpr virtual ~ApplicationRenderEvent() noexcept = default;
 
 		EVENT_TYPE(ApplicationRender)
 		EVENT_CATEGORY(Application)

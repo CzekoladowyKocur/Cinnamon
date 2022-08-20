@@ -3,6 +3,7 @@
 
 namespace Cinnamon {
 	class Window;
+	class Surface;
 	class Swapchain;
 
 	class GraphicsContext
@@ -10,10 +11,10 @@ namespace Cinnamon {
 	public:
 		enum class EQueueFamily
 		{
-			Graphics,
-			Compute,
-			Transfer,
-			Present,
+			Graphics = 0U,
+			Compute = 1U,
+			Transfer = 2U,
+			Present = 3U,
 		};
 	private:
 		GraphicsContext() noexcept = delete;
@@ -21,19 +22,122 @@ namespace Cinnamon {
 	public:
 		[[nodiscard]] static bool Initialize();
 		[[nodiscard]] static bool Shutdown();
-		[[nodiscard]] static bool CreateSurface(const Window* const windowContext);
-		static void ResizeSurface(const Window* const windowContext, const uint32_t width, const uint32_t height);
-		static void ResizeSurface(const Swapchain* const swapchain);
 
-		static void AcquireNextImage(const Window* const windowContext);
-		static void PresentImage(const Window* const windowContext);
+		[[nodiscard]] static bool CreateSurface(const Window* const windowContext);
+		static void RecreateSurface();
+		static void ResizeSwapchain();
+
+		static void AcquireNextImage();
+		static void PresentImage();
+
+		template<typename Function>
+		static void PerformSingleSubmitMemoryTransferOperation(Function&& function)
+		{
+			CIN_ASSERT(s_CommandPools.Transfer, "Invalid transfer command pool");
+			const VkCommandBufferAllocateInfo transferCommandBufferAllocateInfo{
+				.sType{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO },
+				.pNext{ nullptr },
+				.commandPool{ s_CommandPools.Transfer },
+				.level{ VK_COMMAND_BUFFER_LEVEL_PRIMARY },
+				.commandBufferCount{ 1U },
+			};
+
+			VkCommandBuffer transferCommandBuffer;
+			VK_CHECK(vkAllocateCommandBuffers(
+				s_LogicalDevice,
+				&transferCommandBufferAllocateInfo,
+				&transferCommandBuffer));
+
+			const VkCommandBufferBeginInfo transferCommandBufferBeginInfo{
+				.sType{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO },
+				.pNext{ nullptr },
+				.flags{ VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT },
+				.pInheritanceInfo{ nullptr },
+			};
+
+			VK_CHECK(vkBeginCommandBuffer(
+				transferCommandBuffer,
+				&transferCommandBufferBeginInfo));
+
+			/* User code */
+			function(transferCommandBuffer);
+
+			VK_CHECK(vkEndCommandBuffer(
+				transferCommandBuffer));
+
+			const VkSubmitInfo submitInfo{
+				.sType{ VK_STRUCTURE_TYPE_SUBMIT_INFO },
+				.pNext{ nullptr },
+				.waitSemaphoreCount{ 0U },
+				.pWaitSemaphores{ nullptr },
+				.pWaitDstStageMask{ 0U /* VK_PIPELINE_STAGE_TRANSFER_BIT */},
+				.commandBufferCount{ 1U },
+				.pCommandBuffers{ &transferCommandBuffer },
+				.signalSemaphoreCount{ 0U },
+				.pSignalSemaphores{ nullptr },
+			};
+
+			constexpr VkFenceCreateInfo fenceCreateInfo{
+				.sType{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO },
+				.pNext{ nullptr },
+				.flags{ 0U },
+			};
+
+			VkFence executionHasFinishedFence;
+			VK_CHECK(vkCreateFence(
+				s_LogicalDevice,
+				&fenceCreateInfo,
+				s_Allocator,
+				&executionHasFinishedFence));
+
+			VK_CHECK(vkQueueSubmit(
+				s_Queues.Transfer,
+				1U,
+				&submitInfo,
+				executionHasFinishedFence));
+
+			VK_CHECK(vkWaitForFences(
+				s_LogicalDevice,
+				1U,
+				&executionHasFinishedFence,
+				VK_FALSE,
+				std::numeric_limits<uint64_t>::max()));
+
+			vkFreeCommandBuffers(
+				s_LogicalDevice,
+				s_CommandPools.Transfer,
+				1U,
+				&transferCommandBuffer);
+
+			vkDestroyFence(
+				s_LogicalDevice,
+				executionHasFinishedFence,
+				s_Allocator);
+		}
+
+		[[nodiscard]] static CIN_FORCE_INLINE bool PresentAndGraphicsFamiliesShared()
+		{
+			return s_QueueFamilies.Graphics == s_QueueFamilies.Present;
+		}
+
+		[[nodiscard]] static CIN_FORCE_INLINE bool PresentAndGraphicsQueuesCanBeSeparate()
+		{
+			return 
+				s_QueueFamilies.Graphics != s_QueueFamilies.Present ||
+				s_QueueFamilies.GraphicsQueueCount > 2;
+		}
+
+		[[nodiscard]] static CIN_FORCE_INLINE bool PresentAndGraphicsQueuesShared()
+		{
+			return s_Queues.Graphics == s_Queues.Present;
+		}
 
 		static CIN_FORCE_INLINE VkInstance GetInstance()
 		{
 			return s_Instance;
 		}
 
-		static CIN_FORCE_INLINE VkSurfaceKHR GetSurface()
+		static CIN_FORCE_INLINE Surface* GetSurface()
 		{
 			return s_Surface;
 		}
@@ -47,26 +151,27 @@ namespace Cinnamon {
 		{
 			return s_LogicalDevice;
 		}
-
-		//static CIN_FORCE_INLINE constexpr Swapchain* GetSwapchain()
-		//{
-		//	return s_Swapchain;
-		//}
-
+#ifdef sls
 		static CIN_FORCE_INLINE VkDebugReportCallbackEXT GetDebugReportCallback()
 		{
-#ifdef CIN_DEBUG
 			return s_DebugObject;
-#else
-			return nullptr;
-#endif
 		}
 
 		static CIN_FORCE_INLINE consteval VkAllocationCallbacks* GetAllocator()
 		{
 			return s_Allocator;
 		}
+#else
+		static consteval VkDebugReportCallbackEXT GetDebugReportCallback()
+		{
+			return nullptr;
+		}
 
+		static consteval VkAllocationCallbacks* GetAllocator()
+		{
+			return nullptr;
+		}
+#endif
 		static CIN_FORCE_INLINE int32_t GetQueueFamily(const EQueueFamily queueFamily)
 		{
 			switch (queueFamily)
@@ -77,8 +182,8 @@ namespace Cinnamon {
 				case EQueueFamily::Present:		return s_QueueFamilies.Present;
 			}
 
-			CIN_ASSERT(false, "Unknown family");
-			return -1;
+			CIN_ASSERT(false, "Unknown queue family");
+			return -1i32;
 		}
 
 		static CIN_FORCE_INLINE VkQueue GetGraphicsQueue()
@@ -97,59 +202,55 @@ namespace Cinnamon {
 		}
 	private:
 		static inline VkInstance s_Instance{ VK_NULL_HANDLE };
-		static inline VkSurfaceKHR s_Surface{ VK_NULL_HANDLE };
 		static inline VkPhysicalDevice s_PhysicalDevice{ VK_NULL_HANDLE };
 		static inline VkDevice s_LogicalDevice{ VK_NULL_HANDLE };
-		//static inline Swapchain* s_Swapchain{ VK_NULL_HANDLE };
-#ifdef CIN_DEBUG
+		static inline Surface* s_Surface;
+		static inline Swapchain* s_Swapchain;
+#ifdef dldl
 		static inline VkDebugReportCallbackEXT s_DebugObject{ VK_NULL_HANDLE };
 #endif
 		static inline constexpr VkAllocationCallbacks* s_Allocator{ VK_NULL_HANDLE };
 
-		struct QueueFamilies
+		struct QueueFamilies final
 		{
-			int32_t Graphics;
-			int32_t Compute;
-			int32_t Transfer;
-			int32_t Present;
+			enum : int32_t
+			{
+				Absent = -1i32,
+			};
 
-            QueueFamilies()
-            :
-            Graphics(-1),
-            Compute(-1),
-            Transfer(-1),
-            Present(-1)
-            {}
-		} static inline s_QueueFamilies;
+			/* Queue family handles are stored as 32 bit signed integers 
+			instead of 32 bit unsigned integers to ease checking */
+			int32_t Graphics{ Absent };
+			int32_t Compute{ Absent };
+			int32_t Transfer{ Absent };
+			int32_t Present{ Absent };
 
-		struct Queues {
-			VkQueue Graphics;
-			VkQueue Compute;
-			VkQueue Transfer;
-			VkQueue Present;
+			uint32_t GraphicsQueueCount{ 0U };
+			uint32_t ComputeQueueCount{ 0U };
+			uint32_t TransferQueueCount{ 0U };
+			uint32_t PresentQueueCount{ 0U };
 
-            Queues()
-            :
-            Graphics(VK_NULL_HANDLE),
-            Compute(VK_NULL_HANDLE),
-            Transfer(VK_NULL_HANDLE),
-            Present(VK_NULL_HANDLE)
-            {} 
-		} static inline s_Queues;
+			constexpr ~QueueFamilies() noexcept = default;
+		} constinit static inline s_QueueFamilies{};
 
-		struct CommandPools {
-			VkCommandPool Graphics;
-			VkCommandPool Compute;
-			VkCommandPool Transfer;
-			VkCommandPool Present;
+		struct Queues final
+		{
+			VkQueue Graphics{ VK_NULL_HANDLE };
+			VkQueue Compute{ VK_NULL_HANDLE };
+			VkQueue Transfer{ VK_NULL_HANDLE };
+			VkQueue Present{ VK_NULL_HANDLE };
 
-            CommandPools()
-            :
-            Graphics(VK_NULL_HANDLE),
-            Compute(VK_NULL_HANDLE),
-            Transfer(VK_NULL_HANDLE),
-            Present(VK_NULL_HANDLE)
-            {}
-		} static inline s_CommandPools;
+			constexpr ~Queues() noexcept = default;
+		} constinit static inline s_Queues{};
+
+		struct CommandPools final
+		{
+			VkCommandPool Graphics{ VK_NULL_HANDLE };
+			VkCommandPool Compute{ VK_NULL_HANDLE };
+			VkCommandPool Transfer{ VK_NULL_HANDLE };
+			VkCommandPool Present{ VK_NULL_HANDLE };
+
+			constexpr ~CommandPools() noexcept = default;
+		} constinit static inline s_CommandPools{};
 	};
 }

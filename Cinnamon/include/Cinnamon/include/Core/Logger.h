@@ -92,7 +92,13 @@ namespace Cinnamon {
 }
 
 /* TODO: Make seperate engine core and application logging macros */
-#ifdef CIN_DISABLE_LOGGING
+#ifdef CIN_DISTRIBUTION 
+#define CIN_DISABLE_LOGGING 1U
+#else
+#define CIN_DISABLE_LOGGING 0U
+#endif
+
+#if CIN_DISABLE_LOGGING
 #define CIN_TRACE(message, ...)             void()
 #define CIN_INFO(message, ...)              void()
 #define CIN_WARN(message, ...)              void()

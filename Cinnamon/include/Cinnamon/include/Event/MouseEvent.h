@@ -8,7 +8,7 @@ namespace Cinnamon {
 	private:
 	public:
 		explicit MouseEvent(const MouseCode mouseCode) noexcept;
-		virtual ~MouseEvent() noexcept = default;
+		constexpr virtual ~MouseEvent() noexcept = default;
 
 		virtual MouseCode GetMouseCode() const final;
 	private:
@@ -20,7 +20,7 @@ namespace Cinnamon {
 	private:
 	public:
 		explicit MousePressedEvent(const MouseCode mouseCode) noexcept;
-		virtual ~MousePressedEvent() noexcept = default;
+		constexpr virtual ~MousePressedEvent() noexcept = default;
 	private:
 	};
 
@@ -29,7 +29,7 @@ namespace Cinnamon {
 	private:
 	public:
 		explicit MouseReleasedEvent(const MouseCode mouseCode) noexcept;
-		virtual ~MouseReleasedEvent() noexcept = default;
+		constexpr virtual ~MouseReleasedEvent() noexcept = default;
 	private:
 	};
 
@@ -38,7 +38,7 @@ namespace Cinnamon {
 	private:
 	public:
 		MouseScrolledEvent(const uint16_t horizontalDelta, const uint16_t verticalDelta) noexcept;
-		virtual ~MouseScrolledEvent() noexcept = default;
+		constexpr virtual ~MouseScrolledEvent() noexcept = default;
 
 		uint16_t GetHorizontalDelta() const;
 		uint16_t GetVerticalDelta() const;

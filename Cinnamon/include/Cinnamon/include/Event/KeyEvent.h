@@ -8,7 +8,7 @@ namespace Cinnamon {
 	private:
 	public:
 		explicit KeyEvent(const KeyCode keyCode) noexcept;
-		virtual ~KeyEvent() noexcept = default;
+		constexpr virtual ~KeyEvent() noexcept = default;
 
 		virtual KeyCode GetKeyCode() const noexcept final;
 		virtual Key GetKey() const noexcept final;
@@ -21,7 +21,7 @@ namespace Cinnamon {
 	private:
 	public:
 		explicit KeyPressedEvent(const KeyCode keyCode) noexcept;
-		virtual ~KeyPressedEvent() noexcept = default;
+		constexpr virtual ~KeyPressedEvent() noexcept = default;
 
 		EVENT_TYPE(KeyPressed)
 		EVENT_CATEGORY(Keyboard)
@@ -33,7 +33,7 @@ namespace Cinnamon {
 	private:
 	public:
 		explicit KeyReleasedEvent(const KeyCode keyCode) noexcept;
-		virtual ~KeyReleasedEvent() noexcept = default;
+		constexpr virtual ~KeyReleasedEvent() noexcept = default;
 
 		EVENT_TYPE(KeyReleased)
 		EVENT_CATEGORY(Keyboard)
@@ -45,7 +45,7 @@ namespace Cinnamon {
 	private:
 	public:
 		explicit KeyHeldEvent(const KeyCode keyCode) noexcept;
-		virtual ~KeyHeldEvent() noexcept = default;
+		constexpr virtual ~KeyHeldEvent() noexcept = default;
 
 		EVENT_TYPE(KeyHeld)
 		EVENT_CATEGORY(Keyboard)
