@@ -6,10 +6,15 @@
 *.vcxproj.filters
 *.user
 *.sln
+*.vs
 
+# Visual Studio Code
+*.vscode
+
+# Directories with freshly compiled stuff
 bin/
 bin-int/
-*.vs
+
 # Prerequisites
 *.d
 

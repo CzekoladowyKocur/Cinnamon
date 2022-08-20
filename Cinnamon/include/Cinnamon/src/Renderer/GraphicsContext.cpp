@@ -287,9 +287,12 @@ namespace Cinnamon {
 
 				if (presentationSupported)
 				{
-					CIN_TRACE("--Found present queue family with index {0} with count of {1} queues", queueFamilyIndex, queueCount);
-					s_QueueFamilies.Present = static_cast<int32_t>(queueFamilyIndex);
-					s_QueueFamilies.PresentQueueCount = queueCount;
+					if(s_QueueFamilies.Present == QueueFamilies::Absent )
+					{
+						CIN_TRACE("--Found present queue family with index {0} with count of {1} queues", queueFamilyIndex, queueCount);
+						s_QueueFamilies.Present = static_cast<int32_t>(queueFamilyIndex);
+						s_QueueFamilies.PresentQueueCount = queueCount;
+					}
 				}
 
 				if (queueFlags & VK_QUEUE_GRAPHICS_BIT)
@@ -305,6 +308,13 @@ namespace Cinnamon {
 					CIN_TRACE("--Found compute queue family with index {0} with count of {1} queues", queueFamilyIndex, queueCount);
 					s_QueueFamilies.Compute = static_cast<int32_t>(queueFamilyIndex);
 					s_QueueFamilies.ComputeQueueCount = queueCount;
+
+					if(presentationSupported)
+					{
+						CIN_TRACE("--Found present queue family with index {0} with count of {1} queues", queueFamilyIndex, queueCount);
+						s_QueueFamilies.Present = static_cast<int32_t>(queueFamilyIndex);
+						s_QueueFamilies.PresentQueueCount = queueCount;
+					}
 					continue;
 				}
 

@@ -380,7 +380,7 @@ namespace Cinnamon {
 				&m_Semaphores.RenderingFinished[i]));
 		}
 
-		CIN_TRACE("Created {0}-buffered swapchain with present and graphics queue {1}", imageCount, queuesFamiliesShared ? "shared" : "not shared");
+		CIN_TRACE("Created {0}-buffered swapchain with present and graphics queue families {1}", imageCount, queuesFamiliesShared ? "shared" : "not shared");
 	}
 
 	void Swapchain::Recreate(const uint32_t width, const uint32_t height, VkSurfaceKHR surface)

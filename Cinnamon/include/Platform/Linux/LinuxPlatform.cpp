@@ -35,8 +35,10 @@ namespace Cinnamon {
 
 	double Platform::GetAbsoluteTime()
 	{
-		CIN_UNIMPLEMENTED();
-		return 0.0;
+		timespec timeSpec;
+		clock_gettime(CLOCK_REALTIME, &timeSpec);
+
+		return static_cast<double>(timeSpec.tv_sec + static_cast<double>(timeSpec.tv_nsec) / 1'000'000'000);
 	}
 
 	/* Vulkan */

@@ -39,12 +39,7 @@ namespace Cinnamon {
 			return false;
 		}
 
-		/*CIN_TRACE("Logger test, {0}, {1}, {2}", 1, 2, "Trace");
-		CIN_INFO("Logger test, {0}, {1}, {2}", 1, 2, "Info");
-		CIN_WARN("Logger test, {0}, {1}, {2}", 1, 2, "Warn");
-		CIN_ERROR("Logger test, {0}, {1}, {2}", 1, 2, "Error");
-		CIN_CRITICAL("Logger test, {0}, {1}, {2}", 1, 2, "Critical");*/
-
+		CIN_WARN("Queues from same families might be faster");
 		m_Window->SetEventCallback(std::bind(&Application::OnEvent, this, std::placeholders::_1));
 		return true;
 	}
@@ -58,6 +53,8 @@ namespace Cinnamon {
 		[[likely]]
 		while (m_Running)
 		{
+			m_Window->PollEvents();
+
 			const double currentTime{ Platform::GetAbsoluteTime() };
 			double timestep{ currentTime - lastFrameTime };
 			lastFrameTime = currentTime;
@@ -66,13 +63,12 @@ namespace Cinnamon {
 			[[unlikely]]
 			if (timer > 1.0)
 			{
-				printf("FPS: %d\n", fpsCounter);
-				//CIN_WARN("FPS: {}", fpsCounter);
+				//printf("FPS: %d\n", fpsCounter);
+				CIN_WARN("FPS: {}", fpsCounter);
 				fpsCounter = 0;
 				timer = 0.0;
 			}
 			
-			m_Window->PollEvents();
 			++fpsCounter;
 		}
 
@@ -162,7 +158,6 @@ namespace Cinnamon {
 				m_Window->SetName("A IS NOT REAL");
 
 				break;
-<<<<<<< Updated upstream
 			}
 
 			case Key::W:
@@ -184,8 +179,6 @@ namespace Cinnamon {
 				m_Window->SetSize({ 300U, 300U });
 
 				break;
-=======
->>>>>>> Stashed changes
 			}
 
 			default:

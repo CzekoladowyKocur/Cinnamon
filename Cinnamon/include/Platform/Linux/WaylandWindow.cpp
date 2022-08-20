@@ -532,7 +532,7 @@ namespace Cinnamon {
         wl_surface_add_listener(windowState->wlSurface, &wlSurfaceListener, window);
 
 		wl_callback* fCallback = wl_surface_frame(windowState->wlSurface);
-        wl_callback_add_listener(fCallback, &wlSurfaceFrameListener, window);
+		wl_callback_add_listener(fCallback, &wlSurfaceFrameListener, window);
 
         windowState->xdgSurface = zxdg_shell_v6_get_xdg_surface(windowState->xdgShell, windowState->wlSurface);
         windowState->xdgToplevel = zxdg_surface_v6_get_toplevel(windowState->xdgSurface);
@@ -591,8 +591,8 @@ namespace Cinnamon {
         /* Todo: Handle the dispatching properly */
         wl_display_dispatch_pending(m_State->display);
 
-        usleep(10);
-    }
+		usleep(10);
+	}
 
 	void Window::SendEvent(Event& event)
     {

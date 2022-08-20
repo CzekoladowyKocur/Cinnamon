@@ -183,7 +183,7 @@ namespace Cinnamon {
 			}
 
 			CIN_ASSERT(false, "Unknown queue family");
-			return -1i32;
+			return -1;
 		}
 
 		static CIN_FORCE_INLINE VkQueue GetGraphicsQueue()
@@ -215,42 +215,71 @@ namespace Cinnamon {
 		{
 			enum : int32_t
 			{
-				Absent = -1i32,
+				Absent = -1,
 			};
 
 			/* Queue family handles are stored as 32 bit signed integers 
 			instead of 32 bit unsigned integers to ease checking */
-			int32_t Graphics{ Absent };
-			int32_t Compute{ Absent };
-			int32_t Transfer{ Absent };
-			int32_t Present{ Absent };
+			int32_t Graphics;
+			int32_t Compute;
+			int32_t Transfer;
+			int32_t Present;
 
-			uint32_t GraphicsQueueCount{ 0U };
-			uint32_t ComputeQueueCount{ 0U };
-			uint32_t TransferQueueCount{ 0U };
-			uint32_t PresentQueueCount{ 0U };
+			uint32_t GraphicsQueueCount;
+			uint32_t ComputeQueueCount;
+			uint32_t TransferQueueCount;
+			uint32_t PresentQueueCount;
+
+			constexpr QueueFamilies() noexcept
+				:
+				Graphics(Absent),
+				Compute(Absent),
+				Transfer(Absent),
+				Present(Absent),
+
+				GraphicsQueueCount(0U),
+				ComputeQueueCount(0U),
+				TransferQueueCount(0U),
+				PresentQueueCount(0U)
+				{}
 
 			constexpr ~QueueFamilies() noexcept = default;
-		} constinit static inline s_QueueFamilies{};
+		} static inline s_QueueFamilies{};
 
 		struct Queues final
 		{
-			VkQueue Graphics{ VK_NULL_HANDLE };
-			VkQueue Compute{ VK_NULL_HANDLE };
-			VkQueue Transfer{ VK_NULL_HANDLE };
-			VkQueue Present{ VK_NULL_HANDLE };
+			VkQueue Graphics;
+			VkQueue Compute;
+			VkQueue Transfer;
+			VkQueue Present;
+
+			constexpr Queues() noexcept
+			:
+			Graphics(VK_NULL_HANDLE),
+			Compute(VK_NULL_HANDLE),
+			Transfer(VK_NULL_HANDLE),
+			Present(VK_NULL_HANDLE)
+			{}
 
 			constexpr ~Queues() noexcept = default;
-		} constinit static inline s_Queues{};
+		} static inline s_Queues{};
 
 		struct CommandPools final
 		{
-			VkCommandPool Graphics{ VK_NULL_HANDLE };
-			VkCommandPool Compute{ VK_NULL_HANDLE };
-			VkCommandPool Transfer{ VK_NULL_HANDLE };
-			VkCommandPool Present{ VK_NULL_HANDLE };
+			VkCommandPool Graphics;
+			VkCommandPool Compute;
+			VkCommandPool Transfer;
+			VkCommandPool Present;
+
+			constexpr CommandPools() noexcept
+			:
+			Graphics(VK_NULL_HANDLE),
+			Compute(VK_NULL_HANDLE),
+			Transfer(VK_NULL_HANDLE),
+			Present(VK_NULL_HANDLE)
+			{}
 
 			constexpr ~CommandPools() noexcept = default;
-		} constinit static inline s_CommandPools{};
+		} static inline s_CommandPools{};
 	};
 }
