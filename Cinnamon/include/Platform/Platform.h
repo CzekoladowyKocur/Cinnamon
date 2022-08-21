@@ -31,8 +31,8 @@ namespace Cinnamon {
 	class Platform
 	{
 	private:
-		Platform() noexcept = delete;
-		~Platform() noexcept = delete;
+		NON_CONSTRUCTIBLE(Platform)
+		NON_COPYABLE(Platform)
 	public:
 		[[nodiscard]] static bool Initialize();
 		[[nodiscard]] static bool Shutdown();

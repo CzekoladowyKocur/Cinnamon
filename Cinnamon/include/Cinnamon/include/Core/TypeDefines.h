@@ -87,6 +87,10 @@
 
 #define CIN_CARRAY_SIZE(array) (const uint32_t)((sizeof(array) / sizeof(*(array))))
 
+#define NON_CONSTRUCTIBLE(classType)                            \
+constexpr explicit classType() noexcept = delete;				\
+constexpr ~classType() noexcept = delete;
+
 #define NON_COPYABLE(classType)							        \
     classType(const classType&) noexcept = delete;				\
     classType& operator=(const classType&)noexcept  = delete;
@@ -96,47 +100,17 @@ consteval auto ResolveAtCompileTime(auto arg)
 	return arg;
 }
 
-class ScopedTimer final
+class Timestep final
 {
 public:
-    std::chrono::time_point<std::chrono::high_resolution_clock> m_StartTime;
-    std::chrono::duration<float> m_Delta;
+    using Type = float;
 
-    constexpr ScopedTimer() noexcept
-        :
-        m_StartTime({}),
-        m_Delta({})
-    {}
+    constexpr explicit Timestep() noexcept;
+    explicit Timestep(const Type deltaTime) noexcept;
+    constexpr ~Timestep() noexcept = default;
 
-    constexpr ~ScopedTimer() noexcept = default;
-    
-    inline void Start()
-    {
-        m_StartTime = std::chrono::high_resolution_clock::now();
-    }
-
-    inline void End()
-    {
-        m_Delta = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - m_StartTime);
-    }
-
-    inline float GetNanoseconds()
-    {
-        return m_Delta.count() * 1000'000'000.0f;
-    }
-
-    inline float GetMicroseconds()
-    {
-        return m_Delta.count() * 1000'000.0f;
-    }
-
-	inline float GetMilliseconds()
-	{
-        return m_Delta.count() * 1000.0f;
-	}
-
-	inline float GetSeconds()
-	{
-        return m_Delta.count();
-	}
+    Type GetTimestep() const;
+    operator Type() const;
+private:
+    Type m_DeltaTime;
 };

@@ -1,5 +1,12 @@
 #include "Cinnamon/include/Core/Application.h"
 #include "Cinnamon/include/Renderer/GraphicsContext.h"
+#include "Cinnamon/include/Core/Window.h"
+#include "Cinnamon/include/Core/LayerStack.h"
+#include "Cinnamon/include/Event/Event.h"
+#include "Cinnamon/include/Event/ApplicationEvent.h"
+#include "Cinnamon/include/Event/WindowEvent.h"
+#include "Cinnamon/include/Event/KeyEvent.h"
+#include "Cinnamon/include/Event/MouseEvent.h"
 
 namespace Cinnamon {
 	Application* Application::s_ApplicationInstance{ nullptr };
@@ -10,7 +17,7 @@ namespace Cinnamon {
 		m_Minimized(false),
 		m_Window(nullptr)
 	{
-		CIN_ASSERT(s_ApplicationInstance == nullptr, "Application already initialized!");
+		CIN_ASSERT(s_ApplicationInstance == nullptr, "Application already instantiated!");
 		CIN_TRACE("Running cinnamon build {}", Platform::GetBuildDate());
 
 		s_ApplicationInstance = this;
@@ -18,14 +25,15 @@ namespace Cinnamon {
 
 	Application::~Application() noexcept
 	{
+		cindel m_LayerStack;
 		cindel m_Window;
 		CIN_DUMP_ALLOCATIONS();
 	}
 
 	bool Application::Initialize()
 	{
-		/* TODO: Set window event callbacks after context creation? */
 		m_Window = cinew Window(WindowProperties{ "Cinnamon Application", 800U, 600U, EWindowMode::Windowed });
+		m_LayerStack = cinew LayerStack;
 
 		if (!GraphicsContext::Initialize())
 		{
@@ -40,8 +48,14 @@ namespace Cinnamon {
 		}
 
 		CIN_WARN("Queues from same families might be faster");
-
 		m_Window->SetEventCallback(std::bind(&Application::OnEvent, this, std::placeholders::_1));
+
+		if (!OnUserInitialize())
+		{
+			CIN_CRITICAL("Failed to initialize user data");
+			return false;
+		}
+
 		return true;
 	}
 
@@ -55,11 +69,15 @@ namespace Cinnamon {
 		while (m_Running)
 		{
 			m_Window->PollEvents();
-
 			const double currentTime{ Platform::GetAbsoluteTime() };
-			double timestep{ currentTime - lastFrameTime };
+			const Timestep timestep{ static_cast<Timestep::Type>(currentTime - lastFrameTime) };
+			
+			/* Update layers */
+			for (Layer* layer : *m_LayerStack)
+				layer->OnUpdate(timestep);
+			
 			lastFrameTime = currentTime;
-
+			/* Temporary */
 			timer += timestep;
 			[[unlikely]]
 			if (timer > 1.0)
@@ -79,6 +97,12 @@ namespace Cinnamon {
 	{
 		bool shutdownSuccessful{ true };
 
+		if (!OnUserShutdown())
+		{
+			CIN_CRITICAL("Failed to shutdown user data");
+			shutdownSuccessful = false;
+		}
+
 		if (!GraphicsContext::Shutdown())
 		{
 			CIN_CRITICAL("Failed to shutdown graphics context");
@@ -86,6 +110,34 @@ namespace Cinnamon {
 		}
 
 		return shutdownSuccessful;
+	}
+
+	void Application::PushLayer(Layer* const layer)
+	{
+		CIN_ASSERT(layer, "Invalid layer");
+		layer->OnAttach();
+		m_LayerStack->PushLayer(layer);
+	}
+
+	void Application::PopLayer(Layer* const layer)
+	{
+		CIN_ASSERT(layer, "Invalid layer");
+		layer->OnDetach();
+		m_LayerStack->PopLayer(layer);
+	}
+
+	void Application::PushOverlay(Layer* const layer)
+	{
+		CIN_ASSERT(layer, "Invalid layer");
+		layer->OnAttach();
+		m_LayerStack->PushOverlay(layer);
+	}
+
+	void Application::PopOverlay(Layer* const layer)
+	{
+		CIN_ASSERT(layer, "Invalid layer");
+		layer->OnDetach();
+		m_LayerStack->PopOverlay(layer);
 	}
 
 	void Application::OnEvent(Event& event)

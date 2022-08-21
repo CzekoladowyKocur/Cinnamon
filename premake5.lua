@@ -3,6 +3,7 @@ WorkspaceName = "Cinnamon"
 OutputDirectory = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 CoreProjectName = "Cinnamon"
 EditorProjectName = "CinnamonEditor"
+SandboxProjectName = "Sandbox"
 
 VulkanSDK = os.getenv("VULKAN_SDK");
 VulkanLibrary = VulkanSDK .. "/Lib/vulkan-1.lib"
@@ -17,8 +18,7 @@ workspace (WorkspaceName)
 	architecture "x64"
 	platforms "x64"
 	targetdir (OutputDirectory)
-
-	startproject (Cinnamon) -- TODO: REMOVE ASAP
+	startproject (EditorProjectName) 
 
 	configurations 
 	{ 
@@ -93,7 +93,7 @@ project (CoreProjectName)
 	location (CoreProjectName .. "/include")
 	language "C++"
 	cppdialect "C++20"
-	kind "ConsoleApp"
+	kind "StaticLib"
 
 	targetdir ("bin/" .. (OutputDirectory) .. "/%{prj.name}")
 	objdir ("bin-int/" .. (OutputDirectory) .. "/%{prj.name}")
@@ -101,24 +101,17 @@ project (CoreProjectName)
 	files 
 	{ 
 		"%{prj.name}/include/Cinnamon/**.h", 
-		"%{prj.name}/include/Cinnamon/**.h", 
-		"%{prj.name}/include/Cinnamon/**.c", 
 		"%{prj.name}/include/Cinnamon/**.hpp", 
-		"%{prj.name}/include/Cinnamon/**.cpp", 
-		"%{prj.name}/src/Cinnamon/**.h", 
-		"%{prj.name}/src/Cinnamon/**.c", 
-		"%{prj.name}/src/Cinnamon/**.hpp", 
-		"%{prj.name}/src/Cinnamon/**.cpp", 
 
+		"%{prj.name}/include/Cinnamon/**.c", 
+		"%{prj.name}/include/Cinnamon/**.cpp",
+		-------------------------------------
 		"%{prj.name}/include/Platform/**.h", 
-		"%{prj.name}/include/Platform/**.h", 
-		"%{prj.name}/include/Platform/**.c", 
 		"%{prj.name}/include/Platform/**.hpp", 
-		"%{prj.name}/include/Platform/**.cpp", 
-		"%{prj.name}/src/Platform/**.h", 
-		"%{prj.name}/src/Platform/**.c", 
-		"%{prj.name}/src/Platform/**.hpp", 
-		"%{prj.name}/src/Platform/**.cpp", 
+							 
+		"%{prj.name}/include/Platform/**.c", 
+		"%{prj.name}/include/Platform/**.cpp",
+		-------------------------------------
 	}
 
 	includedirs
@@ -152,28 +145,46 @@ project (EditorProjectName)
 	files 
 	{ 
 		"%{prj.name}/include/CinnamonEditor/**.h", 
-		"%{prj.name}/include/CinnamonEditor/**.h", 
-		"%{prj.name}/include/CinnamonEditor/**.c", 
 		"%{prj.name}/include/CinnamonEditor/**.hpp", 
-		"%{prj.name}/include/CinnamonEditor/**.cpp", 
-		"%{prj.name}/src/CinnamonEditor/**.h", 
-		"%{prj.name}/src/CinnamonEditor/**.c", 
-		"%{prj.name}/src/CinnamonEditor/**.hpp", 
-		"%{prj.name}/src/CinnamonEditor/**.cpp", 
 
-		"%{prj.name}/include/Platform/**.h", 
-		"%{prj.name}/include/Platform/**.h", 
-		"%{prj.name}/include/Platform/**.c", 
-		"%{prj.name}/include/Platform/**.hpp", 
-		"%{prj.name}/include/Platform/**.cpp", 
-		"%{prj.name}/src/Platform/**.h", 
-		"%{prj.name}/src/Platform/**.c", 
-		"%{prj.name}/src/Platform/**.hpp", 
-		"%{prj.name}/src/Platform/**.cpp", 
+		"%{prj.name}/include/CinnamonEditor/**.c", 
+		"%{prj.name}/include/CinnamonEditor/**.cpp",
+		-------------------------------------
 	}
 
 	includedirs
 	{
 		"%{prj.name}/include",
 		"%{wks.location}/Cinnamon/include",
+		FMTInclude,
 	}
+
+	links "Cinnamon"
+
+project (SandboxProjectName)
+	location (SandboxProjectName .. "/include")
+	language "C++"
+	cppdialect "C++20"
+	kind "ConsoleApp"
+
+	targetdir ("bin/" .. (OutputDirectory) .. "/%{prj.name}")
+	objdir ("bin-int/" .. (OutputDirectory) .. "/%{prj.name}")
+
+	files 
+	{ 
+		"%{prj.name}/include/Sandbox/**.h", 
+		"%{prj.name}/include/Sandbox/**.hpp", 
+							 
+		"%{prj.name}/include/Sandbox/**.c", 
+		"%{prj.name}/include/Sandbox/**.cpp",
+		-------------------------------------
+	}
+
+	includedirs
+	{
+		"%{prj.name}/include",
+		"%{wks.location}/Cinnamon/include",
+		FMTInclude,
+	}
+
+	links "Cinnamon"

@@ -1,6 +1,5 @@
 #pragma once
 
-/* TODO: Temp */
 #include "Cinnamon/include/Core/Application.h"
 
 #ifndef EXIT_SUCCESS 
@@ -29,7 +28,7 @@ InternalScope int32_t CommonEntryPoint() noexcept
 
 	/* Application lifetime */
 	{
-		Application* application{ cinew Application };
+		Application* application{ CreateApplication() };
 		if (!application->Initialize())
 		{
 			CIN_CRITICAL("Failed to properly initialize the application");
@@ -95,10 +94,10 @@ INT WINAPI wWinMain(
 	_In_ LPWSTR lpCmdLine,
 	_In_ int nShowCmd)
 {
-	(void)hInstance;
-	(void)hPrevInstance;
-	(void)lpCmdLine;
-	(void)nShowCmd;
+	CIN_UNUSED(hInstance);
+	CIN_UNUSED(hPrevInstance);
+	CIN_UNUSED(lpCmdLine);
+	CIN_UNUSED(nShowCmd);
 
 #if USE_CRT_MEMORY_LEAK_DETECTION
 	/* Using memory checkpoint to prevent static object initialization and deinitialization */

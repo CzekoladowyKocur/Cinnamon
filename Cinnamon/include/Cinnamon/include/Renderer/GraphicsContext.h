@@ -8,6 +8,9 @@ namespace Cinnamon {
 
 	class GraphicsContext
 	{
+	private:
+		NON_CONSTRUCTIBLE(GraphicsContext)
+		NON_COPYABLE(GraphicsContext)
 	public:
 		enum class EQueueFamily
 		{
@@ -16,9 +19,6 @@ namespace Cinnamon {
 			Transfer = 2U,
 			Present = 3U,
 		};
-	private:
-		GraphicsContext() noexcept = delete;
-		~GraphicsContext() noexcept = delete;
 	public:
 		[[nodiscard]] static bool Initialize();
 		[[nodiscard]] static bool Shutdown();

@@ -40,6 +40,7 @@ namespace Cinnamon {
 	class Window
 	{
 	private:
+		NON_COPYABLE(Window)
 	public:
 		explicit Window(WindowProperties&& windowProperties, const EventCallbackFunction callback = nullptr) noexcept;
 		~Window() noexcept;

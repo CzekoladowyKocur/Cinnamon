@@ -1,22 +1,46 @@
 #pragma once
-#include "Cinnamon/include/Core/Window.h"
-#include "Cinnamon/include/Event/Event.h"
-#include "Cinnamon/include/Event/ApplicationEvent.h"
-#include "Cinnamon/include/Event/WindowEvent.h"
-#include "Cinnamon/include/Event/KeyEvent.h"
-#include "Cinnamon/include/Event/MouseEvent.h"
+#include "Cinnamon/include/Core/Core.h"
+
+#define REGISTER_CINNAMON_APPLICATION(applicationName)						\
+Cinnamon::Application* Cinnamon::CreateApplication() noexcept				\
+{																			\
+	using namespace Cinnamon;												\
+	static_assert(std::is_base_of<Application, applicationName>::value);	\
+	return cinew applicationName();											\
+}							
+
+namespace Cinnamon {
+	class Window;
+	class Layer;
+	class LayerStack;
+	class Event;
+	class ApplicationRenderEvent;
+	class WindowResizedEvent;
+	class WindowClosedEvent;
+	class KeyPressedEvent;
+}
 
 namespace Cinnamon {
 	class Application
 	{
 	private:
+		NON_COPYABLE(Application)
 	public:
 		Application() noexcept;
-		~Application() noexcept;
+		virtual ~Application() noexcept;
 
 		[[nodiscard]] bool Initialize();
 		[[nodiscard]] bool Run();
 		[[nodiscard]] bool Shutdown();
+		
+		void PushLayer(Layer* const layer);
+		void PopLayer(Layer* const layer);
+		void PushOverlay(Layer* const layer);
+		void PopOverlay(Layer* const layer);
+	protected: 
+		/* User functions */
+		[[nodiscard]] virtual bool OnUserInitialize() = 0;
+		[[nodiscard]] virtual bool OnUserShutdown() = 0;
 	private:
 		void OnEvent(Event& event);
 
@@ -24,15 +48,18 @@ namespace Cinnamon {
 		bool OnWindowResized(WindowResizedEvent& event);
 		bool OnWindowClosed(WindowClosedEvent& event);
 		bool OnKeyPressed(KeyPressedEvent& event);
-	public:
-		/* Global application instance */
-		static Application* s_ApplicationInstance;
-		static const Application* Get();
 	protected:
 		bool m_Running;
 		bool m_Minimized;
 
 		Window* m_Window;
+		LayerStack* m_LayerStack;
 	private:
+		/* Global application instance, accessed via Get() */
+		static Application* s_ApplicationInstance;
+	public:
+		static const Application* Get();
 	};
+
+	Application* CreateApplication() noexcept;
 }

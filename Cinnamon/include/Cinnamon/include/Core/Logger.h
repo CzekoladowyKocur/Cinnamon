@@ -105,9 +105,9 @@ namespace Cinnamon {
 #define CIN_ERROR(message, ...)             void()
 #define CIN_CRITICAL(message, ...)          void()
 #else
-#define CIN_TRACE(message, ...)             Logger::Log<ELogLevel::Trace>(" [TRACE] " message "\n", ##__VA_ARGS__)
-#define CIN_INFO(message, ...)              Logger::Log<ELogLevel::Info>(" [INFO] " message "\n", ##__VA_ARGS__)
-#define CIN_WARN(message, ...)              Logger::Log<ELogLevel::Warn>(" [WARN] " message "\n", ##__VA_ARGS__)
-#define CIN_ERROR(message, ...)             Logger::Log<ELogLevel::Error>(" [ERROR] " message "\n", ##__VA_ARGS__)
-#define CIN_CRITICAL(message, ...)          Logger::Log<ELogLevel::Critical>(" [CRITICAL] " message "\n", ##__VA_ARGS__)
+#define CIN_TRACE(message, ...)             Cinnamon::Logger::Log<Cinnamon::ELogLevel::Trace>(" [TRACE] " message "\n", ##__VA_ARGS__)
+#define CIN_INFO(message, ...)              Cinnamon::Logger::Log<Cinnamon::ELogLevel::Info>(" [INFO] " message "\n", ##__VA_ARGS__)
+#define CIN_WARN(message, ...)              Cinnamon::Logger::Log<Cinnamon::ELogLevel::Warn>(" [WARN] " message "\n", ##__VA_ARGS__)
+#define CIN_ERROR(message, ...)             Cinnamon::Logger::Log<Cinnamon::ELogLevel::Error>(" [ERROR] " message "\n", ##__VA_ARGS__)
+#define CIN_CRITICAL(message, ...)          Cinnamon::Logger::Log<Cinnamon::ELogLevel::Critical>(" [CRITICAL] " message "\n", ##__VA_ARGS__)
 #endif
