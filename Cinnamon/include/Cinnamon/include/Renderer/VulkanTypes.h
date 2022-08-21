@@ -77,9 +77,9 @@ namespace Cinnamon {
 
 #ifdef CIN_DEBUG
 #define VK_CHECK(expr)											\
-	VulkanCheckResult(expr)				
+	VulkanCheckResult(expr)
 #else
 #define VK_CHECK(expr)											\
-	VulkanCheckResult(expr)		
+	expr
 #endif
 }

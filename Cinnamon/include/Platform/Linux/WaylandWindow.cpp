@@ -32,16 +32,17 @@ namespace Cinnamon {
 	struct PlatformWindowState
 	{
 	    // Globals
-	    wl_display* display { nullptr };
+
+	    wl_display* wlDisplay { nullptr };
 	    wl_compositor* wlCompositor { nullptr };
-	    wl_registry* registry { nullptr };
+	    wl_registry* wlRegistry { nullptr };
 	    zxdg_shell_v6* xdgShell { nullptr };
 	    wl_output* wlOutput { nullptr };
 	    wl_seat* wlSeat { nullptr };
 
 	    // Objects
 
-		/* Surfaces*/
+		/* Surfaces */
 	    wl_surface* wlSurface { nullptr };
 	    zxdg_surface_v6* xdgSurface { nullptr };
 	    zxdg_toplevel_v6* xdgToplevel { nullptr };
@@ -548,22 +549,22 @@ namespace Cinnamon {
 	{
 		PlatformWindowState* windowState = const_cast<PlatformWindowState*>(window->GetState());
 
-	    windowState->display = wl_display_connect(NULL);
-	    if(!windowState->display)
+	    windowState->wlDisplay = wl_display_connect(NULL);
+	    if(!windowState->wlDisplay)
 		{
 			CIN_CRITICAL("Couldn't connect to a wayland display");
 			CIN_PANIC_EXIT();
 		}
 
 		/* Registry */
-	    windowState->registry = wl_display_get_registry(windowState->display);
-	    wl_registry_add_listener(windowState->registry, &registryListener, windowState);
-	    wl_display_roundtrip(windowState->display);
+	    windowState->wlRegistry = wl_display_get_registry(windowState->wlDisplay);
+	    wl_registry_add_listener(windowState->wlRegistry, &registryListener, windowState);
+	    wl_display_roundtrip(windowState->wlDisplay);
 
 		InputSetup(window);
 		SurfaceSetup(window);
 
-        wl_display_roundtrip(windowState->display);
+        wl_display_roundtrip(windowState->wlDisplay);
 	}
 
 	Window::Window(WindowProperties&& windowProperties, const EventCallbackFunction callback) noexcept
@@ -589,7 +590,7 @@ namespace Cinnamon {
 	void Window::PollEvents() 
     {
         /* Todo: Handle the dispatching properly */
-        wl_display_dispatch_pending(m_State->display);
+        wl_display_dispatch_pending(m_State->wlDisplay);
 
 		usleep(10);
 	}

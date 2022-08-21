@@ -40,6 +40,7 @@ namespace Cinnamon {
 		}
 
 		CIN_WARN("Queues from same families might be faster");
+
 		m_Window->SetEventCallback(std::bind(&Application::OnEvent, this, std::placeholders::_1));
 		return true;
 	}
@@ -63,8 +64,7 @@ namespace Cinnamon {
 			[[unlikely]]
 			if (timer > 1.0)
 			{
-				//printf("FPS: %d\n", fpsCounter);
-				CIN_WARN("FPS: {}", fpsCounter);
+				printf("FPS: %d\n", fpsCounter);
 				fpsCounter = 0;
 				timer = 0.0;
 			}

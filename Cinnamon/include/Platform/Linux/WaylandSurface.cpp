@@ -12,21 +12,27 @@ extern "C"
 #include "ThirdParty/volk/volk.h"
 
 namespace Cinnamon {
-    struct PlatformWindowState
-    {
-        // Globals
-        wl_display* display {nullptr}; 
-        wl_compositor* compositor {nullptr};
-        wl_registry* registry {nullptr};
-        zxdg_shell_v6* xdgShell {nullptr}; 
-        wl_output* output {nullptr};
-        wl_seat* seat {nullptr};
+	struct PlatformWindowState
+	{
+	    // Globals
 
-        // Objects 
-        wl_surface* waylandSurface {nullptr};
-        zxdg_surface_v6* xdgSurface {nullptr};
-        zxdg_toplevel_v6* xdgToplevel {nullptr};
-    };
+	    wl_display* wlDisplay { nullptr };
+	    wl_compositor* wlCompositor { nullptr };
+	    wl_registry* wlRegistry { nullptr };
+	    zxdg_shell_v6* xdgShell { nullptr };
+	    wl_output* wlOutput { nullptr };
+	    wl_seat* wlSeat { nullptr };
+
+	    // Objects
+
+		/* Surfaces */
+	    wl_surface* wlSurface { nullptr };
+	    zxdg_surface_v6* xdgSurface { nullptr };
+	    zxdg_toplevel_v6* xdgToplevel { nullptr };
+
+		/* Input */
+		wl_keyboard* wlKeyboard { nullptr };
+	};
 
 	Surface::Surface(const Window* windowContext) noexcept
 		:
@@ -37,8 +43,8 @@ namespace Cinnamon {
 
 		VkWaylandSurfaceCreateInfoKHR waylandSurfaceCreateInfo;
 		waylandSurfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
-		waylandSurfaceCreateInfo.display = m_WindowState->display;
-		waylandSurfaceCreateInfo.surface = m_WindowState->waylandSurface;
+		waylandSurfaceCreateInfo.display = m_WindowState->wlDisplay;
+		waylandSurfaceCreateInfo.surface = m_WindowState->wlSurface;
 		waylandSurfaceCreateInfo.flags = 0;
 		waylandSurfaceCreateInfo.pNext = nullptr;
 
