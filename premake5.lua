@@ -161,6 +161,13 @@ project (EditorProjectName)
 
 	links "Cinnamon"
 
+	filter "system:linux"
+		links
+        {
+			"wayland-client",
+			"xdg"
+        }
+
 project (SandboxProjectName)
 	location (SandboxProjectName .. "/include")
 	language "C++"
