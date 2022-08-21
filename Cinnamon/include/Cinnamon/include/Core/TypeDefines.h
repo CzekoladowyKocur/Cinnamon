@@ -95,3 +95,48 @@ consteval auto ResolveAtCompileTime(auto arg)
 {
 	return arg;
 }
+
+class ScopedTimer final
+{
+public:
+    std::chrono::time_point<std::chrono::high_resolution_clock> m_StartTime;
+    std::chrono::duration<float> m_Delta;
+
+    constexpr ScopedTimer() noexcept
+        :
+        m_StartTime({}),
+        m_Delta({})
+    {}
+
+    constexpr ~ScopedTimer() noexcept = default;
+    
+    inline void Start()
+    {
+        m_StartTime = std::chrono::high_resolution_clock::now();
+    }
+
+    inline void End()
+    {
+        m_Delta = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - m_StartTime);
+    }
+
+    inline float GetNanoseconds()
+    {
+        return m_Delta.count() * 1000'000'000.0f;
+    }
+
+    inline float GetMicroseconds()
+    {
+        return m_Delta.count() * 1000'000.0f;
+    }
+
+	inline float GetMilliseconds()
+	{
+        return m_Delta.count() * 1000.0f;
+	}
+
+	inline float GetSeconds()
+	{
+        return m_Delta.count();
+	}
+};

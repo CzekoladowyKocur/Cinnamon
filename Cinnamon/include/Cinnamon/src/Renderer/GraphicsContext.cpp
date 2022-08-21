@@ -14,7 +14,7 @@ namespace Cinnamon {
 
 		return physicalDeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
 	}
-#if CIN_DEeG
+#if CIN_DEBUG
 	InternalScope VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugReportCallback(
 		VkDebugReportFlagsEXT flags,
 		VkDebugReportObjectTypeEXT objectType,
@@ -49,7 +49,6 @@ namespace Cinnamon {
 		return VK_FALSE;
 	}
 #endif
-
 	bool GraphicsContext::Initialize()
 	{
 		VkResult success{ volkInitialize() };
@@ -160,8 +159,8 @@ namespace Cinnamon {
 			&s_Instance));
 
 		volkLoadInstance(s_Instance);
-#ifdef ldldl
-		const auto _vkCreateDebugReportCallbackEXT{ (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(s_Instance, "vkCreateDebugReportCallbackEXT") };
+#ifdef CIN_DEBUG
+		const auto _vkCreateDebugReportCallbackEXT{ reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(vkGetInstanceProcAddr(s_Instance, "vkCreateDebugReportCallbackEXT")) };
 		CIN_ASSERT(_vkCreateDebugReportCallbackEXT != nullptr);
 		
 		const VkDebugReportCallbackCreateInfoEXT debugReportCreateInfo{
@@ -230,8 +229,8 @@ namespace Cinnamon {
 			s_LogicalDevice,
 			s_Allocator);
 		
-#ifdef dldl
-		const auto _vkDestroyDebugReportCallbackEXT{ (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(s_Instance, "vkDestroyDebugReportCallbackEXT") };
+#ifdef CIN_DEBUG
+		const auto _vkDestroyDebugReportCallbackEXT{ reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>(vkGetInstanceProcAddr(s_Instance, "vkDestroyDebugReportCallbackEXT")) };
 		CIN_ASSERT(_vkDestroyDebugReportCallbackEXT != nullptr);
 
 		_vkDestroyDebugReportCallbackEXT(
@@ -242,7 +241,12 @@ namespace Cinnamon {
 		vkDestroyInstance(
 			s_Instance,
 			s_Allocator);
-
+#ifdef CIN_PLATFORM_WINDOWS
+		const HMODULE sharedVulkanLibraryModule{ GetModuleHandleA("vulkan-1.dll") };
+		CIN_ASSERT(sharedVulkanLibraryModule, "Invalid module");
+		CIN_VERIFY(FreeLibrary(sharedVulkanLibraryModule));
+#else
+#endif
 		return true;
 	}
 
@@ -551,6 +555,7 @@ namespace Cinnamon {
 		{
 			CIN_WARN("Transfer queue family was not found. Defaulting transfer queue to a graphics queue");
 			s_Queues.Transfer = s_Queues.Graphics;
+			s_QueueFamilies.Transfer = s_QueueFamilies.Graphics;
 		}
 
 		CIN_ASSERT(s_Queues.Graphics != VK_NULL_HANDLE, "Graphics queue is invalid");
@@ -605,7 +610,6 @@ namespace Cinnamon {
 	void GraphicsContext::RecreateSurface()
 	{
 		CIN_ASSERT(s_WindowContext, "Invalid window context");
-		/* No surface recreation */
 		Surface* oldSurface{ s_Surface };
 		s_Surface = cinew Surface(s_WindowContext);
 

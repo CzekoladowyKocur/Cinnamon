@@ -157,8 +157,8 @@ namespace Cinnamon {
 			/* "VK_KHR_bind_memory2", core in 1.1 */
 			/* VK_KHR_dedicated_allocation, core in 1.1 */
 #ifdef CIN_DEBUG
-			//"VK_EXT_debug_report",
-			//"VK_EXT_debug_utils",
+			"VK_EXT_debug_report",
+			"VK_EXT_debug_utils",
 #endif
 		};
 	}
@@ -167,7 +167,7 @@ namespace Cinnamon {
 	{
 		return {
 #ifdef CIN_DEBUG
-			//"VK_LAYER_KHRONOS_validation",
+			"VK_LAYER_KHRONOS_validation",
 #endif
 		};
 	}

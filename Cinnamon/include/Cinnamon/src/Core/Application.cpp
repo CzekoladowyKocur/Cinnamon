@@ -152,35 +152,6 @@ namespace Cinnamon {
 				break;
 			}
 
-			case Key::A:
-			{
-				CIN_CRITICAL("A IS NOT REAL");
-				m_Window->SetName("A IS NOT REAL");
-
-				break;
-			}
-
-			case Key::W:
-			{
-				m_Window->SetWidth(1000U);
-
-				break;
-			}
-
-			case Key::S:
-			{
-				m_Window->SetHeight(500U);
-
-				break;
-			}
-
-			case Key::D:
-			{
-				m_Window->SetSize({ 300U, 300U });
-
-				break;
-			}
-
 			default:
 			{
 				break;

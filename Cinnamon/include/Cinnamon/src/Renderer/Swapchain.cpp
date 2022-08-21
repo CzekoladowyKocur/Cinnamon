@@ -403,14 +403,14 @@ namespace Cinnamon {
 		const VkFence imageInFlightFence{ m_Fences.InFlightFences[m_FrameIndex] };
 		const VkSemaphore presentCompleteSemaphore{ m_Semaphores.ImageAvailable[m_FrameIndex] };
 
-		VK_CHECK(vkWaitForFences(
-			GraphicsContext::GetDevice(),
-			1U,
-			&imageInFlightFence,
-			VK_TRUE,
-			std::numeric_limits<std::uint64_t>::max()));
-
 		VkResult result;
+		do 
+		{
+			result = vkGetFenceStatus(
+				GraphicsContext::GetDevice(),
+				imageInFlightFence);
+		} while (result == VK_NOT_READY);
+
 		do {
 			result = vkAcquireNextImageKHR(
 				GraphicsContext::GetDevice(),
@@ -449,12 +449,6 @@ namespace Cinnamon {
 				} break;
 			}
 		} while (result != VK_SUCCESS);
-
-		/* Unsignal the fence */
-		VK_CHECK(vkResetFences(
-			GraphicsContext::GetDevice(),
-			1U,
-			&imageInFlightFence));
 	}
 
 	void Swapchain::PresentSwapchainImage()
@@ -467,6 +461,12 @@ namespace Cinnamon {
 		const VkSemaphore renderCompleteSemaphore{ m_Semaphores.RenderingFinished[m_FrameIndex] };
 		/* Current frmae command buffer */
 		const VkCommandBuffer commandBuffer{ m_CommandBuffers[m_FrameIndex] };
+
+		/* Unsignal the fence */
+		VK_CHECK(vkResetFences(
+			GraphicsContext::GetDevice(),
+			1U,
+			&imageInFlightFence));
 
 		/* Color attachment output */
 		constexpr STL::Array<VkPipelineStageFlags, 1U> waitStages{ VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
@@ -533,9 +533,9 @@ namespace Cinnamon {
 				commandBuffer));
 		}
 
-		GraphicsContext::PerformSingleSubmitMemoryTransferOperation([](VkCommandBuffer lolz) {
-			CIN_UNUSED(lolz);
-			});
+		//GraphicsContext::PerformSingleSubmitMemoryTransferOperation([](VkCommandBuffer lolz) {
+		//	CIN_UNUSED(lolz);
+		//	});
 
 		VK_CHECK(vkQueueSubmit(
 			GraphicsContext::GetGraphicsQueue(),
@@ -594,35 +594,43 @@ namespace Cinnamon {
 
 	void Swapchain::Cleanup()
 	{
-		for (uint32_t i{ 0U }; i < m_ImageViews.size(); ++i)
+		for (uint32_t i{ 0U }; i < static_cast<uint32_t>(m_Images.size()); ++i)
+		{
+			CIN_ASSERT(m_ImageViews.size() == m_Images.size());
+			CIN_ASSERT(m_Framebuffers.size() == m_Images.size());
+
 			vkDestroyImageView(
 				GraphicsContext::GetDevice(),
 				m_ImageViews[i],
 				GraphicsContext::GetAllocator());
 
-		for (uint32_t i{ 0U }; i < m_Framebuffers.size(); ++i)
 			vkDestroyFramebuffer(
 				GraphicsContext::GetDevice(),
 				m_Framebuffers[i],
 				GraphicsContext::GetAllocator());
+		}
 
-		for (uint32_t i{ 0U }; i < m_Semaphores.ImageAvailable.size(); ++i)
+		for (uint32_t i{ 0U }; i < m_FramesInFlight; ++i)
+		{
+			CIN_ASSERT(static_cast<uint32_t>(m_Semaphores.ImageAvailable.size()) == m_FramesInFlight);
+			CIN_ASSERT(static_cast<uint32_t>(m_Semaphores.RenderingFinished.size()) == m_FramesInFlight);
+			CIN_ASSERT(static_cast<uint32_t>(m_Fences.InFlightFences.size()) == m_FramesInFlight);
+
 			vkDestroySemaphore(
 				GraphicsContext::GetDevice(),
 				m_Semaphores.ImageAvailable[i],
 				GraphicsContext::GetAllocator());
 
-		for (uint32_t i{ 0U }; i < m_Semaphores.RenderingFinished.size(); ++i)
 			vkDestroySemaphore(
 				GraphicsContext::GetDevice(),
 				m_Semaphores.RenderingFinished[i],
 				GraphicsContext::GetAllocator());
-
-		for (uint32_t i{ 0U }; i < m_Fences.InFlightFences.size(); ++i)
+			
 			vkDestroyFence(
 				GraphicsContext::GetDevice(),
 				m_Fences.InFlightFences[i],
 				GraphicsContext::GetAllocator());
+		}
 
 		vkDestroyRenderPass(
 			GraphicsContext::GetDevice(),

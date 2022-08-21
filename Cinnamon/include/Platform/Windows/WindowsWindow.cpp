@@ -212,11 +212,13 @@ namespace Cinnamon {
 
 	void Window::SetWidth(const uint32_t windowWidth)
 	{
+		CIN_UNIMPLEMENTED();
 		m_Properties.Width = windowWidth;
 	}
 
 	void Window::SetHeight(const uint32_t windowHeight)
 	{
+		CIN_UNIMPLEMENTED();
 		m_Properties.Height = windowHeight;
 	}
 
@@ -249,9 +251,9 @@ namespace Cinnamon {
 						windowStyleExtended));
 				}
 
-				CIN_VERIFY(ShowWindow(
+				ShowWindow(
 					windowHandle, 
-					SW_NORMAL));
+					SW_NORMAL);
 
 				break;
 			}
@@ -338,6 +340,7 @@ namespace Cinnamon {
 
 	void Window::SetSize(std::pair<uint32_t, uint32_t> windowSize)
 	{
+		CIN_UNIMPLEMENTED();
 		m_Properties.Width = windowSize.first;
 		m_Properties.Height = windowSize.second;
 	}
@@ -381,7 +384,11 @@ namespace Cinnamon {
 				{
 					const uint32_t width{ LOWORD(lParam) };
 					const uint32_t height{ HIWORD(lParam) };
-					window->SetSize({ width, height });
+
+					/* Ugly hack for now */
+					WindowProperties* windowProperties{ reinterpret_cast<WindowProperties*>((uint8_t*)window + sizeof(PlatformWindowState*)) };
+					windowProperties->Width = width;
+					windowProperties->Height = height;
 
 					WindowResizedEvent event(window, width, height);
 					window->SendEvent(event);

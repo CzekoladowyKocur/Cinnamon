@@ -151,7 +151,7 @@ namespace Cinnamon {
 		{
 			return s_LogicalDevice;
 		}
-#ifdef sls
+#ifdef CIN_DEBUG
 		static CIN_FORCE_INLINE VkDebugReportCallbackEXT GetDebugReportCallback()
 		{
 			return s_DebugObject;
@@ -206,7 +206,7 @@ namespace Cinnamon {
 		static inline VkDevice s_LogicalDevice{ VK_NULL_HANDLE };
 		static inline Surface* s_Surface;
 		static inline Swapchain* s_Swapchain;
-#ifdef dldl
+#ifdef CIN_DEBUG
 		static inline VkDebugReportCallbackEXT s_DebugObject{ VK_NULL_HANDLE };
 #endif
 		static inline constexpr VkAllocationCallbacks* s_Allocator{ VK_NULL_HANDLE };
@@ -241,7 +241,7 @@ namespace Cinnamon {
 				ComputeQueueCount(0U),
 				TransferQueueCount(0U),
 				PresentQueueCount(0U)
-				{}
+			{}
 
 			constexpr ~QueueFamilies() noexcept = default;
 		} static inline s_QueueFamilies{};
@@ -254,11 +254,11 @@ namespace Cinnamon {
 			VkQueue Present;
 
 			constexpr Queues() noexcept
-			:
-			Graphics(VK_NULL_HANDLE),
-			Compute(VK_NULL_HANDLE),
-			Transfer(VK_NULL_HANDLE),
-			Present(VK_NULL_HANDLE)
+				:
+				Graphics(VK_NULL_HANDLE),
+				Compute(VK_NULL_HANDLE),
+				Transfer(VK_NULL_HANDLE),
+				Present(VK_NULL_HANDLE)
 			{}
 
 			constexpr ~Queues() noexcept = default;
@@ -272,11 +272,11 @@ namespace Cinnamon {
 			VkCommandPool Present;
 
 			constexpr CommandPools() noexcept
-			:
-			Graphics(VK_NULL_HANDLE),
-			Compute(VK_NULL_HANDLE),
-			Transfer(VK_NULL_HANDLE),
-			Present(VK_NULL_HANDLE)
+				:
+				Graphics(VK_NULL_HANDLE),
+				Compute(VK_NULL_HANDLE),
+				Transfer(VK_NULL_HANDLE),
+				Present(VK_NULL_HANDLE)
 			{}
 
 			constexpr ~CommandPools() noexcept = default;
