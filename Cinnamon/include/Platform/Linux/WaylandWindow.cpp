@@ -10,11 +10,13 @@ extern "C"
 #include "ThirdParty/xdg/xdg-shell-unstable-v6.h"
 }
 
+#include <sys/poll.h>
+
 #define wl_array_for_each_casted(pos, array, type) \
 	for \
-    (pos = reinterpret_cast<type>((array)->data); \
-    (const char *) pos < ((const char *) (array)->data + (array)->size); \
-    (pos)++)
+	(pos = reinterpret_cast<type>((array)->data); \
+	(const char *) pos < ((const char *) (array)->data + (array)->size); \
+	(pos)++)
 
 /* Todo: Manage closing the window and destroying this object properly */
 
@@ -31,21 +33,21 @@ namespace Cinnamon {
 	/* Declared in Window.h */
 	struct PlatformWindowState
 	{
-	    // Globals
+		// Globals
 
-	    wl_display* wlDisplay { nullptr };
-	    wl_compositor* wlCompositor { nullptr };
-	    wl_registry* wlRegistry { nullptr };
-	    zxdg_shell_v6* xdgShell { nullptr };
-	    wl_output* wlOutput { nullptr };
-	    wl_seat* wlSeat { nullptr };
+		wl_display* wlDisplay { nullptr };
+		wl_compositor* wlCompositor { nullptr };
+		wl_registry* wlRegistry { nullptr };
+		zxdg_shell_v6* xdgShell { nullptr };
+		wl_output* wlOutput { nullptr };
+		wl_seat* wlSeat { nullptr };
 
-	    // Objects
+		// Objects
 
 		/* Surfaces */
-	    wl_surface* wlSurface { nullptr };
-	    zxdg_surface_v6* xdgSurface { nullptr };
-	    zxdg_toplevel_v6* xdgToplevel { nullptr };
+		wl_surface* wlSurface { nullptr };
+		zxdg_surface_v6* xdgSurface { nullptr };
+		zxdg_toplevel_v6* xdgToplevel { nullptr };
 
 		/* Input */
 		wl_keyboard* wlKeyboard { nullptr };
@@ -580,56 +582,86 @@ namespace Cinnamon {
         WaylandSetup(this);
 
 		SetName(m_Properties.Name);
-    }
+	}
 
 	Window::~Window() noexcept
 	{
-        cindel m_State;
-    }
+		cindel m_State;
+	}
 
-	void Window::PollEvents() 
-    {
-        /* Todo: Handle the dispatching properly */
-        wl_display_dispatch_pending(m_State->wlDisplay);
+	void Window::PollEvents()
+	{
+		wl_display_dispatch_pending(m_State->wlDisplay);
+
+		bool flushFailure { false };
+		while(wl_display_flush(m_State->wlDisplay) == -1)
+		{
+			CIN_ERROR("Failed flushing the display");
+
+			if(errno != EAGAIN)
+			{
+				flushFailure = true;
+				break;
+			}
+
+			pollfd fd { };
+			fd.fd = wl_display_get_fd(m_State->wlDisplay);
+			fd.events = POLLOUT;
+
+			while(poll(&fd, 1, -1) == -1)
+			{
+				if(errno != EAGAIN)
+				{
+					flushFailure = true;
+					break;
+				}
+			}
+		}
+
+		if(flushFailure)
+		{
+			CIN_CRITICAL("Could not recover");
+			CIN_PANIC_EXIT();
+		}
 
 		usleep(10);
 	}
 
 	void Window::SendEvent(Event& event)
-    {
+	{
 		CIN_ASSERT(m_EventCallback, "Invalid event callback function");
-        m_EventCallback(event);
-    }
+		m_EventCallback(event);
+	}
 
 	const char* Window::GetName() const
-    {
-        return m_Properties.Name;
-    }
+	{
+		return m_Properties.Name;
+	}
 
 	uint32_t Window::GetWidth() const
-    {
-        return m_Properties.Width;
-    }
+	{
+		return m_Properties.Width;
+	}
 
 	uint32_t Window::GetHeight() const
-    {
-        return m_Properties.Height;
-    }
+	{
+		return m_Properties.Height;
+	}
 
 	EWindowMode Window::GetWindowMode() const
-    {
-        return m_Properties.Mode;
-    }
+	{
+		return m_Properties.Mode;
+	}
 
 	std::pair<uint32_t, uint32_t> Window::GetSize() const
-    {
-        return { m_Properties.Width, m_Properties.Height };
-    }
-    
-	const PlatformWindowState* Window::GetState() const 
-    {
-        return m_State;
-    }
+	{
+		return { m_Properties.Width, m_Properties.Height };
+	}
+
+	const PlatformWindowState* Window::GetState() const
+	{
+		return m_State;
+	}
 
 	WindowProperties& Window::GetProperties()
 	{
@@ -637,18 +669,18 @@ namespace Cinnamon {
 	}
 
 	const void* Window::GetNativeHandle() const
-    {
+	{
 		CIN_UNIMPLEMENTED(); return nullptr;
-    }
+	}
 
 	void Window::SetName(const char* windowName)
-    {
-        m_Properties.Name = windowName;
-        zxdg_toplevel_v6_set_title(m_State->xdgToplevel, m_Properties.Name);
-    }
+	{
+		m_Properties.Name = windowName;
+		zxdg_toplevel_v6_set_title(m_State->xdgToplevel, m_Properties.Name);
+	}
 
 	void Window::SetWidth(const uint32_t windowWidth)
-    {
+	{
 		if(m_Properties.Mode != EWindowMode::Windowed)
 			return;
 
@@ -659,10 +691,10 @@ namespace Cinnamon {
 
 		WindowResizedEvent event(this, m_Properties.Width, m_Properties.Height);
 		SendEvent(event);
-    }
+	}
 
 	void Window::SetHeight(const uint32_t windowHeight)
-    {
+	{
 		if(m_Properties.Mode != EWindowMode::Windowed)
 			return;
 
@@ -673,10 +705,10 @@ namespace Cinnamon {
 
 	    WindowResizedEvent event(this, m_Properties.Width, m_Properties.Height);
 	    SendEvent(event);
-    }
+	}
 
 	void Window::SetWindowMode(const EWindowMode windowMode)
-    {
+	{
 		switch(windowMode)
 		{
 			case EWindowMode::Fullscreen:
@@ -720,10 +752,10 @@ namespace Cinnamon {
 			default:
 				break;
 		}
-    }
+	}
 
 	void Window::SetSize(std::pair<uint32_t, uint32_t> windowSize)
-    {
+	{
 		if(m_Properties.Mode != EWindowMode::Windowed)
 			return;
 
@@ -737,12 +769,12 @@ namespace Cinnamon {
 	    	WindowResizedEvent event(this, width, height);
 	    	SendEvent(event);
 		}
-    }
+	}
 
-    void Window::SetEventCallback(const EventCallbackFunction callback)
-    {
+	void Window::SetEventCallback(const EventCallbackFunction callback)
+	{
 		xdgSurfaceListener.configure = xdgSurfaceConfigureHandler;
 		m_EventCallback = callback;
-    }
+	}
 } // namespace Cinnamon
 #endif // #define CIN_PLATFORM_LINUX
