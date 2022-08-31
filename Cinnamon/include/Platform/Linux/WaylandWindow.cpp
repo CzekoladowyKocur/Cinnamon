@@ -462,12 +462,12 @@ namespace Cinnamon {
 	    uint32_t version
 	)
 	{
-	    if (strcmp(interface, wl_compositor_interface.name) == 0)
+	    if(strcmp(interface, wl_compositor_interface.name) == 0)
 	    {
 	        reinterpret_cast<PlatformWindowState*>(data)->wlCompositor =
 	        (wl_compositor*)wl_registry_bind(registry, name, &wl_compositor_interface, version);
 
-	        if(wl_compositor_interface.version != int32_t(version))
+	        if(wl_compositor_interface.version != int(version))
 	            CIN_INFO("using wl_compositor_interface version {0} but the desired version is {1}", version, wl_compositor_interface.version);
 	    }
 	    else if(strcmp(interface, zxdg_shell_v6_interface.name) == 0)
@@ -475,7 +475,7 @@ namespace Cinnamon {
 	        reinterpret_cast<PlatformWindowState*>(data)->xdgShell =
 	        (zxdg_shell_v6*)wl_registry_bind(registry, name, &zxdg_shell_v6_interface, version);
 
-	        if(zxdg_shell_v6_interface.version != int32_t(version))
+	        if(zxdg_shell_v6_interface.version != int(version))
 	            CIN_INFO("using zxdg_shell_v6_interface version {0} but the desired version is {1}", version, zxdg_shell_v6_interface.version);
 	    }
 	    else if(strcmp(interface, wl_output_interface.name) == 0)
@@ -483,7 +483,7 @@ namespace Cinnamon {
 	        reinterpret_cast<PlatformWindowState*>(data)->wlOutput =
 	        (wl_output*)wl_registry_bind(registry, name, &wl_output_interface, version);
 
-	        if(wl_output_interface.version != int32_t(version))
+	        if(wl_output_interface.version != int(version))
 	            CIN_INFO("using wl_output_interface version {0} but the desired version is {1}", version, wl_output_interface.version);
 	    }
 	    else if(strcmp(interface, wl_seat_interface.name) == 0)
@@ -491,7 +491,7 @@ namespace Cinnamon {
 	        reinterpret_cast<PlatformWindowState*>(data)->wlSeat =
 	        (wl_seat*)wl_registry_bind(registry, name, &wl_seat_interface, version);
 
-	        if(wl_seat_interface.version != int32_t(version))
+	        if(wl_seat_interface.version != int(version))
 	            CIN_INFO("using wl_seat_interface version {0} but the desired version is {1}", version, wl_seat_interface.version);
 	    }
 	}
@@ -577,7 +577,7 @@ namespace Cinnamon {
         m_State = cinew PlatformWindowState;
 
 		if(m_Properties.Mode != EWindowMode::Unspecified)
-			CIN_INFO("The compositor is going to decide on our window's mode");
+			CIN_INFO("The compositor is going to decide on the window's mode");
 
         WaylandSetup(this);
 
@@ -743,7 +743,7 @@ namespace Cinnamon {
 					else if(m_Properties.Mode == EWindowMode::Maximized)
 						zxdg_toplevel_v6_unset_maximized(m_State->xdgToplevel);
 
-					m_Properties.Mode = EWindowMode::Windowed;
+					/* m_Properties.Mode = EWindowMode::Windowed; */
 				}
 
 				break;

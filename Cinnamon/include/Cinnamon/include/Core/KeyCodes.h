@@ -206,11 +206,9 @@ namespace Cinnamon {
 		DEFINE_KEY(Y, KEY_Y),
 		DEFINE_KEY(Z, KEY_Z),
 
-		/*
-		DEFINE_KEY(LeftWindows, ),
-		DEFINE_KEY(RightWindows, ),
-		DEFINE_KEY(Applications, KEY_APPSELECT),
-		*/
+		DEFINE_KEY(LeftWindows, KEY_LEFTMETA), /* Correct? */
+		DEFINE_KEY(RightWindows, KEY_RIGHTMETA), /* Correct? */
+		DEFINE_KEY(Applications, KEY_APPSELECT), /* Correct? */
 
 		DEFINE_KEY(Sleep, KEY_SLEEP),
 

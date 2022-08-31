@@ -73,7 +73,7 @@
 
 #if defined(__clang__) || defined(__GNUC__)
 #define CIN_STATIC_ASSERT	_Static_assert
-#define CIN_FORCE_INLINE	inline
+#define CIN_FORCE_INLINE	inline __attribute__((always_inline))
 #else
 #define CIN_STATIC_ASSERT	static_assert
 #define CIN_FORCE_INLINE 	__forceinline
@@ -87,12 +87,12 @@
 
 #define CIN_CARRAY_SIZE(array) (const uint32_t)((sizeof(array) / sizeof(*(array))))
 
-#define NON_CONSTRUCTIBLE(classType)                            \
-constexpr explicit classType() noexcept = delete;				\
-constexpr ~classType() noexcept = delete;
+#define NON_CONSTRUCTIBLE(classType) \
+	constexpr explicit classType() noexcept = delete; \
+	constexpr ~classType() noexcept = delete;
 
-#define NON_COPYABLE(classType)							        \
-    classType(const classType&) noexcept = delete;				\
+#define NON_COPYABLE(classType) \
+    classType(const classType&) noexcept = delete; \
     classType& operator=(const classType&)noexcept  = delete;
 
 consteval auto ResolveAtCompileTime(auto arg)

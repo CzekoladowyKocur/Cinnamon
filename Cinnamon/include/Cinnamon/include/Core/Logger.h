@@ -5,20 +5,18 @@
 #ifdef CIN_PLATFORM_WINDOWS
 #pragma warning(push, 0)
 #elif defined CIN_PLATFORM_LINUX
-/* no */
+#pragma GCC diagnostic push /* GCC isn't happy about deprecated declarations inside fmt */
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
 #define FMT_HEADER_ONLY
-#pragma GCC diagnostic push /* GCC isn't happy about deprecated declarations inside fmt */
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include "fmt/format.h"
 #include "fmt/chrono.h"
-#pragma GCC diagnostic pop
 
 #ifdef CIN_PLATFORM_WINDOWS
 #pragma warning(pop)
 #elif defined CIN_PLATFORM_LINUX
-/* no */
+#pragma GCC diagnostic pop
 #endif
 
 namespace Cinnamon {
