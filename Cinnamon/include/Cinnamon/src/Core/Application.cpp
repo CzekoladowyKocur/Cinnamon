@@ -32,7 +32,7 @@ namespace Cinnamon {
 
 	bool Application::Initialize()
 	{
-		m_Window = cinew Window(WindowProperties{ "Cinnamon Application", 800U, 600U, EWindowMode::Windowed });
+		m_Window = cinew Window(WindowProperties{ "Cinnamon Application", 800U, 600U, EWindowMode::Windowed, true });
 		m_LayerStack = cinew LayerStack;
 
 		if (!GraphicsContext::Initialize())

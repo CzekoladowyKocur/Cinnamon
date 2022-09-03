@@ -12,9 +12,11 @@ namespace Cinnamon {
 		uint32_t ExtendedStyleFlags{ 0U };
 	};
 
-	Surface::Surface(const Window* windowContext) noexcept
+	Surface::Surface(const Window* const windowContext) noexcept
 		:
 		m_WindowState(windowContext->GetState()),
+		m_UseVSync(windowContext->GetProperties().UseVSync),
+		m_DesiredPresentMode(m_UseVSync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR),
 		m_Handle(VK_NULL_HANDLE)
 	{
 		CIN_ASSERT(m_WindowState, "Window state is invalid");
@@ -40,6 +42,11 @@ namespace Cinnamon {
 			GraphicsContext::GetInstance(),
 			m_Handle,
 			GraphicsContext::GetAllocator());
+	}
+
+	VkPresentModeKHR Surface::GetDesiredPresentMode() const
+	{
+		return m_DesiredPresentMode;
 	}
 
 	VkSurfaceKHR Surface::GetHandle() const

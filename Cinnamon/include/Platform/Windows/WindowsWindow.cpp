@@ -208,6 +208,16 @@ namespace Cinnamon {
 		return m_InputState;
 	}
 
+	WindowProperties& Window::GetProperties()
+	{
+		return m_Properties;
+	}
+
+	const WindowProperties& Window::GetProperties() const
+	{
+		return m_Properties;
+	}
+
 	const void* Window::GetNativeHandle() const
 	{
 		return m_State->Handle;

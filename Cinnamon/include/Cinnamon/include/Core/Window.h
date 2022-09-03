@@ -8,7 +8,6 @@ namespace Cinnamon {
 }
 
 namespace Cinnamon {
-
 	enum class EWindowMode
 	{
 		Unspecified = 0,
@@ -23,19 +22,22 @@ namespace Cinnamon {
 		uint32_t Width;
 		uint32_t Height;
 		EWindowMode Mode;
-		bool focused;
-		/* TODO: Add vsync */
+		bool UseVSync;
+		bool Focused;
 
 		explicit WindowProperties(
 			const char* windowName,
 			const uint32_t windowWidth,
 			const uint32_t windowHeight,
-			const EWindowMode windowMode) noexcept
+			const EWindowMode windowMode,
+			const bool useVSync) noexcept
 			:
 			Name(windowName),
 			Width(windowWidth),
 			Height(windowHeight),
-			Mode(windowMode)
+			Mode(windowMode),
+			UseVSync(useVSync),
+			Focused(false)
 		{}
 
 		constexpr ~WindowProperties() noexcept = default;
@@ -61,6 +63,7 @@ namespace Cinnamon {
 		const PlatformWindowState* GetState() const;
 		const InputState* GetInputState() const;
 		WindowProperties& GetProperties();
+		const WindowProperties& GetProperties() const;
 		const void* GetNativeHandle() const;
 
 		void SetName(const char* windowName);

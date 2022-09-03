@@ -624,7 +624,7 @@ namespace Cinnamon {
 			s_CommandPools.Transfer = s_CommandPools.Graphics;
 
 		const auto [width, height] { windowContext->GetSize() };
-		s_Swapchain = cinew Swapchain(width, height, s_Surface->GetHandle());
+		s_Swapchain = cinew Swapchain(width, height, s_Surface);
 
 		return true;
 	}
@@ -636,7 +636,7 @@ namespace Cinnamon {
 		s_Surface = cinew Surface(s_WindowContext);
 
 		const auto [width, height] { s_WindowContext->GetSize() };
-		s_Swapchain->Recreate(width, height, s_Surface->GetHandle());
+		s_Swapchain->Recreate(width, height, s_Surface);
 		
 		cindel oldSurface;
 	}
@@ -646,7 +646,7 @@ namespace Cinnamon {
 		CIN_ASSERT(s_WindowContext, "Invalid window context");
 		/* No surface recreation */
 		const auto [width, height] { s_WindowContext->GetSize() };
-		s_Swapchain->Recreate(width, height, s_Surface->GetHandle());
+		s_Swapchain->Recreate(width, height, s_Surface);
 	}
 
 	void GraphicsContext::AcquireNextImage()

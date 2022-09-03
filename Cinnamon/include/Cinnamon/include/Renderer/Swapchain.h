@@ -2,15 +2,19 @@
 #include "Cinnamon/include/Renderer/VulkanTypes.h"
 
 namespace Cinnamon {
+	class Surface;
+}
+
+namespace Cinnamon {
 	class Swapchain
 	{
 	private:
 	public:
-		Swapchain(const uint32_t width, const uint32_t height, VkSurfaceKHR surface) noexcept;
+		Swapchain(const uint32_t width, const uint32_t height, const Surface* const surface) noexcept;
 		~Swapchain() noexcept;
 
-		void Create(const uint32_t width, const uint32_t height, VkSurfaceKHR surface);
-		void Recreate(const uint32_t width, const uint32_t height, VkSurfaceKHR surface);
+		void Create(const uint32_t width, const uint32_t height, const Surface* const surface);
+		void Recreate(const uint32_t width, const uint32_t height, const Surface* const surface);
 
 		void AcquireNextSwapchainImage();
 		void PresentSwapchainImage();

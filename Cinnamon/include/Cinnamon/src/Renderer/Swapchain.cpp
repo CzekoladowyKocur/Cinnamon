@@ -3,7 +3,7 @@
 #include "Cinnamon/include/Renderer/Surface.h"
 
 namespace Cinnamon {
-	Swapchain::Swapchain(const uint32_t width, const uint32_t height, VkSurfaceKHR surface) noexcept
+	Swapchain::Swapchain(const uint32_t width, const uint32_t height, const Surface* const surface) noexcept
 		:
 		m_Handle(VK_NULL_HANDLE),
 		m_CachedSwapchain(VK_NULL_HANDLE),
@@ -55,7 +55,7 @@ namespace Cinnamon {
 			GraphicsContext::GetAllocator());
 	}
 
-	void Swapchain::Create(const uint32_t width, const uint32_t height, VkSurfaceKHR surface)
+	void Swapchain::Create(const uint32_t width, const uint32_t height, const Surface* const surface)
 	{
 		m_ImageIndex = 0U;
 		m_FrameIndex = 0U;
@@ -68,7 +68,7 @@ namespace Cinnamon {
 			uint32_t availableSurfaceFormatCount{ 0U };
 			VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(
 				GraphicsContext::GetPhysicalDevice(),
-				surface,
+				surface->GetHandle(),
 				&availableSurfaceFormatCount,
 				nullptr));
 
@@ -76,7 +76,7 @@ namespace Cinnamon {
 			STL::Vector<VkSurfaceFormatKHR> availableSurfaceFormats(availableSurfaceFormatCount);
 			VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(
 				GraphicsContext::GetPhysicalDevice(),
-				surface,
+				surface->GetHandle(),
 				&availableSurfaceFormatCount,
 				&availableSurfaceFormats[0U]));
 
@@ -98,7 +98,7 @@ namespace Cinnamon {
 			uint32_t availablePresentModeCount{ 0U };
 			VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(
 				GraphicsContext::GetPhysicalDevice(),
-				surface,
+				surface->GetHandle(),
 				&availablePresentModeCount,
 				nullptr));
 
@@ -107,28 +107,28 @@ namespace Cinnamon {
 			
 			VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(
 				GraphicsContext::GetPhysicalDevice(),
-				surface,
+				surface->GetHandle(),
 				&availablePresentModeCount,
 				&availablePresentModes[0]));
 
 			bool found{ false };
 			for (const VkPresentModeKHR availablePresentMode : availablePresentModes)
-				if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR)
+				if (availablePresentMode == surface->GetDesiredPresentMode())
 				{
-					m_PresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+					m_PresentMode = surface->GetDesiredPresentMode();
 					found = true;
 					break;
 				}
 
 			if (!found)
-				m_PresentMode = VK_PRESENT_MODE_FIFO_KHR;
+				m_PresentMode = VK_PRESENT_MODE_FIFO_KHR; /* Guaranteed by specification */
 		}
 
 		/* Get surface capabilities */
 		{
 			VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
 				GraphicsContext::GetPhysicalDevice(),
-				surface,
+				surface->GetHandle(),
 				&m_SurfaceCapabilities));
 		}
 
@@ -166,7 +166,7 @@ namespace Cinnamon {
 			.sType{ VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR },
 			.pNext{ nullptr },
 			.flags{ 0U },
-			.surface{ surface },
+			.surface{ surface->GetHandle() },
 			.minImageCount{ imageCount },
 			.imageFormat{ m_SurfaceFormat.format },
 			.imageColorSpace{ m_SurfaceFormat.colorSpace },
@@ -383,13 +383,13 @@ namespace Cinnamon {
 		CIN_TRACE("Created {0}-buffered swapchain with present and graphics queue families {1}", imageCount, queuesFamiliesShared ? "shared" : "not shared");
 	}
 
-	void Swapchain::Recreate(const uint32_t width, const uint32_t height, VkSurfaceKHR surface)
+	void Swapchain::Recreate(const uint32_t width, const uint32_t height, const Surface* const surface)
 	{
 		VK_CHECK(vkDeviceWaitIdle(
 			GraphicsContext::GetDevice()));
 
 		/* If surface hasn't changed, cache handle */
-		m_CachedSwapchain = GraphicsContext::GetSurface()->GetHandle() == surface ? m_Handle : VK_NULL_HANDLE;
+		m_CachedSwapchain = GraphicsContext::GetSurface()->GetHandle() == surface->GetHandle() ? m_Handle : VK_NULL_HANDLE;
 		Cleanup();
 		Create(width, height, surface);
 		vkDestroySwapchainKHR(
