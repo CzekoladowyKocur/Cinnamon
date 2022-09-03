@@ -23,6 +23,34 @@ extern "C"
 
 namespace Cinnamon {
 
+	/* https://wayland-book.com/seat/example.html */
+	enum EPointerEventMask
+	{
+		POINTER_EVENT_ENTER = 1 << 0,
+		POINTER_EVENT_LEAVE = 1 << 1,
+		POINTER_EVENT_MOTION = 1 << 2,
+		POINTER_EVENT_BUTTON = 1 << 3,
+		POINTER_EVENT_AXIS = 1 << 4,
+		POINTER_EVENT_AXIS_SOURCE = 1 << 5,
+		POINTER_EVENT_AXIS_STOP = 1 << 6,
+		POINTER_EVENT_AXIS_DISCRETE = 1 << 7,
+	};
+
+	struct PointerEvent
+	{
+		uint32_t eventMask;
+		wl_fixed_t x, y;
+		uint32_t button, state;
+		uint32_t time;
+		uint32_t serial;
+		struct {
+			bool valid;
+			wl_fixed_t value;
+			int32_t discrete;
+		} axes[2];
+		uint32_t axisSource;
+	};
+
 	struct {
 		uint32_t width;
 		uint32_t height;
@@ -52,6 +80,8 @@ namespace Cinnamon {
 
 		/* Input */
 		wl_keyboard* wlKeyboard { nullptr };
+		wl_pointer* wlPointer { nullptr };
+		PointerEvent pointerEvent;
 	};
 
 	// -- wayland surface
@@ -114,6 +144,193 @@ namespace Cinnamon {
         window->SendEvent(event);
 	}
 	// frame callback --
+
+	// -- wl pointer
+
+	InternalScope void wlPointerEnter
+	(
+		void *data,
+		wl_pointer *wlPointer,
+		uint32_t serial,
+		wl_surface *surface,
+		wl_fixed_t x,
+		wl_fixed_t y
+	)
+	{
+		CIN_UNUSED(wlPointer);
+		CIN_UNUSED(surface);
+
+		CIN_TRACE("wlPointerEnter");
+
+		Window* window = reinterpret_cast<Window*>(data);
+		PlatformWindowState* windowState = const_cast<PlatformWindowState*>(window->GetState());
+
+		windowState->pointerEvent.eventMask |= POINTER_EVENT_ENTER;
+		windowState->pointerEvent.serial = serial;
+		windowState->pointerEvent.x = x;
+		windowState->pointerEvent.y = y;
+	}
+
+	InternalScope void wlPointerLeave
+	(
+		void *data,
+		wl_pointer *wlPointer,
+		uint32_t serial,
+		wl_surface *surface
+	)
+	{
+		CIN_UNUSED(wlPointer);
+		CIN_UNUSED(surface);
+
+		CIN_TRACE("wlPointerLeave");
+
+		Window* window = reinterpret_cast<Window*>(data);
+		PlatformWindowState* windowState = const_cast<PlatformWindowState*>(window->GetState());
+
+		windowState->pointerEvent.serial = serial;
+		windowState->pointerEvent.eventMask |= POINTER_EVENT_LEAVE;
+	}
+	
+	InternalScope void wlPointerMotion
+	(
+		void *data,
+		wl_pointer *wlPointer,
+		uint32_t time,
+		wl_fixed_t x,
+		wl_fixed_t y
+	)
+	{
+		CIN_UNUSED(data);
+		CIN_UNUSED(wlPointer);
+		CIN_UNUSED(time);
+		CIN_UNUSED(x);
+		CIN_UNUSED(y);
+	}
+
+	InternalScope void wlPointerButton
+	(
+		void *data,
+		wl_pointer *wlPointer,
+		uint32_t serial,
+		uint32_t time,
+		uint32_t button,
+		uint32_t state
+	)
+	{
+		CIN_UNUSED(data);
+		CIN_UNUSED(wlPointer);
+		CIN_UNUSED(serial);
+		CIN_UNUSED(time);
+		CIN_UNUSED(button);
+		CIN_UNUSED(state);
+	}
+
+	InternalScope void wlPointerAxis
+	(
+		void *data,
+		wl_pointer *wlPointer,
+		uint32_t time,
+		uint32_t axis,
+		wl_fixed_t value
+	)
+	{
+		CIN_UNUSED(data);
+		CIN_UNUSED(wlPointer);
+		CIN_UNUSED(time);
+		CIN_UNUSED(axis);
+		CIN_UNUSED(value);
+	}
+
+	InternalScope void wlPointerAxisSource
+	(
+		void *data,
+		wl_pointer *wlPointer,
+		uint32_t axisSource
+	)
+	{
+		CIN_UNUSED(data);
+		CIN_UNUSED(wlPointer);
+		CIN_UNUSED(axisSource);
+	}	
+
+	InternalScope void wlPointerAxisStop
+	(
+		void *data,
+		wl_pointer *wlPointer,
+		uint32_t time,
+		uint32_t axis
+	)
+	{
+		CIN_UNUSED(data);
+		CIN_UNUSED(wlPointer);
+		CIN_UNUSED(time);
+		CIN_UNUSED(axis);
+	}
+
+	InternalScope void wlPointerAxisDiscrete
+	(
+		void *data,
+		wl_pointer *wlPointer,
+		uint32_t axis,
+		int32_t discrete
+	)
+	{
+		CIN_UNUSED(data);
+		CIN_UNUSED(wlPointer);
+		CIN_UNUSED(axis);
+		CIN_UNUSED(discrete);
+	}
+
+	InternalScope void wlPointerFrame
+	(
+		void *data,
+		wl_pointer *wlPointer
+	)
+	{
+		CIN_UNUSED(wlPointer);
+
+		Window* window = reinterpret_cast<Window*>(data);
+		PlatformWindowState* windowState = const_cast<PlatformWindowState*>(window->GetState());
+		PointerEvent* pointerEvent = &windowState->pointerEvent;
+
+		if(pointerEvent->eventMask & POINTER_EVENT_ENTER)
+			CIN_TRACE("Pointer entered the surface with motion {0}, {1}", wl_fixed_to_double(pointerEvent->x), wl_fixed_to_double(pointerEvent->x));
+
+    	if(pointerEvent->eventMask & POINTER_EVENT_LEAVE)
+    	    CIN_TRACE("Pointer left the surface");
+		
+		memset(pointerEvent, 0, sizeof(PointerEvent));
+	}
+
+	InternalScope void wlPointerAxisValue120
+	(
+		void *data,
+		wl_pointer *wlPointer,
+		uint32_t axis,
+		int32_t value120
+	)
+	{
+		CIN_UNUSED(data);
+		CIN_UNUSED(wlPointer);
+		CIN_UNUSED(axis);
+		CIN_UNUSED(value120);
+	}
+
+	InternalScope constexpr wl_pointer_listener wlPointerListener
+	{
+		.enter = wlPointerEnter,
+		.leave = wlPointerLeave,
+		.motion = wlPointerMotion,
+		.button = wlPointerButton,
+       	.axis = wlPointerAxis,
+		.frame = wlPointerFrame,
+       	.axis_source = wlPointerAxisSource,
+       	.axis_stop = wlPointerAxisStop,
+       	.axis_discrete = wlPointerAxisDiscrete,	
+		.axis_value120 = wlPointerAxisValue120
+	};
+
+	// wl pointer --
 
 	// -- wl keyboard
 	InternalScope void wlKeyboardEnter
@@ -262,14 +479,25 @@ namespace Cinnamon {
 		Window* window = reinterpret_cast<Window*>(data);
 		PlatformWindowState* windowState = const_cast<PlatformWindowState*>(window->GetState());
 
-		bool keyboardCapability { bool(capabilities & WL_SEAT_CAPABILITY_KEYBOARD) };
+		bool pointerCapability { bool(capabilities & WL_SEAT_CAPABILITY_POINTER) };
+		if(pointerCapability && windowState->wlPointer == nullptr)
+		{
+			windowState->wlPointer = wl_seat_get_pointer(windowState->wlSeat);
+            wl_pointer_add_listener(windowState->wlPointer, &wlPointerListener, window);
+		}
+		else if(!pointerCapability && windowState->wlPointer != nullptr)
+		{
+			wl_pointer_release(windowState->wlPointer);
+			windowState->wlPointer = nullptr;
+		}
 
-		if(keyboardCapability && windowState->wlKeyboard == NULL)
+		bool keyboardCapability { bool(capabilities & WL_SEAT_CAPABILITY_KEYBOARD) };
+		if(keyboardCapability && windowState->wlKeyboard == nullptr)
 		{
 			windowState->wlKeyboard = wl_seat_get_keyboard(windowState->wlSeat);
 			wl_keyboard_add_listener(windowState->wlKeyboard, &wlKeyboardListener, window);
 		}
-		else if(!keyboardCapability && windowState->wlKeyboard != NULL)
+		else if(!keyboardCapability && windowState->wlKeyboard != nullptr)
 		{
 			wl_keyboard_release(windowState->wlKeyboard);
 			windowState->wlKeyboard = nullptr;
