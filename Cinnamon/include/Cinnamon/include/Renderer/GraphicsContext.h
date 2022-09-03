@@ -5,7 +5,9 @@ namespace Cinnamon {
 	class Window;
 	class Surface;
 	class Swapchain;
+}
 
+namespace Cinnamon {
 	class GraphicsContext
 	{
 	private:
@@ -152,9 +154,9 @@ namespace Cinnamon {
 			return s_LogicalDevice;
 		}
 #ifdef CIN_DEBUG
-		static CIN_FORCE_INLINE VkDebugReportCallbackEXT GetDebugReportCallback()
+		static CIN_FORCE_INLINE VkDebugUtilsMessengerEXT GetDebugUtilitiesCallback()
 		{
-			return s_DebugObject;
+			return s_DebugUtilitiesMessenger;
 		}
 
 		static CIN_FORCE_INLINE consteval VkAllocationCallbacks* GetAllocator()
@@ -207,7 +209,7 @@ namespace Cinnamon {
 		static inline Surface* s_Surface;
 		static inline Swapchain* s_Swapchain;
 #ifdef CIN_DEBUG
-		static inline VkDebugReportCallbackEXT s_DebugObject{ VK_NULL_HANDLE };
+		static inline VkDebugUtilsMessengerEXT s_DebugUtilitiesMessenger{ VK_NULL_HANDLE };
 #endif
 		static inline constexpr VkAllocationCallbacks* s_Allocator{ VK_NULL_HANDLE };
 

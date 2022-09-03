@@ -33,11 +33,10 @@ namespace Cinnamon {
 
 	class Logger
 	{
+	private:
+		NON_CONSTRUCTIBLE(Logger)
+		NON_COPYABLE(Logger)
 	public:
-	public:
-		Logger() noexcept = delete;
-		~Logger() noexcept = delete;
-
 		static bool Initialize(const ELogLevel logLevel);
 		static bool Shutdown();
 

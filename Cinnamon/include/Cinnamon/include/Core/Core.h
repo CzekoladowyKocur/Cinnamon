@@ -22,6 +22,7 @@
 #ifdef CIN_PLATFORM_WINDOWS
 #undef UNICODE
 #include <Windows.h>
+#include <Windowsx.h>
 #include <shellapi.h>
 #undef max
 #undef min

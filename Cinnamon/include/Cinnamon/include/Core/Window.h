@@ -4,6 +4,10 @@
 
 namespace Cinnamon {
 	struct PlatformWindowState;
+	class InputState;
+}
+
+namespace Cinnamon {
 
 	enum class EWindowMode
 	{
@@ -55,6 +59,7 @@ namespace Cinnamon {
 		std::pair<uint32_t, uint32_t> GetSize() const;
 		EventCallbackFunction GetEventCallback() const;
 		const PlatformWindowState* GetState() const;
+		const InputState* GetInputState() const;
 		WindowProperties& GetProperties();
 		const void* GetNativeHandle() const;
 
@@ -62,12 +67,17 @@ namespace Cinnamon {
 		void SetWidth(const uint32_t windowWidth);
 		void SetHeight(const uint32_t windowHeight);
 		void SetWindowMode(const EWindowMode windowMode);
-		void SetSize(std::pair<uint32_t, uint32_t> windowSize);
+		void SetSize(const std::pair<uint32_t, uint32_t> windowSize);
 		void SetEventCallback(const EventCallbackFunction callback);
 	private:
 		/* To be defined in platform */
 		PlatformWindowState* m_State;
+		InputState* m_InputState;
 		WindowProperties m_Properties;
 		EventCallbackFunction m_EventCallback;
+
+#ifdef CIN_PLATFORM_WINDOWS
+		friend InternalScope LRESULT CALLBACK Windows32ProcessMessage(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam);
+#endif
 	};
 }

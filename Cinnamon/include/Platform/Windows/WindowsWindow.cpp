@@ -1,5 +1,6 @@
 #ifdef CIN_PLATFORM_WINDOWS
 #include "Cinnamon/include/Core/Window.h"
+#include "Cinnamon/include/Core/Input.h"
 #include "Cinnamon/include/Event/ApplicationEvent.h"
 #include "Cinnamon/include/Event/WindowEvent.h"
 #include "Cinnamon/include/Event/KeyEvent.h"
@@ -35,6 +36,7 @@ namespace Cinnamon {
 	Window::Window(WindowProperties&& windowProperties, const EventCallbackFunction callback) noexcept
 		:
 		m_State(nullptr),
+		m_InputState(cinew InputState),
 		m_Properties(std::move(windowProperties)),
 		m_EventCallback(callback ? callback : DefaultEventCallback)
 	{
@@ -146,6 +148,7 @@ namespace Cinnamon {
 			CIN_PANIC_EXIT();
 		}
 
+		cindel m_InputState;
 		cindel m_State;
 	}
 
@@ -198,6 +201,11 @@ namespace Cinnamon {
 	const PlatformWindowState* Window::GetState() const
 	{
 		return m_State;
+	}
+
+	const InputState* Window::GetInputState() const
+	{
+		return m_InputState;
 	}
 
 	const void* Window::GetNativeHandle() const
@@ -338,7 +346,7 @@ namespace Cinnamon {
 		m_Properties.Mode = windowMode;
 	}
 
-	void Window::SetSize(std::pair<uint32_t, uint32_t> windowSize)
+	void Window::SetSize(const std::pair<uint32_t, uint32_t> windowSize)
 	{
 		CIN_UNIMPLEMENTED();
 		m_Properties.Width = windowSize.first;
@@ -361,6 +369,10 @@ namespace Cinnamon {
 				CREATESTRUCT* createStruct{ reinterpret_cast<CREATESTRUCT*>(lParam) };
 				window = reinterpret_cast<Window*>(createStruct->lpCreateParams);
 				SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(window));
+
+				POINT point;
+				CIN_VERIFY(GetCursorPos(&point));
+				window->m_InputState->SetMouseCursorPosition(static_cast<uint32_t>(point.x), static_cast<uint32_t>(point.y));
 
 				return DefWindowProcA(hwnd, message, wParam, lParam);
 			}
@@ -385,10 +397,8 @@ namespace Cinnamon {
 					const uint32_t width{ LOWORD(lParam) };
 					const uint32_t height{ HIWORD(lParam) };
 
-					/* Ugly hack for now */
-					WindowProperties* windowProperties{ reinterpret_cast<WindowProperties*>((uint8_t*)window + sizeof(PlatformWindowState*)) };
-					windowProperties->Width = width;
-					windowProperties->Height = height;
+					window->m_Properties.Width = width;
+					window->m_Properties.Height = height;
 
 					WindowResizedEvent event(window, width, height);
 					window->SendEvent(event);
@@ -428,17 +438,66 @@ namespace Cinnamon {
 			case WM_KEYUP: /* Nonsystem key */
 			case WM_SYSKEYUP: /* System key (alt pressed) */
 			{
-				/* TODO: Update input */
+				/* TODO: Add repeated key presses */
+				window->m_InputState->SetKeyState(static_cast<Key>(wParam), EKeyState::Released);
+
 				return 0;
 			}
 
 			case WM_KEYDOWN: /* Nonsystem key */
 			case WM_SYSKEYDOWN: /* System key (alt pressed) */
 			{
-				/* TODO: Update input */
+				window->m_InputState->SetKeyState(static_cast<Key>(wParam), EKeyState::Pressed);
+
 				KeyPressedEvent event(static_cast<KeyCode>(wParam));
 				window->SendEvent(event);
 
+				return 0;
+			}
+
+			case WM_LBUTTONDOWN:
+			{
+				window->m_InputState->SetMouseButtonState(Mouse::LeftButton, EMouseState::Pressed);
+				return 0;
+			}
+
+			case WM_MBUTTONDOWN:
+			{
+				window->m_InputState->SetMouseButtonState(Mouse::MiddleButton, EMouseState::Pressed);
+				return 0;
+			}
+
+			case WM_RBUTTONDOWN:
+			{
+				window->m_InputState->SetMouseButtonState(Mouse::RightButton, EMouseState::Pressed);
+				return 0;
+			}
+
+
+			case WM_LBUTTONUP:
+			{
+				window->m_InputState->SetMouseButtonState(Mouse::LeftButton, EMouseState::Released);
+				return 0;
+			}
+
+			case WM_MBUTTONUP:
+			{
+				window->m_InputState->SetMouseButtonState(Mouse::MiddleButton, EMouseState::Released);
+				return 0;
+			}
+
+			case WM_RBUTTONUP:
+			{
+				window->m_InputState->SetMouseButtonState(Mouse::RightButton, EMouseState::Released);
+				return 0;
+			}
+
+			case WM_MOUSEMOVE:
+			{
+				const uint32_t xPosition = static_cast<uint32_t>(GET_X_LPARAM(lParam));
+				const uint32_t yPosition = static_cast<uint32_t>(GET_Y_LPARAM(lParam));
+
+				window->m_InputState->SetMouseCursorPosition(xPosition, yPosition);
 				return 0;
 			}
 		}

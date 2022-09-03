@@ -140,6 +140,11 @@ namespace Cinnamon {
 		m_LayerStack->PopOverlay(layer);
 	}
 
+	const Window* Application::GetWindow() const
+	{
+		return m_Window;
+	}
+
 	void Application::OnEvent(Event& event)
 	{
 		EventDispatcher dispatcher(event);

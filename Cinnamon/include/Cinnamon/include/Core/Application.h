@@ -37,6 +37,8 @@ namespace Cinnamon {
 		void PopLayer(Layer* const layer);
 		void PushOverlay(Layer* const layer);
 		void PopOverlay(Layer* const layer);
+
+		const Window* GetWindow() const;
 	protected: 
 		/* User functions */
 		[[nodiscard]] virtual bool OnUserInitialize() = 0;

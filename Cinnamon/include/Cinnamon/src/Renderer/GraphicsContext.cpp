@@ -15,36 +15,46 @@ namespace Cinnamon {
 		return physicalDeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
 	}
 #if CIN_DEBUG
-	InternalScope VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugReportCallback(
-		VkDebugReportFlagsEXT flags,
-		VkDebugReportObjectTypeEXT objectType,
-		uint64_t object,
-		uint64_t location,
-		int32_t messageCode,
-		const char* pLayerPrefix,
-		const char* pMessage,
+	InternalScope VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugUtilitiesCallback(
+		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+		VkDebugUtilsMessageTypeFlagsEXT messageTypes,
+		const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
 		void* pUserData)
 	{
-		CIN_UNUSED(object);
-		CIN_UNUSED(location);
-		CIN_UNUSED(messageCode);
-		CIN_UNUSED(pLayerPrefix);
+		CIN_UNUSED(messageTypes);
 		CIN_UNUSED(pUserData);
 
-		if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)
-			CIN_INFO("Vulkan:\n  Object: {0}\n  Message: {1}", objectType, pMessage);
+		switch (messageSeverity)
+		{
+			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+			{
+				CIN_TRACE("{}", pCallbackData->pMessage);
+				break;
+			}
 
-		if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
-			CIN_WARN("Vulkan:\n  Object: {0}\n  Message: {1}", objectType, pMessage);
+			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+			{
+				CIN_INFO("{}", pCallbackData->pMessage);
+				break;
+			}
 
-		if (flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT)
-			CIN_WARN("Vulkan:\n  Object: {0}\n  Message: {1}", objectType, pMessage);
+			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+			{
+				CIN_WARN("{}", pCallbackData->pMessage);
+				break;
+			}
 
-		if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
-			CIN_ERROR("Vulkan:\n  Object: {0}\n  Message: {1}", objectType, pMessage);
+			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+			{
+				CIN_ERROR("{}", pCallbackData->pMessage);
+				break;
+			}
 
-		if (flags & VK_DEBUG_REPORT_DEBUG_BIT_EXT)
-			CIN_WARN("Vulkan:\n  Object: {0}\n  Message: {1}", objectType, pMessage);
+			default:
+			{
+				break;
+			}
+		}
 
 		return VK_FALSE;
 	}
@@ -160,22 +170,34 @@ namespace Cinnamon {
 
 		volkLoadInstance(s_Instance);
 #ifdef CIN_DEBUG
-		const auto _vkCreateDebugReportCallbackEXT{ reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(vkGetInstanceProcAddr(s_Instance, "vkCreateDebugReportCallbackEXT")) };
-		CIN_ASSERT(_vkCreateDebugReportCallbackEXT != nullptr);
-		
-		const VkDebugReportCallbackCreateInfoEXT debugReportCreateInfo{
-			.sType{ VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT },
+		constexpr VkDebugUtilsMessengerCreateInfoEXT debugUtilitiesMessengerCreateInfo{
+			.sType{ VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT },
 			.pNext{ nullptr },
 			.flags{ 0U },
-			.pfnCallback{ VulkanDebugReportCallback },
+			.messageSeverity{ 
+				VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+				VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+				VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+				VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT 
+			},
+			.messageType{ 
+				VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | 
+				VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+				VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT},
+			.pfnUserCallback{ VulkanDebugUtilitiesCallback },
 			.pUserData{ nullptr },
 		};
 
-		VK_CHECK(_vkCreateDebugReportCallbackEXT(
-			s_Instance, 
-			&debugReportCreateInfo, 
-			s_Allocator, 
-			&s_DebugObject));
+		const PFN_vkCreateDebugUtilsMessengerEXT _vkCreateDebugUtilsMessengerEXT{ reinterpret_cast<const PFN_vkCreateDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(
+				s_Instance, 
+				"vkCreateDebugUtilsMessengerEXT")) };
+
+		CIN_ASSERT(_vkCreateDebugUtilsMessengerEXT);
+		VK_CHECK(_vkCreateDebugUtilsMessengerEXT(
+			s_Instance,
+			&debugUtilitiesMessengerCreateInfo,
+			s_Allocator,
+			&s_DebugUtilitiesMessenger));
 #endif
 		uint32_t physicalDeviceCount{ 0 };
 		VK_CHECK(vkEnumeratePhysicalDevices(s_Instance, &physicalDeviceCount, nullptr));
@@ -230,12 +252,12 @@ namespace Cinnamon {
 			s_Allocator);
 		
 #ifdef CIN_DEBUG
-		const auto _vkDestroyDebugReportCallbackEXT{ reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>(vkGetInstanceProcAddr(s_Instance, "vkDestroyDebugReportCallbackEXT")) };
-		CIN_ASSERT(_vkDestroyDebugReportCallbackEXT != nullptr);
+		const PFN_vkDestroyDebugUtilsMessengerEXT _vkDestroyDebugUtilsMessengerEXT{ reinterpret_cast<const PFN_vkDestroyDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(s_Instance, "vkDestroyDebugUtilsMessengerEXT")) };
+		CIN_ASSERT(_vkDestroyDebugUtilsMessengerEXT != nullptr);
 
-		_vkDestroyDebugReportCallbackEXT(
+		_vkDestroyDebugUtilsMessengerEXT(
 			s_Instance,
-			s_DebugObject,
+			s_DebugUtilitiesMessenger,
 			s_Allocator);
 #endif
 		vkDestroyInstance(
