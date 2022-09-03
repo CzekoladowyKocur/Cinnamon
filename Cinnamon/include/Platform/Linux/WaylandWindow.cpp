@@ -1,5 +1,6 @@
 #ifdef CIN_PLATFORM_LINUX
 #include "Cinnamon/include/Core/Window.h"
+#include "Cinnamon/include/Core/Input.h"
 #include "Cinnamon/include/Event/WindowEvent.h"
 #include "Cinnamon/include/Event/ApplicationEvent.h"
 #include "Cinnamon/include/Event/KeyEvent.h"
@@ -327,7 +328,7 @@ namespace Cinnamon {
 		WindowProperties& windowProperties { window->GetProperties() };
 
 		windowProperties.Mode = pending.mode;
-		windowProperties.focused = pending.focused;
+		windowProperties.Focused = pending.focused;
 
 		if(windowProperties.Width != pending.width || windowProperties.Height != pending.height)
 		{
@@ -355,7 +356,7 @@ namespace Cinnamon {
 			WindowProperties& windowProperties { window->GetProperties() };
 
 			windowProperties.Mode = pending.mode;
-			windowProperties.focused = pending.focused;
+			windowProperties.Focused = pending.focused;
 
 			if(windowProperties.Width != pending.width || windowProperties.Height != pending.height)
 			{
@@ -468,7 +469,7 @@ namespace Cinnamon {
 	        (wl_compositor*)wl_registry_bind(registry, name, &wl_compositor_interface, version);
 
 	        if(wl_compositor_interface.version != int(version))
-	            CIN_INFO("using wl_compositor_interface version {0} but the desired version is {1}", version, wl_compositor_interface.version);
+	            CIN_INFO("Using wl_compositor_interface version {0} but the desired version is {1}", version, wl_compositor_interface.version);
 	    }
 	    else if(strcmp(interface, zxdg_shell_v6_interface.name) == 0)
 	    {
@@ -476,7 +477,7 @@ namespace Cinnamon {
 	        (zxdg_shell_v6*)wl_registry_bind(registry, name, &zxdg_shell_v6_interface, version);
 
 	        if(zxdg_shell_v6_interface.version != int(version))
-	            CIN_INFO("using zxdg_shell_v6_interface version {0} but the desired version is {1}", version, zxdg_shell_v6_interface.version);
+	            CIN_INFO("Using zxdg_shell_v6_interface version {0} but the desired version is {1}", version, zxdg_shell_v6_interface.version);
 	    }
 	    else if(strcmp(interface, wl_output_interface.name) == 0)
 	    {
@@ -484,7 +485,7 @@ namespace Cinnamon {
 	        (wl_output*)wl_registry_bind(registry, name, &wl_output_interface, version);
 
 	        if(wl_output_interface.version != int(version))
-	            CIN_INFO("using wl_output_interface version {0} but the desired version is {1}", version, wl_output_interface.version);
+	            CIN_INFO("Using wl_output_interface version {0} but the desired version is {1}", version, wl_output_interface.version);
 	    }
 	    else if(strcmp(interface, wl_seat_interface.name) == 0)
 	    {
@@ -492,7 +493,7 @@ namespace Cinnamon {
 	        (wl_seat*)wl_registry_bind(registry, name, &wl_seat_interface, version);
 
 	        if(wl_seat_interface.version != int(version))
-	            CIN_INFO("using wl_seat_interface version {0} but the desired version is {1}", version, wl_seat_interface.version);
+	            CIN_INFO("Using wl_seat_interface version {0} but the desired version is {1}", version, wl_seat_interface.version);
 	    }
 	}
 
@@ -571,11 +572,11 @@ namespace Cinnamon {
 
 	Window::Window(WindowProperties&& windowProperties, const EventCallbackFunction callback) noexcept
 		:
+		m_State(cinew PlatformWindowState),
+		m_InputState(cinew InputState),
 		m_Properties(std::move(windowProperties)),
         m_EventCallback(callback)
 	{
-        m_State = cinew PlatformWindowState;
-
 		if(m_Properties.Mode != EWindowMode::Unspecified)
 			CIN_INFO("The compositor is going to decide on the window's mode");
 
@@ -586,6 +587,7 @@ namespace Cinnamon {
 
 	Window::~Window() noexcept
 	{
+		cindel m_InputState;
 		cindel m_State;
 	}
 
@@ -666,6 +668,16 @@ namespace Cinnamon {
 	WindowProperties& Window::GetProperties()
 	{
 		return m_Properties;
+	}
+
+	const WindowProperties& Window::GetProperties() const
+	{
+		return m_Properties;
+	}
+
+	const InputState* Window::GetInputState() const
+	{
+		return m_InputState;
 	}
 
 	const void* Window::GetNativeHandle() const
@@ -754,7 +766,7 @@ namespace Cinnamon {
 		}
 	}
 
-	void Window::SetSize(std::pair<uint32_t, uint32_t> windowSize)
+	void Window::SetSize(const std::pair<uint32_t, uint32_t> windowSize)
 	{
 		if(m_Properties.Mode != EWindowMode::Windowed)
 			return;

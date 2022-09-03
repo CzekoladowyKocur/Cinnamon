@@ -85,7 +85,7 @@
 #define CIN_MIN(value, min) ((value) > (min)) ? (value) : (min);
 #define CIN_MIN_MAX(value, min, max) CIN_CLAMP(value, min, max)
 
-#define CIN_CARRAY_SIZE(array) (const uint32_t)((sizeof(array) / sizeof(*(array))))
+#define CIN_CARRAY_SIZE(array) (uint32_t)((sizeof(array) / sizeof(*(array))))
 
 #define NON_CONSTRUCTIBLE(classType) \
 	constexpr explicit classType() noexcept = delete; \

@@ -19,8 +19,8 @@ namespace Cinnamon {
 		EMouseState GetMouseButtonState(const Mouse mouseButton) const;
 		std::pair<uint32_t, uint32_t> GetMousePosition() const;
 	private:
-		EKeyState m_KeyStates[static_cast<const std::size_t>(Key::KeysEnd)];
-		EMouseState m_MouseStates[static_cast<const std::size_t>(Mouse::MouseButtonsEnd)];
+		EKeyState m_KeyStates[static_cast<std::size_t>(Key::KeysEnd)];
+		EMouseState m_MouseStates[static_cast<std::size_t>(Mouse::MouseButtonsEnd)];
 
 		struct
 		{

@@ -188,7 +188,7 @@ namespace Cinnamon {
 			.pUserData{ nullptr },
 		};
 
-		const PFN_vkCreateDebugUtilsMessengerEXT _vkCreateDebugUtilsMessengerEXT{ reinterpret_cast<const PFN_vkCreateDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(
+		const PFN_vkCreateDebugUtilsMessengerEXT _vkCreateDebugUtilsMessengerEXT{ reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(
 				s_Instance, 
 				"vkCreateDebugUtilsMessengerEXT")) };
 
@@ -252,7 +252,7 @@ namespace Cinnamon {
 			s_Allocator);
 		
 #ifdef CIN_DEBUG
-		const PFN_vkDestroyDebugUtilsMessengerEXT _vkDestroyDebugUtilsMessengerEXT{ reinterpret_cast<const PFN_vkDestroyDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(s_Instance, "vkDestroyDebugUtilsMessengerEXT")) };
+		const PFN_vkDestroyDebugUtilsMessengerEXT _vkDestroyDebugUtilsMessengerEXT{ reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(s_Instance, "vkDestroyDebugUtilsMessengerEXT")) };
 		CIN_ASSERT(_vkDestroyDebugUtilsMessengerEXT != nullptr);
 
 		_vkDestroyDebugUtilsMessengerEXT(
