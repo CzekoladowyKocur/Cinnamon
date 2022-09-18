@@ -1,5 +1,6 @@
 #include "Cinnamon/include/Core/Application.h"
 #include "Cinnamon/include/Renderer/GraphicsContext.h"
+#include "Cinnamon/include/GUI/GUIRenderer.h"
 #include "Cinnamon/include/Core/Window.h"
 #include "Cinnamon/include/Core/LayerStack.h"
 #include "Cinnamon/include/Event/Event.h"
@@ -15,7 +16,8 @@ namespace Cinnamon {
 		:
 		m_Running(true),
 		m_Minimized(false),
-		m_Window(nullptr)
+		m_Window(nullptr),
+		m_LayerStack(nullptr)
 	{
 		CIN_ASSERT(s_ApplicationInstance == nullptr, "Application already instantiated!");
 		CIN_TRACE("Running cinnamon build {}", Platform::GetBuildDate());
@@ -47,6 +49,12 @@ namespace Cinnamon {
 			return false;
 		}
 
+		if (!GUIRenderer::Initialize(m_Window))
+		{
+			CIN_CRITICAL("Failed to initialize gui renderer");
+			return false;
+		}
+
 		CIN_WARN("Queues from same families might be faster");
 		m_Window->SetEventCallback(std::bind(&Application::OnEvent, this, std::placeholders::_1));
 
@@ -69,13 +77,10 @@ namespace Cinnamon {
 		while (m_Running)
 		{
 			m_Window->PollEvents();
+	
 			const double currentTime{ Platform::GetAbsoluteTime() };
 			const Timestep timestep{ static_cast<Timestep::Type>(currentTime - lastFrameTime) };
-			
-			/* Update layers */
-			for (Layer* layer : *m_LayerStack)
-				layer->OnUpdate(timestep);
-			
+
 			lastFrameTime = currentTime;
 			/* Temporary */
 			timer += timestep;
@@ -100,6 +105,12 @@ namespace Cinnamon {
 		if (!OnUserShutdown())
 		{
 			CIN_CRITICAL("Failed to shutdown user data");
+			shutdownSuccessful = false;
+		}
+
+		if (!GUIRenderer::Shutdown())
+		{
+			CIN_CRITICAL("Failed to shutdown GUI renderer");
 			shutdownSuccessful = false;
 		}
 
@@ -156,16 +167,28 @@ namespace Cinnamon {
 
 	bool Application::OnApplicationRender(ApplicationRenderEvent& event)
 	{
-		CIN_UNUSED(event);
+		FunctionVariable double f_lastFrameTime{ Platform::GetAbsoluteTime() };
 
-		/* Clear swapchain image for now */
 		[[likely]]
 		if (not m_Minimized)
 		{
+			const double currentTime{ Platform::GetAbsoluteTime() };
+			const Timestep timestep{ static_cast<Timestep::Type>(currentTime - f_lastFrameTime) };
+			f_lastFrameTime = currentTime;
+
 			GraphicsContext::AcquireNextImage();
+			{
+				GUIRenderer::BeginFrame();
+
+				for (Layer* layer : *m_LayerStack)
+					layer->OnUpdate(timestep);
+
+				GUIRenderer::EndFrame();
+			}
 			GraphicsContext::PresentImage();
 		}
 
+		CIN_UNUSED(event);
 		return true;
 	}
 

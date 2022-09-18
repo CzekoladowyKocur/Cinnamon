@@ -32,6 +32,96 @@ namespace Cinnamon {
 		static void AcquireNextImage();
 		static void PresentImage();
 
+		static uint32_t GetSwapchainImageCount();
+		static uint32_t GetMinimalSwapchainImageCount();
+		static uint32_t GetMaximumSwapchainImageCount();
+		static VkRenderPass GetSwapchainRenderPass();
+
+		template<typename Function>
+		static void PerformSingleSubmitGraphicsOperation(Function&& function)
+		{
+			CIN_ASSERT(s_CommandPools.Graphics, "Invalid graphics command pool");
+			const VkCommandBufferAllocateInfo commandBufferAllocateInfo{
+				.sType{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO },
+				.pNext{ nullptr },
+				.commandPool{ s_CommandPools.Graphics },
+				.level{ VK_COMMAND_BUFFER_LEVEL_PRIMARY },
+				.commandBufferCount{ 1U },
+			};
+
+			VkCommandBuffer commandBuffer;
+			VK_CHECK(vkAllocateCommandBuffers(
+				s_LogicalDevice,
+				&commandBufferAllocateInfo,
+				&commandBuffer));
+
+			const VkCommandBufferBeginInfo commandBufferBeginInfo{
+				.sType{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO },
+				.pNext{ nullptr },
+				.flags{ VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT },
+				.pInheritanceInfo{ nullptr },
+			};
+
+			VK_CHECK(vkBeginCommandBuffer(
+				commandBuffer,
+				&commandBufferBeginInfo));
+
+			/* User code */
+			function(commandBuffer);
+
+			VK_CHECK(vkEndCommandBuffer(
+				commandBuffer));
+
+			const VkSubmitInfo submitInfo{
+				.sType{ VK_STRUCTURE_TYPE_SUBMIT_INFO },
+				.pNext{ nullptr },
+				.waitSemaphoreCount{ 0U },
+				.pWaitSemaphores{ nullptr },
+				.pWaitDstStageMask{ 0U /* VK_PIPELINE_STAGE_GRAPHICS_BIT */},
+				.commandBufferCount{ 1U },
+				.pCommandBuffers{ &commandBuffer },
+				.signalSemaphoreCount{ 0U },
+				.pSignalSemaphores{ nullptr },
+			};
+
+			constexpr VkFenceCreateInfo fenceCreateInfo{
+				.sType{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO },
+				.pNext{ nullptr },
+				.flags{ 0U },
+			};
+
+			VkFence executionHasFinishedFence;
+			VK_CHECK(vkCreateFence(
+				s_LogicalDevice,
+				&fenceCreateInfo,
+				s_Allocator,
+				&executionHasFinishedFence));
+
+			VK_CHECK(vkQueueSubmit(
+				s_Queues.Graphics,
+				1U,
+				&submitInfo,
+				executionHasFinishedFence));
+
+			VK_CHECK(vkWaitForFences(
+				s_LogicalDevice,
+				1U,
+				&executionHasFinishedFence,
+				VK_FALSE,
+				std::numeric_limits<uint64_t>::max()));
+
+			vkFreeCommandBuffers(
+				s_LogicalDevice,
+				s_CommandPools.Graphics,
+				1U,
+				&commandBuffer);
+
+			vkDestroyFence(
+				s_LogicalDevice,
+				executionHasFinishedFence,
+				s_Allocator);
+		}
+
 		template<typename Function>
 		static void PerformSingleSubmitMemoryTransferOperation(Function&& function)
 		{
@@ -144,6 +234,11 @@ namespace Cinnamon {
 			return s_Surface;
 		}
 
+		static CIN_FORCE_INLINE Swapchain* GetSwapchain()
+		{
+			return s_Swapchain;
+		}
+
 		static CIN_FORCE_INLINE VkPhysicalDevice GetPhysicalDevice()
 		{
 			return s_PhysicalDevice;
@@ -174,7 +269,7 @@ namespace Cinnamon {
 			return nullptr;
 		}
 #endif
-		static CIN_FORCE_INLINE int32_t GetQueueFamily(const EQueueFamily queueFamily)
+		static CIN_FORCE_INLINE uint32_t GetQueueFamily(const EQueueFamily queueFamily)
 		{
 			switch (queueFamily)
 			{
@@ -185,7 +280,7 @@ namespace Cinnamon {
 			}
 
 			CIN_ASSERT(false, "Unknown queue family");
-			return -1;
+			return std::numeric_limits<uint32_t>::max();
 		}
 
 		static CIN_FORCE_INLINE VkQueue GetGraphicsQueue()
@@ -215,17 +310,17 @@ namespace Cinnamon {
 
 		struct QueueFamilies final
 		{
-			enum : int32_t
+			enum : uint32_t
 			{
-				Absent = -1,
+				Absent = std::numeric_limits<uint32_t>::max(),
 			};
 
 			/* Queue family handles are stored as 32 bit signed integers 
 			instead of 32 bit unsigned integers to ease checking */
-			int32_t Graphics;
-			int32_t Compute;
-			int32_t Transfer;
-			int32_t Present;
+			uint32_t Graphics;
+			uint32_t Compute;
+			uint32_t Transfer;
+			uint32_t Present;
 
 			uint32_t GraphicsQueueCount;
 			uint32_t ComputeQueueCount;

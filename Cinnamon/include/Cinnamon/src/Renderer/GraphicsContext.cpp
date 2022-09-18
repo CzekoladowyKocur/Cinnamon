@@ -52,6 +52,7 @@ namespace Cinnamon {
 
 			default:
 			{
+				CIN_ERROR("{}", pCallbackData->pMessage);
 				break;
 			}
 		}
@@ -379,7 +380,7 @@ namespace Cinnamon {
 				.sType{ VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO },
 				.pNext{ nullptr },
 				.flags{ 0U },
-				.queueFamilyIndex{ static_cast<uint32_t>(s_QueueFamilies.Graphics) },
+				.queueFamilyIndex{ s_QueueFamilies.Graphics },
 				.queueCount{ s_QueueFamilies.GraphicsQueueCount > 1U ? 2U : 1U }, /* If queue family is shared, attempt using a different queue if more than 1 is available */
 				.pQueuePriorities{ s_QueueFamilies.GraphicsQueueCount > 1U ? defaultQueuePriorities.data() : &defaultQueuePriority },
 			};
@@ -402,7 +403,7 @@ namespace Cinnamon {
 				.sType{ VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO },
 				.pNext{ nullptr },
 				.flags{ 0U },
-				.queueFamilyIndex{ static_cast<uint32_t>(s_QueueFamilies.Graphics) },
+				.queueFamilyIndex{ s_QueueFamilies.Graphics },
 				.queueCount{ 1U },
 				.pQueuePriorities{ &defaultQueuePriority },
 			};
@@ -417,7 +418,7 @@ namespace Cinnamon {
 				.sType{ VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO },
 				.pNext{ nullptr },
 				.flags{ 0U },
-				.queueFamilyIndex{ static_cast<uint32_t>(s_QueueFamilies.Transfer) },
+				.queueFamilyIndex{ s_QueueFamilies.Transfer },
 				.queueCount{ 1U },
 				.pQueuePriorities{ &defaultQueuePriority },
 			};
@@ -530,13 +531,13 @@ namespace Cinnamon {
 				CIN_ASSERT(s_QueueFamilies.GraphicsQueueCount > 1U);
 				vkGetDeviceQueue(
 					s_LogicalDevice,
-					static_cast<uint32_t>(s_QueueFamilies.Graphics),
+					s_QueueFamilies.Graphics,
 					0U, /* Pick first queue in a queue family */
 					&s_Queues.Graphics);
 
 				vkGetDeviceQueue(
 					s_LogicalDevice,
-					static_cast<uint32_t>(s_QueueFamilies.Present),
+					s_QueueFamilies.Present,
 					1U, /* Pick second queue in a queue family */
 					&s_Queues.Present);
 			}
@@ -544,7 +545,7 @@ namespace Cinnamon {
 			{
 				vkGetDeviceQueue(
 					s_LogicalDevice,
-					static_cast<uint32_t>(s_QueueFamilies.Graphics),
+					s_QueueFamilies.Graphics,
 					0U, /* Pick first queue in a queue family */
 					&s_Queues.Graphics);
 
@@ -555,13 +556,13 @@ namespace Cinnamon {
 		{
 			vkGetDeviceQueue(
 				s_LogicalDevice,
-				static_cast<uint32_t>(s_QueueFamilies.Graphics),
+				s_QueueFamilies.Graphics,
 				0U,
 				&s_Queues.Graphics);
 
 			vkGetDeviceQueue(
 				s_LogicalDevice,
-				static_cast<uint32_t>(s_QueueFamilies.Present),
+				s_QueueFamilies.Present,
 				0U,
 				&s_Queues.Present);
 		}
@@ -570,7 +571,7 @@ namespace Cinnamon {
 		if (s_QueueFamilies.Transfer != QueueFamilies::Absent)
 			vkGetDeviceQueue(
 				s_LogicalDevice,
-				static_cast<uint32_t>(s_QueueFamilies.Transfer),
+				s_QueueFamilies.Transfer,
 				0U, /* Pick first queue in a queue family */
 				&s_Queues.Transfer);
 		else
@@ -590,7 +591,7 @@ namespace Cinnamon {
 				.sType{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO },
 				.pNext{ nullptr },
 				.flags{ 0U },
-				.queueFamilyIndex{ static_cast<uint32_t>(s_QueueFamilies.Graphics) },
+				.queueFamilyIndex{ s_QueueFamilies.Graphics },
 			};
 
 			VK_CHECK(vkCreateCommandPool(
@@ -609,7 +610,7 @@ namespace Cinnamon {
 				.sType{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO },
 				.pNext{ nullptr },
 				.flags{ 0U },
-				.queueFamilyIndex{ static_cast<uint32_t>(s_QueueFamilies.Transfer) },
+				.queueFamilyIndex{ s_QueueFamilies.Transfer },
 			};
 
 			VK_CHECK(vkCreateCommandPool(
@@ -657,5 +658,25 @@ namespace Cinnamon {
 	void GraphicsContext::PresentImage()
 	{
 		s_Swapchain->PresentSwapchainImage();
+	}
+
+	uint32_t GraphicsContext::GetSwapchainImageCount()
+	{
+		return s_Swapchain->GetImageCount();
+	}
+
+	uint32_t GraphicsContext::GetMinimalSwapchainImageCount()
+	{
+		return s_Swapchain->GetMinimalImageCount();
+	}
+
+	uint32_t GraphicsContext::GetMaximumSwapchainImageCount()
+	{
+		return s_Swapchain->GetMaximumImageCount();
+	}
+
+	VkRenderPass GraphicsContext::GetSwapchainRenderPass()
+	{
+		return s_Swapchain->GetRenderPass();
 	}
 }

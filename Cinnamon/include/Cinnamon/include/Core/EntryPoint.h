@@ -86,7 +86,6 @@ void* operator new[](const std::size_t size)
 #include <stdlib.h>
 #include <crtdbg.h>
 #endif 
-
 static_assert(sizeof(std::remove_pointer<LPWSTR>::type) == sizeof(char16_t), "UTF-16 Encoding for windows required");
 INT WINAPI wWinMain(
 	_In_ HINSTANCE hInstance,
@@ -104,7 +103,6 @@ INT WINAPI wWinMain(
 	_CrtMemState memoryState;
 	_CrtMemCheckpoint(&memoryState);
 #endif
-	/// https://jdelezenne.github.io/Codex/
 	INT argc{ 0 };
 	LPWSTR* argv{ CommandLineToArgvW(GetCommandLineW(), &argc) };
 	(void)argv;
@@ -112,6 +110,9 @@ INT WINAPI wWinMain(
 	int result{ EXIT_SUCCESS };
 	{
 		result = CommonEntryPoint(/*std::move(arguments)*/);
+
+		if (result == EXIT_FAILURE)
+			Sleep(5000);
 	}
 #if USE_CRT_MEMORY_LEAK_DETECTION
 	/* No point to log in case of invalid application initialization */

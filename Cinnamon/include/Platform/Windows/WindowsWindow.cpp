@@ -16,6 +16,9 @@
 	}														\
 }
 
+/* NOTE: Temp */
+extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 namespace Cinnamon {
 	InternalScope LRESULT CALLBACK Windows32ProcessMessage(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam);
 	InternalScope void DefaultEventCallback(Event& event);
@@ -370,6 +373,8 @@ namespace Cinnamon {
 
 	LRESULT CALLBACK Windows32ProcessMessage(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam)
 	{
+		/* NOTE: Temp */
+		ImGui_ImplWin32_WndProcHandler(hwnd, message, wParam, lParam);
 		Window* window{ reinterpret_cast<Window*>(GetWindowLongPtr(hwnd, GWLP_USERDATA)) };
 
 		switch (message)

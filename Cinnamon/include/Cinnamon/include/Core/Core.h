@@ -21,6 +21,9 @@
 
 #ifdef CIN_PLATFORM_WINDOWS
 #undef UNICODE
+#ifndef UNICODE
+#define _T(x) x
+#endif
 #include <Windows.h>
 #include <Windowsx.h>
 #include <shellapi.h>

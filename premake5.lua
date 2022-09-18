@@ -87,6 +87,7 @@ group "ThirdParty"
 include "Cinnamon/include/ThirdParty/xdg"
 include "Cinnamon/include/ThirdParty/volk"
 include "Cinnamon/include/ThirdParty/fmt"
+include "Cinnamon/include/ThirdParty/imgui"
 group ""
 
 project (CoreProjectName)
@@ -124,6 +125,7 @@ project (CoreProjectName)
 	links
 	{
 		"volk",
+		"imgui",
 	}
 
 	filter "system:linux"
@@ -159,7 +161,11 @@ project (EditorProjectName)
 		FMTInclude,
 	}
 
-	links "Cinnamon"
+	links
+	{
+		"Cinnamon",
+		"imgui",
+	}
 
 	filter "system:linux"
 		links
@@ -194,4 +200,8 @@ project (SandboxProjectName)
 		FMTInclude,
 	}
 
-	links "Cinnamon"
+	links
+	{
+		"Cinnamon",
+		"imgui",
+	}

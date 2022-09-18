@@ -18,6 +18,17 @@ namespace Cinnamon {
 
 		void AcquireNextSwapchainImage();
 		void PresentSwapchainImage();
+
+		uint32_t GetFrameIndex() const;
+		uint32_t GetImageCount() const;
+		uint32_t GetMinimalImageCount() const;
+		uint32_t GetMaximumImageCount() const;
+		VkExtent2D GetExtent() const;
+		VkRenderPass GetRenderPass() const;
+
+		VkCommandBuffer GetCurrentCommandBuffer() const;
+		VkFramebuffer GetCurrentFramebuffer() const;
+		void RecordCommands(const std::function<void()> recordFunction);
 	private:
 		void Cleanup();
 	private:
@@ -48,5 +59,7 @@ namespace Cinnamon {
 		uint32_t m_ImageIndex;
 		uint32_t m_FrameIndex;
 		uint32_t m_FramesInFlight;
+
+		std::function<void()> m_RecordFunction;
 	};
 }

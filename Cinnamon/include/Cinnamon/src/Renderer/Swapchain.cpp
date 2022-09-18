@@ -20,13 +20,14 @@ namespace Cinnamon {
 		m_Fences({}),
 		m_ImageIndex(0U),
 		m_FrameIndex(0U),
-		m_FramesInFlight(2U)
+		m_FramesInFlight(2U),
+		m_RecordFunction(nullptr)
 	{
 		const VkCommandPoolCreateInfo commandPoolCreateInfo{
 			.sType{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO },
 			.pNext{ nullptr },
 			.flags{ VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT },
-			.queueFamilyIndex{ static_cast<uint32_t>(GraphicsContext::GetQueueFamily(GraphicsContext::EQueueFamily::Graphics)) },
+			.queueFamilyIndex{ GraphicsContext::GetQueueFamily(GraphicsContext::EQueueFamily::Graphics) },
 		};
 
 		VK_CHECK(vkCreateCommandPool(
@@ -158,8 +159,8 @@ namespace Cinnamon {
 		const bool queuesFamiliesShared{ GraphicsContext::PresentAndGraphicsFamiliesShared() };
 		const STL::Array<uint32_t, 2> queueFamilyIndices
 		{
-			static_cast<uint32_t>(GraphicsContext::GetQueueFamily(GraphicsContext::EQueueFamily::Graphics)), 
-			static_cast<uint32_t>(GraphicsContext::GetQueueFamily(GraphicsContext::EQueueFamily::Present)), 
+			GraphicsContext::GetQueueFamily(GraphicsContext::EQueueFamily::Graphics), 
+			GraphicsContext::GetQueueFamily(GraphicsContext::EQueueFamily::Present), 
 		};
 
 		const VkSwapchainCreateInfoKHR swapchainCreateInfo{
@@ -275,7 +276,7 @@ namespace Cinnamon {
 			.sType{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO },
 			.pNext{ nullptr },
 			.flags{ 0U },
-			.image{ nullptr },
+			.image{ nullptr }, /* Set in loop */
 			.viewType{ VK_IMAGE_VIEW_TYPE_2D },
 			.format{ m_SurfaceFormat.format },
 			.components{ 
@@ -389,7 +390,7 @@ namespace Cinnamon {
 			GraphicsContext::GetDevice()));
 
 		/* If surface hasn't changed, cache handle */
-		m_CachedSwapchain = GraphicsContext::GetSurface()->GetHandle() == surface->GetHandle() ? m_Handle : VK_NULL_HANDLE;
+		m_CachedSwapchain = (GraphicsContext::GetSurface() == surface) ? m_Handle : VK_NULL_HANDLE;
 		Cleanup();
 		Create(width, height, surface);
 		vkDestroySwapchainKHR(
@@ -423,6 +424,10 @@ namespace Cinnamon {
 			switch (result)
 			{
 				case VK_SUCCESS:
+				{
+				} break;
+
+				case VK_NOT_READY:
 				{
 				} break;
 
@@ -482,6 +487,9 @@ namespace Cinnamon {
 			.pSignalSemaphores{ &renderCompleteSemaphore },
 		};
 
+		if (m_RecordFunction)
+			m_RecordFunction();
+		else
 		/* Record default clear command buffers */
 		{
 			constexpr STL::Array<VkClearValue, 1U> clearValues{
@@ -532,10 +540,6 @@ namespace Cinnamon {
 			VK_CHECK(vkEndCommandBuffer(
 				commandBuffer));
 		}
-
-		//GraphicsContext::PerformSingleSubmitMemoryTransferOperation([](VkCommandBuffer lolz) {
-		//	CIN_UNUSED(lolz);
-		//	});
 
 		VK_CHECK(vkQueueSubmit(
 			GraphicsContext::GetGraphicsQueue(),
@@ -590,6 +594,52 @@ namespace Cinnamon {
 		}
 
 		m_FrameIndex = (m_FrameIndex + 1U) % m_FramesInFlight;
+	}
+
+	uint32_t Swapchain::GetFrameIndex() const
+	{
+		return m_ImageIndex;
+	}
+
+	uint32_t Swapchain::GetImageCount() const
+	{
+		CIN_ASSERT(m_Images.size() > 0, "Invalid image count");
+		return static_cast<uint32_t>(m_Images.size());
+	}
+
+	uint32_t Swapchain::GetMinimalImageCount() const
+	{
+		return m_SurfaceCapabilities.minImageCount;
+	}
+
+	uint32_t Swapchain::GetMaximumImageCount() const
+	{
+		return m_SurfaceCapabilities.maxImageCount;
+	}
+
+	VkExtent2D Swapchain::GetExtent() const
+	{
+		return m_Extent;
+	}
+
+	VkRenderPass Swapchain::GetRenderPass() const
+	{
+		return m_RenderPass;
+	}
+
+	VkCommandBuffer Swapchain::GetCurrentCommandBuffer() const
+	{
+		return m_CommandBuffers[m_FrameIndex];
+	}
+
+	VkFramebuffer Swapchain::GetCurrentFramebuffer() const
+	{
+		return m_Framebuffers[m_ImageIndex];
+	}
+
+	void Swapchain::RecordCommands(const std::function<void()> recordFunction)
+	{
+		m_RecordFunction = recordFunction;
 	}
 
 	void Swapchain::Cleanup()
