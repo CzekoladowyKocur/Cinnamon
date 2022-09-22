@@ -60,6 +60,7 @@ namespace Cinnamon {
 	private:
 		static ELogLevel s_LogLevel;
 	};
+
 	template<>
 	inline void Logger::Output<ELogLevel::Trace>(const char* message)
 	{

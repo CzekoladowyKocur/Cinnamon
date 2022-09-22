@@ -12,6 +12,7 @@ using namespace Cinnamon;
 
 class ScopedDockspace
 {
+private:
 	NON_COPYABLE(ScopedDockspace)
 public:
 	inline ScopedDockspace() noexcept
@@ -78,7 +79,8 @@ void EditorLayer::OnUpdate(const Timestep timestep)
 {
 	{
 		ScopedDockspace dockspace;
-		ImGui::ShowMetricsWindow();
+		ImGui::Begin("XD");
+		ImGui::End();
 	}
 
 #ifdef CIN_DEBUG

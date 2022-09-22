@@ -107,14 +107,14 @@ namespace Cinnamon {
 #endif
 		};
 
-		CIN_ASSERT(ImGui_ImplWin32_Init(
+		CIN_VERIFY(ImGui_ImplWin32_Init(
 			const_cast<void*>(const_cast<Window*>(window)->GetNativeHandle())));
 
 		CIN_VERIFY(ImGui_ImplVulkan_LoadFunctions([](const char* function_name, void* userData)
 			{
 				return vkGetInstanceProcAddr(
 					GraphicsContext::GetInstance(),
-					function_name);
+					function_name);	
 			}));
 
 		ImGui::GetPlatformIO().Platform_CreateVkSurface = [](ImGuiViewport* viewport, ImU64 vulkanInstance, const void* allocator, ImU64* outVulkanSurface) {

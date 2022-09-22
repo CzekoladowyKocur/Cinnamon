@@ -10,7 +10,7 @@
 #include "Cinnamon/include/Event/MouseEvent.h"
 
 namespace Cinnamon {
-	Application* Application::s_ApplicationInstance{ nullptr };
+	constinit Application* Application::s_ApplicationInstance{ nullptr };
 
 	Application::Application() noexcept
 		:
@@ -56,7 +56,7 @@ namespace Cinnamon {
 		}
 
 		CIN_WARN("Queues from same families might be faster");
-		m_Window->SetEventCallback(std::bind(&Application::OnEvent, this, std::placeholders::_1));
+		m_Window->SetEventCallback([this](Event& event) { OnEvent(event); });
 
 		if (!OnUserInitialize())
 		{
@@ -69,30 +69,16 @@ namespace Cinnamon {
 
 	bool Application::Run()
 	{
-		double lastFrameTime{ Platform::GetAbsoluteTime() };
-		double timer{ 0.0 };
-		uint32_t fpsCounter{ 0U };
+		//double lastFrameTime{ Platform::GetAbsoluteTime() };
 
 		[[likely]]
 		while (m_Running)
 		{
 			m_Window->PollEvents();
 	
-			const double currentTime{ Platform::GetAbsoluteTime() };
-			const Timestep timestep{ static_cast<Timestep::Type>(currentTime - lastFrameTime) };
-
-			lastFrameTime = currentTime;
-			/* Temporary */
-			timer += timestep;
-			[[unlikely]]
-			if (timer > 1.0)
-			{
-				printf("FPS: %d\n", fpsCounter);
-				fpsCounter = 0;
-				timer = 0.0;
-			}
-			
-			++fpsCounter;
+			//const double currentTime{ Platform::GetAbsoluteTime() };
+			//const Timestep timestep{ static_cast<Timestep::Type>(currentTime - lastFrameTime) };
+			//lastFrameTime = currentTime;
 		}
 
 		return true;
@@ -167,14 +153,14 @@ namespace Cinnamon {
 
 	bool Application::OnApplicationRender(ApplicationRenderEvent& event)
 	{
-		FunctionVariable double f_lastFrameTime{ Platform::GetAbsoluteTime() };
+		FunctionVariable double f_LastFrameTime{ Platform::GetAbsoluteTime() };
 
 		[[likely]]
 		if (not m_Minimized)
 		{
 			const double currentTime{ Platform::GetAbsoluteTime() };
-			const Timestep timestep{ static_cast<Timestep::Type>(currentTime - f_lastFrameTime) };
-			f_lastFrameTime = currentTime;
+			const Timestep timestep{ static_cast<Timestep::Type>(currentTime - f_LastFrameTime) };
+			f_LastFrameTime = currentTime;
 
 			GraphicsContext::AcquireNextImage();
 			{
@@ -211,6 +197,7 @@ namespace Cinnamon {
 
 		return true;
 	}
+
 	bool Application::OnKeyPressed(KeyPressedEvent& event)
 	{
 		const Key key{ event.GetKey() };

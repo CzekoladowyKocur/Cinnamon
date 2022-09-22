@@ -58,7 +58,7 @@ namespace Cinnamon {
 		LayerStack* m_LayerStack;
 	private:
 		/* Global application instance, accessed via Get() */
-		static Application* s_ApplicationInstance;
+		constinit static Application* s_ApplicationInstance;
 	public:
 		static const Application* Get();
 	};
