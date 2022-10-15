@@ -1,14 +1,17 @@
 #include "CinnamonEditor/include/EditorLayer.h"
 #include "Cinnamon/include/Core/Logger.h"
 #include "Cinnamon/include/Core/Input.h"
+#include "Cinnamon/include/Core/Application.h"
 using namespace Cinnamon;
 
 /* Panels */
 #include "CinnamonEditor/include/Panels/EditorPanelBase.h"
 #include "CinnamonEditor/include/Panels/EditorViewportPanel.h"
+#include "CinnamonEditor/include/Panels/SceneHierarchyPanel.h"
 
 #include "ThirdParty/imgui/imgui.h"
 #include "ThirdParty/imgui/imgui_internal.h"
+
 
 class ScopedDockspace
 {
@@ -55,7 +58,7 @@ public:
 		{
 			ImGui::DockBuilderRemoveNode(ID); // Clear out existing layout
 			ImGui::DockBuilderAddNode(ID); // Add empty node
-			//ImGui::DockBuilderSetNodeSize(ID, { ImGui::GetIO().DisplaySize.x * ImGui::GetIO().DisplayFramebufferScale.x, ImGui::GetIO().DisplaySize.y * ImGui::GetIO().DisplayFramebufferScale.y });
+			ImGui::DockBuilderSetNodeSize(ID, { ImGui::GetIO().DisplaySize.x * ImGui::GetIO().DisplayFramebufferScale.x, ImGui::GetIO().DisplaySize.y * ImGui::GetIO().DisplayFramebufferScale.y });
 		
 			ImGui::DockBuilderFinish(ID);
 		}
@@ -73,14 +76,56 @@ public:
 void EditorLayer::OnAttach()
 {
 	m_Panels.emplace_back(cinew EditorViewportPanel);
+	m_Panels.emplace_back(cinew SceneHierarchyPanel);
 }
 
 void EditorLayer::OnUpdate(const Timestep timestep)
 {
+	for (EditorPanelBase* panel : m_Panels)
+		panel->OnUpdate(timestep);
 	{
 		ScopedDockspace dockspace;
-		ImGui::Begin("XD");
-		ImGui::End();
+		[[unlikely]]
+		if (ImGui::BeginMenuBar())
+		{
+			[[unlikely]]
+			if (ImGui::BeginMenu("File"))
+			{
+				/* Project files */
+				[[unlikely]]
+				if (ImGui::MenuItem("New Project"))
+				{
+					CIN_INFO("Opening new project");
+				}
+
+				[[unlikely]]
+				if (ImGui::MenuItem("Open Project"))
+				{
+					CIN_INFO("Opening project");
+				}
+
+				[[unlikely]]
+				if (ImGui::MenuItem("Save Project"))
+				{
+					CIN_INFO("Saving project");
+				}
+
+				ImGui::SeparatorEx(ImGuiSeparatorFlags_Horizontal);
+				[[unlikely]]
+				if (ImGui::MenuItem("Quit"))
+				{
+					CIN_INFO("Quitting. . .");
+					Cinnamon::Application::Close();
+				}
+
+				ImGui::EndMenu();
+			}
+
+			ImGui::EndMenuBar();
+		}
+		
+		for (EditorPanelBase* panel : m_Panels)
+			panel->OnGUIRender();
 	}
 
 #ifdef CIN_DEBUG

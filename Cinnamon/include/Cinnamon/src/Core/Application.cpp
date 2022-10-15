@@ -10,7 +10,7 @@
 #include "Cinnamon/include/Event/MouseEvent.h"
 
 namespace Cinnamon {
-	constinit Application* Application::s_ApplicationInstance{ nullptr };
+	constinit InternalScope Application* s_ApplicationInstance{ nullptr };
 
 	Application::Application() noexcept
 		:
@@ -233,5 +233,10 @@ namespace Cinnamon {
 	{
 		CIN_ASSERT(s_ApplicationInstance, "Application not instantiated");
 		return s_ApplicationInstance;
+	}
+
+	void Application::Close()
+	{
+		s_ApplicationInstance->m_Running = false;
 	}
 }

@@ -19,7 +19,9 @@ namespace Cinnamon {
 		void AcquireNextSwapchainImage();
 		void PresentSwapchainImage();
 
+		uint32_t GetImageIndex() const;
 		uint32_t GetFrameIndex() const;
+
 		uint32_t GetImageCount() const;
 		uint32_t GetMinimalImageCount() const;
 		uint32_t GetMaximumImageCount() const;

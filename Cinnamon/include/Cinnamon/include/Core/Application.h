@@ -51,16 +51,14 @@ namespace Cinnamon {
 		bool OnWindowClosed(WindowClosedEvent& event);
 		bool OnKeyPressed(KeyPressedEvent& event);
 	protected:
-		bool m_Running;
+		mutable bool m_Running;
 		bool m_Minimized;
 
 		Window* m_Window;
 		LayerStack* m_LayerStack;
-	private:
-		/* Global application instance, accessed via Get() */
-		constinit static Application* s_ApplicationInstance;
 	public:
 		static const Application* Get();
+		static void Close();
 	};
 
 	Application* CreateApplication() noexcept;

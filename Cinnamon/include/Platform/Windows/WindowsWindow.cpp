@@ -392,6 +392,11 @@ namespace Cinnamon {
 				return DefWindowProcA(hwnd, message, wParam, lParam);
 			}
 
+			case WM_ACTIVATE:
+			{
+				return 0;
+			}
+
 			case WM_PAINT:
 			{
 				ApplicationRenderEvent event;

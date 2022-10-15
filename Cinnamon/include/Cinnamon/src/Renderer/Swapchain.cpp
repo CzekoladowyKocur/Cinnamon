@@ -596,9 +596,14 @@ namespace Cinnamon {
 		m_FrameIndex = (m_FrameIndex + 1U) % m_FramesInFlight;
 	}
 
-	uint32_t Swapchain::GetFrameIndex() const
+	uint32_t Swapchain::GetImageIndex() const
 	{
 		return m_ImageIndex;
+	}
+
+	uint32_t Swapchain::GetFrameIndex() const
+	{
+		return m_FrameIndex;
 	}
 
 	uint32_t Swapchain::GetImageCount() const

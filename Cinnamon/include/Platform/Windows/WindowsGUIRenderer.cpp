@@ -306,10 +306,8 @@ namespace Cinnamon {
 		}
 
 		Swapchain* swapchain = GraphicsContext::GetSwapchain();
-		const uint32_t frameIndex{ swapchain->GetFrameIndex() };
-
-		swapchain->RecordCommands([swapchain, frameIndex]() {
-
+		swapchain->RecordCommands([swapchain]() {
+			const uint32_t frameIndex{ swapchain->GetImageIndex() };
 			const VkExtent2D extent{ swapchain->GetExtent() };
 			const VkCommandBuffer swapchainDrawCommandBuffer{ swapchain->GetCurrentCommandBuffer() };
 			const VkFramebuffer swapchainDrawFramebuffer{ swapchain->GetCurrentFramebuffer() };
