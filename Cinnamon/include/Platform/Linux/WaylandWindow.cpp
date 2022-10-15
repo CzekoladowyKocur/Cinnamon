@@ -3,6 +3,7 @@
 #include "Cinnamon/include/Core/Input.h"
 #include "Cinnamon/include/Event/WindowEvent.h"
 #include "Cinnamon/include/Event/ApplicationEvent.h"
+#include "Cinnamon/include/Event/MouseEvent.h"
 #include "Cinnamon/include/Event/KeyEvent.h"
 
 #include <wayland-client.h>
@@ -41,7 +42,6 @@ namespace Cinnamon {
 		uint32_t eventMask;
 		wl_fixed_t x, y;
 		uint32_t button, state;
-		uint32_t time;
 		uint32_t serial;
 		struct {
 			bool valid;
@@ -160,8 +160,6 @@ namespace Cinnamon {
 		CIN_UNUSED(wlPointer);
 		CIN_UNUSED(surface);
 
-		CIN_TRACE("wlPointerEnter");
-
 		Window* window = reinterpret_cast<Window*>(data);
 		PlatformWindowState* windowState = const_cast<PlatformWindowState*>(window->GetState());
 
@@ -182,8 +180,6 @@ namespace Cinnamon {
 		CIN_UNUSED(wlPointer);
 		CIN_UNUSED(surface);
 
-		CIN_TRACE("wlPointerLeave");
-
 		Window* window = reinterpret_cast<Window*>(data);
 		PlatformWindowState* windowState = const_cast<PlatformWindowState*>(window->GetState());
 
@@ -200,11 +196,15 @@ namespace Cinnamon {
 		wl_fixed_t y
 	)
 	{
-		CIN_UNUSED(data);
 		CIN_UNUSED(wlPointer);
 		CIN_UNUSED(time);
-		CIN_UNUSED(x);
-		CIN_UNUSED(y);
+
+		Window* window = reinterpret_cast<Window*>(data);
+		PlatformWindowState* windowState = const_cast<PlatformWindowState*>(window->GetState());
+
+		windowState->pointerEvent.eventMask |= POINTER_EVENT_MOTION;
+		windowState->pointerEvent.x = x;
+		windowState->pointerEvent.y = y;
 	}
 
 	InternalScope void wlPointerButton
@@ -217,12 +217,16 @@ namespace Cinnamon {
 		uint32_t state
 	)
 	{
-		CIN_UNUSED(data);
 		CIN_UNUSED(wlPointer);
-		CIN_UNUSED(serial);
 		CIN_UNUSED(time);
-		CIN_UNUSED(button);
-		CIN_UNUSED(state);
+
+		Window* window = reinterpret_cast<Window*>(data);
+		PlatformWindowState* windowState = const_cast<PlatformWindowState*>(window->GetState());
+
+		windowState->pointerEvent.serial = serial;
+		windowState->pointerEvent.eventMask |= POINTER_EVENT_BUTTON;
+		windowState->pointerEvent.button = button;
+		windowState->pointerEvent.state = state;
 	}
 
 	InternalScope void wlPointerAxis
@@ -294,11 +298,23 @@ namespace Cinnamon {
 		PointerEvent* pointerEvent = &windowState->pointerEvent;
 
 		if(pointerEvent->eventMask & POINTER_EVENT_ENTER)
-			CIN_TRACE("Pointer entered the surface with motion {0}, {1}", wl_fixed_to_double(pointerEvent->x), wl_fixed_to_double(pointerEvent->x));
+			CIN_TRACE("Pointer entered the surface at {0}, {1}", wl_fixed_to_double(pointerEvent->x), wl_fixed_to_double(pointerEvent->x));
 
     	if(pointerEvent->eventMask & POINTER_EVENT_LEAVE)
     	    CIN_TRACE("Pointer left the surface");
-		
+
+		if(pointerEvent->eventMask & POINTER_EVENT_MOTION)
+			CIN_TRACE("Current cursor position: ({0}, {1})", (int)wl_fixed_to_double(pointerEvent->x), (int)wl_fixed_to_double(pointerEvent->y));
+
+		if(pointerEvent->eventMask & POINTER_EVENT_BUTTON)
+		{
+			const char* state = pointerEvent->state == WL_POINTER_BUTTON_STATE_PRESSED ? "Pressed" : "Released";
+
+			CIN_UNUSED(state);
+
+			CIN_TRACE("{0} {1}", state, pointerEvent->button);
+		}
+
 		memset(pointerEvent, 0, sizeof(PointerEvent));
 	}
 

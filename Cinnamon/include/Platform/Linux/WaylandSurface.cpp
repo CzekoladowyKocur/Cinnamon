@@ -18,7 +18,6 @@ namespace Cinnamon {
 		uint32_t eventMask;
 		wl_fixed_t x, y;
 		uint32_t button, state;
-		uint32_t time;
 		uint32_t serial;
 		struct {
 			bool valid;

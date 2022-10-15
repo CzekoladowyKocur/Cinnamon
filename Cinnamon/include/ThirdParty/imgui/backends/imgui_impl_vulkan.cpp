@@ -228,7 +228,11 @@ static bool g_FunctionsLoaded = true;
     IMGUI_VULKAN_FUNC_MAP_MACRO(vkAcquireNextImageKHR)
 
 // Define function pointers
+#ifdef CIN_PLATFORM_LINUX
+#define IMGUI_VULKAN_FUNC_DEF(func) extern PFN_##func func;
+#else
 #define IMGUI_VULKAN_FUNC_DEF(func) static PFN_##func func;
+#endif
 IMGUI_VULKAN_FUNC_MAP(IMGUI_VULKAN_FUNC_DEF)
 #undef IMGUI_VULKAN_FUNC_DEF
 #endif // VK_NO_PROTOTYPES
