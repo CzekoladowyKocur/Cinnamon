@@ -95,6 +95,7 @@ project (CoreProjectName)
 	language "C++"
 	cppdialect "C++20"
 	kind "StaticLib"
+	buildmessage "Building engine core"
 
 	targetdir ("bin/" .. (OutputDirectory) .. "/%{prj.name}")
 	objdir ("bin-int/" .. (OutputDirectory) .. "/%{prj.name}")
@@ -140,6 +141,7 @@ project (EditorProjectName)
 	language "C++"
 	cppdialect "C++20"
 	kind "ConsoleApp"
+	buildmessage "Building engine editor"
 
 	targetdir ("bin/" .. (OutputDirectory) .. "/%{prj.name}")
 	objdir ("bin-int/" .. (OutputDirectory) .. "/%{prj.name}")
@@ -165,6 +167,12 @@ project (EditorProjectName)
 	{
 		"Cinnamon",
 		"imgui",
+	}
+
+	postbuildcommands 
+	{
+		"{COPY} Resources %{cfg.targetdir}/Resources",
+		"{COPY} imgui.ini %{cfg.targetdir}",
 	}
 
 	filter "system:linux"
