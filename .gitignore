@@ -39,3 +39,4 @@ bin-int/
 # Executables
 *.out
 *.app
+*.exe
