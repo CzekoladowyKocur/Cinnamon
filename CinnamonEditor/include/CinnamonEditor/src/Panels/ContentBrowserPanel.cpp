@@ -5,27 +5,39 @@
 #include "ThirdParty/imgui/imgui.h"
 #include "ThirdParty/imgui/imgui_internal.h"
 
-std::promise<void> promise;
-std::vector<std::string> filesTriggered;
-std::set<std::thread::id> fileWatchThreads;
-std::mutex mutex;
-const uint32_t expected_triggers = 2u;
+//std::promise<void> promise;
+//std::vector<std::string> filesTriggered;
+//std::set<std::thread::id> fileWatchThreads;
+//std::mutex mutex;
+//const uint32_t expected_triggers = 2u;
 
 using namespace Cinnamon;
-
+#define MY_TEST_LINUX 
 ContentBrowserPanel::ContentBrowserPanel() noexcept
 	:
+	#ifdef MY_TEST_LINUX
+	m_WorkingDirectory("/home/dxm/Container"),
+	#elif defined MY_TEST_WINDOWS
 	m_WorkingDirectory("C:\\Users\\marti\\Desktop\\FINALPLIK"),
-	m_WorkingDirectoryIterator(m_WorkingDirectory),
+	#else
+	m_WorkingDirectory(),
+	#endif
 	m_FileWatcher(nullptr)
 {
+	if(!FileExists(m_WorkingDirectory))
+	{
+		m_FileWatcher = nullptr;
+		return;
+	}
+
+	m_WorkingDirectoryIterator = std::move(STL::RecursiveDirectoryIterator(m_WorkingDirectory));
 	m_FileWatcher = cinew Cinnamon::FileWatcher(m_WorkingDirectory.string(), { ".txt", ".cpp" }, [](const STL::String file, const Cinnamon::EFileAction action)
 		{
-			std::lock_guard<std::mutex> lock(mutex);
-			fileWatchThreads.insert(std::this_thread::get_id());
-			filesTriggered.push_back(file);
-			if (fileWatchThreads.size() == expected_triggers)
-				promise.set_value();
+			//std::lock_guard<std::mutex> lock(mutex);
+			//fileWatchThreads.insert(std::this_thread::get_id());
+			//filesTriggered.push_back(file);
+			//if (fileWatchThreads.size() == expected_triggers)
+			//	promise.set_value();
 
 			switch (action)
 			{
@@ -43,6 +55,9 @@ ContentBrowserPanel::ContentBrowserPanel() noexcept
 				{
 					CIN_INFO("Deleted file: {}", file);
 				} break;
+
+				default:
+					break;
 			}
 		});
 }

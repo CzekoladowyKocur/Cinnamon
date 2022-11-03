@@ -7,7 +7,7 @@ private:
 	NON_COPYABLE(SandboxApplication)
 public:
 	explicit SandboxApplication() noexcept;
-	constexpr ~SandboxApplication() noexcept = default;
+	virtual ~SandboxApplication() noexcept = default;
 
 	virtual bool OnUserInitialize() override;
 	virtual bool OnUserShutdown() override;

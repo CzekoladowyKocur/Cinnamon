@@ -40,3 +40,6 @@ bin-int/
 *.out
 *.app
 *.exe
+
+# Generated Makefiles
+Makefile/

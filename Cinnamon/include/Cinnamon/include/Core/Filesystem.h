@@ -2,21 +2,6 @@
 #include "Cinnamon/include/Core/Core.h"
 #include "Cinnamon/include/Core/CinSTL.h"
 
-#include <mutex>
-#include <condition_variable>
-#include <utility>
-#include <vector>
-#include <array>
-#include <map>
-#include <system_error>
-#include <string>
-#include <algorithm>
-#include <type_traits>
-#include <future>
-#include <regex>
-#include <iostream>
-
-
 namespace Cinnamon {
 	CIN_FORCE_INLINE bool FileExists(const STL::Filepath& path) noexcept
 	{

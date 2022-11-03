@@ -208,3 +208,15 @@ project ("Sandbox")
 		"Cinnamon",
 		"imgui",
 	}
+		
+	postbuildcommands 
+	{
+		"{COPY} %{wks.location}/CinnamonEditor/include/Resources %{cfg.targetdir}/Resources",
+	}
+
+	filter "system:linux"
+		links
+        {
+			"wayland-client",
+			"xdg"
+        }

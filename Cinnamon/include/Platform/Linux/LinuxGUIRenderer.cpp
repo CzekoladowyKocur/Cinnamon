@@ -1,9 +1,11 @@
 #ifdef CIN_PLATFORM_LINUX
+#include <linux/uinput.h>
 #include "Cinnamon/include/GUI/GUIRenderer.h"
 #include "Cinnamon/include/GUI/Icons.h"
 #include "Cinnamon/include/Renderer/GraphicsContext.h"
 #include "Cinnamon/include/Renderer/Swapchain.h"
 #include "Cinnamon/include/Core/Window.h"
+#include "Cinnamon/include/Core/Input.h"
 
 #include "ThirdParty/imgui/imgui.h"
 #define VK_NO_PROTOTYPES
@@ -15,6 +17,82 @@ namespace Cinnamon {
 	InternalScope VkCommandPool s_CommandPool{ VK_NULL_HANDLE };
 	InternalScope STL::Vector<VkCommandBuffer> s_CommandBuffers;
 	InternalScope EUITheme s_UITheme{ EUITheme::Default };
+
+	struct LinuxBackendData
+	{
+		const Window* WindowHandle{ nullptr };
+		ImGuiMouseCursor LastMouseCursor{};
+	} constinit static* s_BackendData{ nullptr };
+	
+	static bool LinuxBackendUpdateMouseCursor()
+	{
+		ImGuiIO& io { ImGui::GetIO() };
+    	if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange)
+    	    return false;
+
+
+
+		return true;
+	}
+
+	static void LinuxBackendNewFrame()
+	{
+		const Window* window{ s_BackendData->WindowHandle };
+		const auto[width, height]{ window->GetSize() };
+		
+		ImGuiIO& io { ImGui::GetIO() };
+		io.DisplaySize = ImVec2
+		(
+			static_cast<float>(width),
+			static_cast<float>(height)
+		);
+
+		[[likely]]
+		if(window->GetProperties().Focused)
+		{
+			const auto [xPosition, yPosition]{ Input::GetMousePosition() };
+			io.AddMousePosEvent
+			(
+				static_cast<float>(xPosition),
+				static_cast<float>(yPosition)
+			);			
+		}
+
+		ImGuiMouseCursor mouse_cursor = io.MouseDrawCursor ? ImGuiMouseCursor_None : ImGui::GetMouseCursor();
+    	if (s_BackendData->LastMouseCursor != mouse_cursor)
+    	{
+    	    s_BackendData->LastMouseCursor = mouse_cursor;
+			LinuxBackendUpdateMouseCursor();
+    	    //ImGui_ImplWin32_UpdateMouseCursor();
+    	}
+	}
+
+	static bool LinuxBackendInitialize(const Window* const window)
+	{
+		ImGuiIO& io { ImGui::GetIO() };
+		IM_ASSERT(io.BackendPlatformUserData == nullptr && "Already initialized a platform backend");
+
+		LinuxBackendData* backendData{ cinew LinuxBackendData() };
+		backendData->WindowHandle = window;
+		backendData->LastMouseCursor = {};
+
+		io.BackendPlatformUserData = reinterpret_cast<void*>(backendData);
+		io.BackendPlatformName = "Linux backend";
+		io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
+		io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;
+		//io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;
+		io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport;
+
+
+		s_BackendData = backendData;
+		return true;
+	}
+
+	static bool LinuxBackendShutdown()
+	{
+		cindel s_BackendData;
+		return true;
+	}
 
 	bool GUIRenderer::Initialize(const Window* const window)
 	{
@@ -105,6 +183,8 @@ namespace Cinnamon {
 
 		//CIN_VERIFY(ImGui_ImplWin32_Init(
 		//	const_cast<void*>(const_cast<Window*>(window)->GetNativeHandle())));
+
+		CIN_VERIFY(LinuxBackendInitialize(const_cast<Window*>(window)));
 
 		CIN_VERIFY(ImGui_ImplVulkan_LoadFunctions([](const char* function_name, void* userData)
 			{
@@ -280,6 +360,7 @@ namespace Cinnamon {
 			GraphicsContext::GetAllocator());
 
 		ImGui_ImplVulkan_Shutdown();
+		LinuxBackendShutdown();
 		//ImGui_ImplWin32_Shutdown();
 		ImGui::DestroyContext();
 
@@ -289,6 +370,7 @@ namespace Cinnamon {
 	void GUIRenderer::BeginFrame()
 	{
 		//ImGui_ImplWin32_NewFrame();
+		LinuxBackendNewFrame();
 		ImGui_ImplVulkan_NewFrame();
 
 		ImGui::NewFrame();

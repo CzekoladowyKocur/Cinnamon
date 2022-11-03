@@ -2,6 +2,8 @@
 #include "ThirdParty/imgui/imgui.h"
 #include "ThirdParty/imgui/imgui_internal.h"
 
+using namespace Cinnamon;
+
 void EditorViewportPanel::OnUpdate(const Timestep timestep)
 {
 	CIN_UNUSED(timestep);
@@ -15,9 +17,10 @@ void EditorViewportPanel::OnGUIRender()
 	[[unlikely]]
 	if (ImGui::BeginDragDropTarget())
 	{
-		if (const ImGuiPayload * payload{ ImGui::AcceptDragDropPayload("Script File") })
+		if (const ImGuiPayload* payload{ ImGui::AcceptDragDropPayload("Script File") })
 		{
 			CIN_WARN("Dragging a script file. . .");
+			CIN_UNUSED(payload);
 		}
 
 		ImGui::EndDragDropTarget();

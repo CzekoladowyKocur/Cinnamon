@@ -14,11 +14,14 @@ namespace Cinnamon {
 
 	enum class Mouse : MouseCode
 	{
+#ifdef CIN_PLATFORM_WINDOWS
 		LeftButton,
 		MiddleButton,
 		RightButton,
-#ifdef CIN_PLATFORM_WINDOWS
 #elif defined CIN_PLATFORM_LINUX
+		LeftButton = 272,
+		MiddleButton = 274,
+		RightButton = 273,
 #elif defined CIN_PLATFORM_APPLE
 #endif
 		MouseButtonsEnd,

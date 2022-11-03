@@ -21,6 +21,9 @@
 #include <queue>
 #include <filesystem>
 #include <set>
+#include <future>
+#include <algorithm>
+#include <condition_variable>
 
 #ifdef CIN_PLATFORM_WINDOWS
 #undef UNICODE

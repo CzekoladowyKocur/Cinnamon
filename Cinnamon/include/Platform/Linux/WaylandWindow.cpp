@@ -22,6 +22,156 @@ extern "C"
 
 /* Todo: Manage closing the window and destroying this object properly */
 
+// Temp 
+#include "ThirdParty/imgui/imgui.h"
+using namespace Cinnamon;
+
+ImGuiKey NativeKeyCodeToImGUIKeyCode(const KeyCode native)
+{
+	switch(native)
+	{
+		// Taken from imgui.h
+    	case int(Key::Tab): return ImGuiKey_Tab;             // == ImGuiKey_NamedKey_BEGIN
+    	case int(Key::Left): return ImGuiKey_LeftArrow;
+    	case int(Key::Right): return ImGuiKey_RightArrow;
+    	case int(Key::Up): return ImGuiKey_UpArrow;
+    	case int(Key::Down): return ImGuiKey_DownArrow;
+    	//case int(Key::PageUp): ImGuiKey_PageUp;
+    	//ImGuiKey_PageDown;
+    	case int(Key::Home): return ImGuiKey_Home;
+    	case int(Key::End): return ImGuiKey_End;
+    	case int(Key::Insert): return ImGuiKey_Insert;
+    	case int(Key::Delete): return ImGuiKey_Delete;
+    	case int(Key::Backspace): return ImGuiKey_Backspace;
+    	case int(Key::Space): return ImGuiKey_Space;
+    	case int(Key::Enter): return ImGuiKey_Enter;
+    	case int(Key::Escape): return ImGuiKey_Escape;
+    	case int(Key::LeftControl): return ImGuiKey_LeftCtrl; 
+		case int(Key::LeftShift): return ImGuiKey_LeftShift; 
+		//case int(Key::LeftAlt): return ImGuiKey_LeftAlt; 
+		//ImGuiKey_LeftSuper;
+    	case int(Key::RightControl): return ImGuiKey_RightCtrl; 
+		case int(Key::RightShift): return ImGuiKey_RightShift; 
+		//ImGuiKey_RightAlt; 
+		//ImGuiKey_RightSuper;
+    	//case int(Key::Menu): return ImGuiKey_Menu;
+    	//case int(Key::Number0): return ImGuiKey_0;
+		//ImGuiKey_1; 
+		//ImGuiKey_2; 
+		//ImGuiKey_3;
+		//ImGuiKey_4; 
+		//ImGuiKey_5;
+		//ImGuiKey_6; 
+		//ImGuiKey_7; 
+		//ImGuiKey_8; 
+		//ImGuiKey_9;
+    	case int(Key::A): return ImGuiKey_A; 
+		case int(Key::B): return ImGuiKey_B; 
+		case int(Key::C): return ImGuiKey_C; 
+		case int(Key::D): return ImGuiKey_D; 
+		case int(Key::E): return ImGuiKey_E;
+		case int(Key::F): return ImGuiKey_F; 
+		case int(Key::G): return ImGuiKey_G; 
+		case int(Key::H): return ImGuiKey_H; 
+		case int(Key::I): return ImGuiKey_I; 
+		case int(Key::J): return ImGuiKey_J;
+    	case int(Key::K): return ImGuiKey_K; 
+		case int(Key::L): return ImGuiKey_L; 
+		case int(Key::M): return ImGuiKey_M; 
+		case int(Key::N): return ImGuiKey_N; 
+		case int(Key::O): return ImGuiKey_O; 
+		case int(Key::P): return ImGuiKey_P; 
+		case int(Key::Q): return ImGuiKey_Q; 
+		case int(Key::R): return ImGuiKey_R; 
+		case int(Key::S): return ImGuiKey_S; 
+		case int(Key::T): return ImGuiKey_T;
+    	case int(Key::U): return ImGuiKey_U; 
+		case int(Key::V): return ImGuiKey_V; 
+		case int(Key::W): return ImGuiKey_W; 
+		case int(Key::X): return ImGuiKey_X; 
+		case int(Key::Y): return ImGuiKey_Y;
+		case int(Key::Z): return ImGuiKey_Z;
+    	/*ImGuiKey_F1; 
+		ImGuiKey_F2; 
+		ImGuiKey_F3; 
+		ImGuiKey_F4; 
+		ImGuiKey_F5; 
+		ImGuiKey_F6;
+    	ImGuiKey_F7; 
+		ImGuiKey_F8; 
+		ImGuiKey_F9; 
+		ImGuiKey_F10; 
+		ImGuiKey_F11;
+		ImGuiKey_F12;
+    	ImGuiKey_Apostrophe;        // '
+    	ImGuiKey_Comma;             // ;
+    	ImGuiKey_Minus;             // -
+    	ImGuiKey_Period;            // .
+    	ImGuiKey_Slash;             // /
+    	ImGuiKey_Semicolon;         // ;
+    	ImGuiKey_Equal;             // =
+    	ImGuiKey_LeftBracket;       // [
+    	ImGuiKey_Backslash;         // \ (this text inhibit multiline comment caused by backslash)
+    	ImGuiKey_RightBracket;      // ]
+    	ImGuiKey_GraveAccent;       // `
+    	ImGuiKey_CapsLock;
+    	ImGuiKey_ScrollLock;
+    	ImGuiKey_NumLock;
+    	ImGuiKey_PrintScreen;
+    	ImGuiKey_Pause;
+    	ImGuiKey_Keypad0; ImGuiKey_Keypad1; ImGuiKey_Keypad2; ImGuiKey_Keypad3; ImGuiKey_Keypad4;
+    	ImGuiKey_Keypad5; ImGuiKey_Keypad6; ImGuiKey_Keypad7; ImGuiKey_Keypad8; ImGuiKey_Keypad9;
+    	ImGuiKey_KeypadDecimal;
+    	ImGuiKey_KeypadDivide;
+    	ImGuiKey_KeypadMultiply;
+    	ImGuiKey_KeypadSubtract;
+    	ImGuiKey_KeypadAdd;
+    	ImGuiKey_KeypadEnter;
+    	ImGuiKey_KeypadEqual;
+		*/
+		default: return ImGuiKey_None;
+	}
+
+	CIN_ASSERT(false);
+	return ImGuiKey_None;
+}
+
+static void AddKeyEventGUI(const KeyCode native, const bool pressed)
+{
+	const ImGuiKey key{ NativeKeyCodeToImGUIKeyCode(native) };
+
+	ImGuiIO& io = ImGui::GetIO();
+    io.AddKeyEvent(key, pressed);
+}
+
+static ImGuiMouseButton NativeMouseButtonCodeToImGuiMouseButtonCode(const MouseCode native)
+{
+	switch(native)
+	{
+		case int(Mouse::LeftButton): 	return ImGuiMouseButton_Left;
+		case int(Mouse::MiddleButton): 	return ImGuiMouseButton_Middle;
+		case int(Mouse::RightButton): 	return ImGuiMouseButton_Right;
+		// TODO: Handle it better 
+		default: break;
+	}
+
+	return ImGuiMouseButton_Right;
+}
+
+static void AddMouseButtonEventGUI(const MouseCode native, const bool pressed)
+{
+	const ImGuiMouseButton mouseButton{ NativeMouseButtonCodeToImGuiMouseButtonCode(native) };
+
+	ImGuiIO& io = ImGui::GetIO();
+    io.AddMouseButtonEvent(mouseButton, pressed);	
+}
+
+static void AddMousePositionEventGUI(const float xPosition, const float yPosition)
+{
+	ImGuiIO& io = ImGui::GetIO();
+    io.AddMousePosEvent(xPosition, yPosition);	
+}
+
 namespace Cinnamon {
 
 	/* https://wayland-book.com/seat/example.html */
@@ -304,15 +454,19 @@ namespace Cinnamon {
     	    CIN_TRACE("Pointer left the surface");
 
 		if(pointerEvent->eventMask & POINTER_EVENT_MOTION)
+		{
 			CIN_TRACE("Current cursor position: ({0}, {1})", (int)wl_fixed_to_double(pointerEvent->x), (int)wl_fixed_to_double(pointerEvent->y));
+
+			AddMousePositionEventGUI((float)wl_fixed_to_double(pointerEvent->x), (float)wl_fixed_to_double(pointerEvent->y));
+		}
 
 		if(pointerEvent->eventMask & POINTER_EVENT_BUTTON)
 		{
 			const char* state = pointerEvent->state == WL_POINTER_BUTTON_STATE_PRESSED ? "Pressed" : "Released";
-
 			CIN_UNUSED(state);
-
-			CIN_TRACE("{0} {1}", state, pointerEvent->button);
+			CIN_WARN("{} {}", state, (int)pointerEvent->button);
+			//if(false)
+			AddMouseButtonEventGUI(static_cast<MouseCode>(pointerEvent->button), pointerEvent->state == WL_POINTER_BUTTON_STATE_PRESSED);
 		}
 
 		memset(pointerEvent, 0, sizeof(PointerEvent));
@@ -392,11 +546,15 @@ namespace Cinnamon {
 		{
 			KeyPressedEvent event(key);
 			window->SendEvent(event);
+
+			AddKeyEventGUI(key, true);
 		}
 		else
 		{
 			KeyReleasedEvent event(key);
 			window->SendEvent(event);
+
+			AddKeyEventGUI(key, false);
 		}
 	}
 
