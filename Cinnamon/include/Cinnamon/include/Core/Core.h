@@ -8,6 +8,7 @@
 #include <string_view>
 #include <limits>
 #include <unordered_map>
+#include <map>
 #include <mutex>
 #include <atomic>
 #include <functional>
@@ -18,6 +19,8 @@
 #include <string_view>
 #include <type_traits>
 #include <queue>
+#include <filesystem>
+#include <set>
 
 #ifdef CIN_PLATFORM_WINDOWS
 #undef UNICODE

@@ -3,8 +3,9 @@
 
 namespace Cinnamon {
 	using MouseCode = uint16_t;
+	using MouseStateEnumType = uint8_t;
 
-	enum class EMouseState : uint8_t
+	enum class EMouseState : MouseStateEnumType
 	{
 		Released	= BIT(1),
 		Pressed		= BIT(2),
@@ -22,4 +23,9 @@ namespace Cinnamon {
 #endif
 		MouseButtonsEnd,
 	};
+
+	CIN_FORCE_INLINE MouseStateEnumType operator&(const EMouseState lhs, const EMouseState rhs) noexcept
+	{
+		return static_cast<MouseStateEnumType>(lhs) & static_cast<MouseStateEnumType>(rhs);
+	}
 }

@@ -4,10 +4,10 @@
 namespace Cinnamon {
 #define DEFINE_KEY(key, code) key = code
 #define DEFINE_KEY_TO_STRING(key, code) case static_cast<Key>(code): return #key
-
 	using KeyCode = uint16_t;
+	using KeyStateEnumType = uint8_t;
 
-	enum class EKeyState : uint8_t
+	enum class EKeyState : KeyStateEnumType
 	{
 		Released	= BIT(1),
 		Pressed		= BIT(2),
@@ -453,5 +453,10 @@ namespace Cinnamon {
 				return "UNKNOWN-KEY";
 			}
 		}
+	}
+
+	CIN_FORCE_INLINE KeyStateEnumType operator&(const EKeyState lhs, const EKeyState rhs) noexcept
+	{
+		return static_cast<KeyStateEnumType>(lhs) & static_cast<KeyStateEnumType>(rhs);
 	}
 }

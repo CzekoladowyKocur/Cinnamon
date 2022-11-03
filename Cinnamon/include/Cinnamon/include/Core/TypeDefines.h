@@ -87,13 +87,17 @@
 
 #define CIN_CARRAY_SIZE(array) (uint32_t)((sizeof(array) / sizeof(*(array))))
 
-#define NON_CONSTRUCTIBLE(classType) \
-	constexpr explicit classType() noexcept = delete; \
+#define NON_CONSTRUCTIBLE(classType)                            \
+	constexpr explicit classType() noexcept = delete;           \
 	constexpr ~classType() noexcept = delete;
 
-#define NON_COPYABLE(classType) \
-    classType(const classType&) noexcept = delete; \
-    classType& operator=(const classType&)noexcept  = delete;
+#define NON_COPYABLE(classType)                                 \
+    classType(const classType&) noexcept = delete;              \
+    classType& operator=(const classType&) noexcept  = delete; 
+
+#define NON_MOVABLE(classType)                                  \
+    classType(classType&&) noexcept = delete;                   \
+    classType& operator=(classType&&) noexcept = delete;
 
 consteval auto ResolveAtCompileTime(auto arg)
 {

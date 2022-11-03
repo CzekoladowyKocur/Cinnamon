@@ -2,12 +2,14 @@
 #include "Cinnamon/include/Core/Logger.h"
 #include "Cinnamon/include/Core/Input.h"
 #include "Cinnamon/include/Core/Application.h"
+#include "Cinnamon/include/Event/KeyEvent.h"
 using namespace Cinnamon;
 
 /* Panels */
 #include "CinnamonEditor/include/Panels/EditorPanelBase.h"
 #include "CinnamonEditor/include/Panels/EditorViewportPanel.h"
 #include "CinnamonEditor/include/Panels/SceneHierarchyPanel.h"
+#include "CinnamonEditor/include/Panels/ContentBrowserPanel.h"
 
 #include "ThirdParty/imgui/imgui.h"
 #include "ThirdParty/imgui/imgui_internal.h"
@@ -77,6 +79,7 @@ void EditorLayer::OnAttach()
 {
 	m_Panels.emplace_back(cinew EditorViewportPanel);
 	m_Panels.emplace_back(cinew SceneHierarchyPanel);
+	m_Panels.emplace_back(cinew ContentBrowserPanel);
 }
 
 void EditorLayer::OnUpdate(const Timestep timestep)
@@ -128,7 +131,7 @@ void EditorLayer::OnUpdate(const Timestep timestep)
 			panel->OnGUIRender();
 	}
 
-#ifdef CIN_DEBUG
+#if (CIN_DEBUG && 0)
 	FunctionVariable struct {
 		uint32_t x{ 0U }, y{ 0U };
 	} f_CachedMousePosition;
@@ -168,4 +171,16 @@ void EditorLayer::OnDetach()
 	}
 
 	m_Panels.clear();
+}
+
+void EditorLayer::OnEvent(const Event& event)
+{
+	const EventDispatcher dispatcher(event);
+	dispatcher.Dispatch<KeyPressedEvent>(std::bind(&EditorLayer::OnKeyPressed, this, std::placeholders::_1));
+}
+
+bool EditorLayer::OnKeyPressed(const KeyPressedEvent& event)
+{
+	CIN_UNUSED(event);
+	return false;
 }

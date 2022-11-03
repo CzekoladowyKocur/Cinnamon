@@ -7,13 +7,13 @@
 #include "Cinnamon/include/Event/MouseEvent.h"
 
 /* Assumes variable "event" of type Event& is in scope */
-#define LOG_UNHANDLED_EVENT(eventType)						\
-{															\
-	eventType* cast{ dynamic_cast<eventType*>(&event) };	\
-	if (cast)												\
-	{														\
-	CIN_WARN("Unhandled event: {0}", #eventType);			\
-	}														\
+#define LOG_UNHANDLED_EVENT(eventType)									\
+{																		\
+	const eventType* cast{ dynamic_cast<const eventType*>(&event) };	\
+	if (cast)															\
+	{																	\
+	CIN_WARN("Unhandled event: {0}", #eventType);						\
+	}																	\
 }
 
 /* NOTE: Temp */
@@ -21,7 +21,7 @@ extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam
 
 namespace Cinnamon {
 	InternalScope LRESULT CALLBACK Windows32ProcessMessage(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam);
-	InternalScope void DefaultEventCallback(Event& event);
+	InternalScope void DefaultEventCallback(const Event& event);
 	InternalScope std::once_flag s_Win32ClassInitialized;
 
 	constexpr CHAR WIN32_API_WINDOW_CLASS_NAME[] = "CINNAMON_ENGINE_WINDOW_CLASS";
@@ -525,7 +525,7 @@ namespace Cinnamon {
 		return DefWindowProcA(hwnd, message, wParam, lParam);
 	}
 
-	void DefaultEventCallback(Event& event)
+	void DefaultEventCallback(const Event& event)
 	{
 		/* Window Events */
 		LOG_UNHANDLED_EVENT(WindowClosedEvent);

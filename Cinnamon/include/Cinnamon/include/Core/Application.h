@@ -38,18 +38,16 @@ namespace Cinnamon {
 		void PushOverlay(Layer* const layer);
 		void PopOverlay(Layer* const layer);
 
-		const Window* GetWindow() const;
+		[[nodiscard]] const Window* GetWindow() const;
 	protected: 
 		/* User functions */
 		[[nodiscard]] virtual bool OnUserInitialize() = 0;
 		[[nodiscard]] virtual bool OnUserShutdown() = 0;
 	private:
-		void OnEvent(Event& event);
-
-		bool OnApplicationRender(ApplicationRenderEvent& event);
-		bool OnWindowResized(WindowResizedEvent& event);
-		bool OnWindowClosed(WindowClosedEvent& event);
-		bool OnKeyPressed(KeyPressedEvent& event);
+		bool OnApplicationRender(const ApplicationRenderEvent& event);
+		bool OnWindowResized(const WindowResizedEvent& event);
+		bool OnWindowClosed(const WindowClosedEvent& event);
+		bool OnKeyPressed(const KeyPressedEvent& event);
 	protected:
 		mutable bool m_Running;
 		bool m_Minimized;

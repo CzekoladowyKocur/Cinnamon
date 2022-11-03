@@ -34,7 +34,7 @@ namespace Cinnamon {
 
 	bool Application::Initialize()
 	{
-		m_Window = cinew Window(WindowProperties{ "Cinnamon Application", 800U, 600U, EWindowMode::Windowed, true });
+		m_Window = cinew Window(WindowProperties{ "Cinnamon Application", 800U, 600U, EWindowMode::Windowed, false });
 		m_LayerStack = cinew LayerStack;
 
 		if (!GraphicsContext::Initialize())
@@ -56,7 +56,18 @@ namespace Cinnamon {
 		}
 
 		CIN_WARN("Queues from same families might be faster");
-		m_Window->SetEventCallback([this](Event& event) { OnEvent(event); });
+		m_Window->SetEventCallback([this](const Event& event)
+			{ 
+				const EventDispatcher dispatcher(event);
+				dispatcher.Dispatch<ApplicationRenderEvent>(std::bind(&Application::OnApplicationRender, this, std::placeholders::_1));
+				dispatcher.Dispatch<WindowResizedEvent>(std::bind(&Application::OnWindowResized, this, std::placeholders::_1));
+				dispatcher.Dispatch<WindowClosedEvent>(std::bind(&Application::OnWindowClosed, this, std::placeholders::_1));
+				dispatcher.Dispatch<KeyPressedEvent>(std::bind(&Application::OnKeyPressed, this, std::placeholders::_1));
+
+				for (Layer* const layer : *m_LayerStack)
+					[[likely]] if(not event.IsHandled)
+						layer->OnEvent(event);
+			});
 
 		if (!OnUserInitialize())
 		{
@@ -142,16 +153,7 @@ namespace Cinnamon {
 		return m_Window;
 	}
 
-	void Application::OnEvent(Event& event)
-	{
-		EventDispatcher dispatcher(event);
-		dispatcher.Dispatch<ApplicationRenderEvent>(std::bind(&Application::OnApplicationRender, this, std::placeholders::_1));
-		dispatcher.Dispatch<WindowResizedEvent>(std::bind(&Application::OnWindowResized, this, std::placeholders::_1));
-		dispatcher.Dispatch<WindowClosedEvent>(std::bind(&Application::OnWindowClosed, this, std::placeholders::_1));
-		dispatcher.Dispatch<KeyPressedEvent>(std::bind(&Application::OnKeyPressed, this, std::placeholders::_1));
-	}
-
-	bool Application::OnApplicationRender(ApplicationRenderEvent& event)
+	bool Application::OnApplicationRender(const ApplicationRenderEvent& event)
 	{
 		FunctionVariable double f_LastFrameTime{ Platform::GetAbsoluteTime() };
 
@@ -166,7 +168,7 @@ namespace Cinnamon {
 			{
 				GUIRenderer::BeginFrame();
 
-				for (Layer* layer : *m_LayerStack)
+				for (Layer* const layer : *m_LayerStack)
 					layer->OnUpdate(timestep);
 
 				GUIRenderer::EndFrame();
@@ -178,7 +180,7 @@ namespace Cinnamon {
 		return true;
 	}
 
-	bool Application::OnWindowResized(WindowResizedEvent& event)
+	bool Application::OnWindowResized(const WindowResizedEvent& event)
 	{
 		const auto [width, height] { event.GetResize() };
 		m_Minimized = (width == 0U) or (height == 0U);
@@ -190,7 +192,7 @@ namespace Cinnamon {
 		return true;
 	}
 
-	bool Application::OnWindowClosed(WindowClosedEvent& event)
+	bool Application::OnWindowClosed(const WindowClosedEvent& event)
 	{
 		CIN_UNUSED(event);
 		m_Running = false;
@@ -198,7 +200,7 @@ namespace Cinnamon {
 		return true;
 	}
 
-	bool Application::OnKeyPressed(KeyPressedEvent& event)
+	bool Application::OnKeyPressed(const KeyPressedEvent& event)
 	{
 		const Key key{ event.GetKey() };
 		switch(key)
@@ -208,7 +210,7 @@ namespace Cinnamon {
 				const EWindowMode currentWindowMode{ m_Window->GetWindowMode() };
 				m_Window->SetWindowMode(currentWindowMode != EWindowMode::Maximized ? EWindowMode::Maximized : EWindowMode::Windowed);
 
-				break;
+				return true;
 			}
 
 			case Key::F11:
@@ -216,7 +218,7 @@ namespace Cinnamon {
 				const EWindowMode currentWindowMode{ m_Window->GetWindowMode() };
 				m_Window->SetWindowMode(currentWindowMode != EWindowMode::Fullscreen ? EWindowMode::Fullscreen : EWindowMode::Windowed);
 
-				break;
+				return true;
 			}
 
 			default:
@@ -225,8 +227,7 @@ namespace Cinnamon {
 			}
 		}
 
-		/* Handled for now */
-		return true;
+		return false;
 	}
 
 	const Application* Application::Get()

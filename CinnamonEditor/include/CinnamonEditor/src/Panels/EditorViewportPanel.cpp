@@ -10,6 +10,19 @@ void EditorViewportPanel::OnUpdate(const Timestep timestep)
 void EditorViewportPanel::OnGUIRender()
 {
 	ImGui::Begin(GetPanelName());
+	ImGui::Text("FPS: %f\n", ImGui::GetIO().Framerate);
+
+	[[unlikely]]
+	if (ImGui::BeginDragDropTarget())
+	{
+		if (const ImGuiPayload * payload{ ImGui::AcceptDragDropPayload("Script File") })
+		{
+			CIN_WARN("Dragging a script file. . .");
+		}
+
+		ImGui::EndDragDropTarget();
+	}
+
 	ImGui::End();
 }
 

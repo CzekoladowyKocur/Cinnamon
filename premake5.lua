@@ -1,10 +1,5 @@
 -- Main project setup file --
-WorkspaceName = "Cinnamon"
 OutputDirectory = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
-CoreProjectName = "Cinnamon"
-EditorProjectName = "CinnamonEditor"
-SandboxProjectName = "Sandbox"
-
 VulkanSDK = os.getenv("VULKAN_SDK");
 VulkanLibrary = VulkanSDK .. "/Lib/vulkan-1.lib"
 VulkanSDKInclude = VulkanSDK .. "/Include"
@@ -14,11 +9,11 @@ FMTInclude = "Cinnamon/include/ThirdParty/fmt/include"
 -- VolkInclude = VulkanSDK;
 -- VolkLibrary = VulkanSDK .. "/Lib/volk.lib"
 
-workspace (WorkspaceName)
+workspace ("Cinnamon")
 	architecture "x64"
 	platforms "x64"
 	targetdir (OutputDirectory)
-	startproject (EditorProjectName) 
+	startproject ("CinnamonEditor") 
 
 	configurations 
 	{ 
@@ -58,7 +53,7 @@ workspace (WorkspaceName)
 		defines "NDEBUG" -- Explicitly define NDEBUG
 		symbols "Off" 
 		optimize "Speed" -- Optimize for speed
-		-- optimize "Full" -- Perform full optimization 
+		optimize "Full" -- Perform full optimization 
 		runtime "Release"
 		staticruntime "on"
 		flags "LinkTimeOptimization" -- Enable link time optimization
@@ -90,8 +85,8 @@ include "Cinnamon/include/ThirdParty/fmt"
 include "Cinnamon/include/ThirdParty/imgui"
 group ""
 
-project (CoreProjectName)
-	location (CoreProjectName .. "/include")
+project ("Cinnamon")
+	location ("Cinnamon/include")
 	language "C++"
 	cppdialect "C++20"
 	kind "StaticLib"
@@ -136,8 +131,8 @@ project (CoreProjectName)
 			"xdg"
         }
 
-project (EditorProjectName)
-	location (EditorProjectName .. "/include")
+project ("CinnamonEditor")
+	location ("CinnamonEditor/include")
 	language "C++"
 	cppdialect "C++20"
 	kind "ConsoleApp"
@@ -182,8 +177,8 @@ project (EditorProjectName)
 			"xdg"
         }
 
-project (SandboxProjectName)
-	location (SandboxProjectName .. "/include")
+project ("Sandbox")
+	location ("Sandbox/include")
 	language "C++"
 	cppdialect "C++20"
 	kind "ConsoleApp"

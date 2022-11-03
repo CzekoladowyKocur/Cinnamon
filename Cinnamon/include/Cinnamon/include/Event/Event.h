@@ -4,7 +4,7 @@
 namespace Cinnamon {
 	/* Event types */
 	class Event;
-	using EventCallbackFunction = std::function<void(Event& event)>;
+	using EventCallbackFunction = std::function<void(const Event& event)>;
 #define BIND_EVENT_FUNCTION(function) std::bind(&##function, this, std::placeholders::_1)
 #define EVENT_TYPE(event_) \
 	static consteval EEventType GetEventTypeStatic() { static_assert(std::is_base_of<Event, event_##Event>::value, "Class is not derived from Event!"); return EEventType::event_; } \
@@ -51,15 +51,15 @@ namespace Cinnamon {
 	{
 	private:
 	public:
-		explicit EventDispatcher(Event& event) noexcept;
+		explicit EventDispatcher(const Event& event) noexcept;
 
 		template<EventClassDerivative EventType, typename DispatchFunction>
-		CIN_FORCE_INLINE void Dispatch(const DispatchFunction&& function) noexcept
+		CIN_FORCE_INLINE void Dispatch(const DispatchFunction&& function) const noexcept
 		{
 			if (m_Event.GetEventType() == ResolveAtCompileTime(EventType::GetEventTypeStatic()))
-				m_Event.IsHandled |= function(static_cast<EventType&>(m_Event));
+				m_Event.IsHandled |= function(static_cast<const EventType&>(m_Event));
 		}
 	private:
-		Event& m_Event;
+		const Event& m_Event;
 	};
 }

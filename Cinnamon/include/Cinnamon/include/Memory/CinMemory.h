@@ -47,7 +47,7 @@ scripted objects usually work with handles instead of pointers to support hot-re
 
 #define CIN_ALLOCATOR_FORCE_INLINE	CIN_FORCE_INLINE
 
-#define CIN_ALLOCATOR_SHARED_STATE 0 /* Can free allocated memory from all threads */ 
+#define CIN_ALLOCATOR_SHARED_STATE 1 /* Can free allocated memory from all threads */ 
 #define CIN_ALLOCATOR_USE_NOTHROW_NEW 1 /* Disable exceptions */
 #if CIN_ALLOCATOR_USE_NOTHROW_NEW 
 #define CIN_ALLOCATOR_THROW_ATTRIBUTE (std::nothrow)
@@ -81,6 +81,7 @@ namespace Cinnamon {
 		};
 #if CIN_ALLOCATOR_SHARED_STATE
 		static inline std::unordered_map<const void*, AllocationData> Allocations;
+		static inline std::atomic<bool> s_MainThreadExited{ false };
 		static inline std::mutex s_AllocationRegistryMutex;
 #else
 		std::unordered_map<const void*, AllocationData> Allocations;
@@ -88,13 +89,17 @@ namespace Cinnamon {
 	public:
 		~ThreadAllocatorData() noexcept
 		{
-			DumpThreadMemory();
+			if (!s_MainThreadExited)
+				DumpThreadMemory();
 		}
 
 		CIN_ALLOCATOR_FORCE_INLINE void DumpThreadMemory()
 		{
 #if CIN_ALLOCATOR_SHARED_STATE
-			std::lock_guard<std::mutex> lock(s_AllocationRegistryMutex);
+			const std::lock_guard<std::mutex> lock(s_AllocationRegistryMutex);
+			/* Sleep for 200 to let other threads clean up, still might fire false positives... */
+			//const std::chrono::duration<int, std::milli> sleepDuration{ 200 };
+			//std::this_thread::sleep_for(sleepDuration);
 #endif
 			if (!Allocations.empty())
 			{
@@ -106,7 +111,7 @@ namespace Cinnamon {
 		CIN_ALLOCATOR_FORCE_INLINE void Register(const void* address, const char* name, const std::size_t size, const char* file, const std::size_t line) noexcept
 		{
 #if CIN_ALLOCATOR_SHARED_STATE
-			std::lock_guard<std::mutex> lock(s_AllocationRegistryMutex);
+			const std::lock_guard<std::mutex> lock(s_AllocationRegistryMutex);
 #endif
 			Allocations.emplace(address, std::move(AllocationData{ name, size, file, line }));
 		}
@@ -114,7 +119,7 @@ namespace Cinnamon {
 		CIN_ALLOCATOR_FORCE_INLINE void Unregister(const void* address) noexcept
 		{
 #if CIN_ALLOCATOR_SHARED_STATE
-			std::lock_guard<std::mutex> lock(s_AllocationRegistryMutex);
+			const std::lock_guard<std::mutex> lock(s_AllocationRegistryMutex);
 #endif
 			CIN_ASSERT(Allocations.find(address) != Allocations.end(), "Allocation came from a different thread (invalid if shared state is disabled) or was not done via the API");
 			Allocations.erase(address);
