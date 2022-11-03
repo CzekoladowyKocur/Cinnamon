@@ -2,7 +2,7 @@
 OutputDirectory = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 VulkanSDK = os.getenv("VULKAN_SDK");
 VulkanLibrary = VulkanSDK .. "/Lib/vulkan-1.lib"
-VulkanSDKInclude = VulkanSDK .. "/Include"
+VulkanSDKInclude = VulkanSDK .. "/include"
 FMTInclude = "Cinnamon/include/ThirdParty/fmt/include"
 
 -- Use volk as a static lib from SDK? (Can't use debug symbols)
