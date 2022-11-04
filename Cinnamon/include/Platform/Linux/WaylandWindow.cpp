@@ -91,44 +91,43 @@ ImGuiKey NativeKeyCodeToImGUIKeyCode(const KeyCode native)
 		case int(Key::X): return ImGuiKey_X; 
 		case int(Key::Y): return ImGuiKey_Y;
 		case int(Key::Z): return ImGuiKey_Z;
-    	/*ImGuiKey_F1; 
-		ImGuiKey_F2; 
-		ImGuiKey_F3; 
-		ImGuiKey_F4; 
-		ImGuiKey_F5; 
+		/* ImGuiKey_F1;
+		ImGuiKey_F2;
+		ImGuiKey_F3;
+		ImGuiKey_F4;
+		ImGuiKey_F5;
 		ImGuiKey_F6;
-    	ImGuiKey_F7; 
-		ImGuiKey_F8; 
-		ImGuiKey_F9; 
-		ImGuiKey_F10; 
+		ImGuiKey_F7;
+		ImGuiKey_F8;
+		ImGuiKey_F9;
+		ImGuiKey_F10;
 		ImGuiKey_F11;
 		ImGuiKey_F12;
-    	ImGuiKey_Apostrophe;        // '
-    	ImGuiKey_Comma;             // ;
-    	ImGuiKey_Minus;             // -
-    	ImGuiKey_Period;            // .
-    	ImGuiKey_Slash;             // /
-    	ImGuiKey_Semicolon;         // ;
-    	ImGuiKey_Equal;             // =
-    	ImGuiKey_LeftBracket;       // [
-    	ImGuiKey_Backslash;         // \ (this text inhibit multiline comment caused by backslash)
-    	ImGuiKey_RightBracket;      // ]
-    	ImGuiKey_GraveAccent;       // `
-    	ImGuiKey_CapsLock;
-    	ImGuiKey_ScrollLock;
-    	ImGuiKey_NumLock;
-    	ImGuiKey_PrintScreen;
-    	ImGuiKey_Pause;
-    	ImGuiKey_Keypad0; ImGuiKey_Keypad1; ImGuiKey_Keypad2; ImGuiKey_Keypad3; ImGuiKey_Keypad4;
-    	ImGuiKey_Keypad5; ImGuiKey_Keypad6; ImGuiKey_Keypad7; ImGuiKey_Keypad8; ImGuiKey_Keypad9;
-    	ImGuiKey_KeypadDecimal;
-    	ImGuiKey_KeypadDivide;
-    	ImGuiKey_KeypadMultiply;
-    	ImGuiKey_KeypadSubtract;
-    	ImGuiKey_KeypadAdd;
-    	ImGuiKey_KeypadEnter;
-    	ImGuiKey_KeypadEqual;
-		*/
+		ImGuiKey_Apostrophe;        // '
+		ImGuiKey_Comma;             // ;
+		ImGuiKey_Minus;             // -
+		ImGuiKey_Period;            // .
+		ImGuiKey_Slash;             // /
+		ImGuiKey_Semicolon;         // ;
+		ImGuiKey_Equal;             // =
+		ImGuiKey_LeftBracket;       // [
+		ImGuiKey_Backslash;         // \ (this text inhibit multiline comment caused by backslash)
+		ImGuiKey_RightBracket;      // ]
+		ImGuiKey_GraveAccent;       // `
+		ImGuiKey_CapsLock;
+		ImGuiKey_ScrollLock;
+		ImGuiKey_NumLock;
+		ImGuiKey_PrintScreen;
+		ImGuiKey_Pause;
+		ImGuiKey_Keypad0; ImGuiKey_Keypad1; ImGuiKey_Keypad2; ImGuiKey_Keypad3; ImGuiKey_Keypad4;
+		ImGuiKey_Keypad5; ImGuiKey_Keypad6; ImGuiKey_Keypad7; ImGuiKey_Keypad8; ImGuiKey_Keypad9;
+		ImGuiKey_KeypadDecimal;
+		ImGuiKey_KeypadDivide;
+		ImGuiKey_KeypadMultiply;
+		ImGuiKey_KeypadSubtract;
+		ImGuiKey_KeypadAdd;
+		ImGuiKey_KeypadEnter;
+		ImGuiKey_KeypadEqual; */
 		default: return ImGuiKey_None;
 	}
 
@@ -447,16 +446,15 @@ namespace Cinnamon {
 		PlatformWindowState* windowState = const_cast<PlatformWindowState*>(window->GetState());
 		PointerEvent* pointerEvent = &windowState->pointerEvent;
 
-		if(pointerEvent->eventMask & POINTER_EVENT_ENTER)
-			CIN_TRACE("Pointer entered the surface at {0}, {1}", wl_fixed_to_double(pointerEvent->x), wl_fixed_to_double(pointerEvent->x));
+		/* if(pointerEvent->eventMask & POINTER_EVENT_ENTER)
+			CIN_TRACE("Pointer entered the surface at {0}, {1}", wl_fixed_to_double(pointerEvent->x), wl_fixed_to_double(pointerEvent->x)); */
 
-    	if(pointerEvent->eventMask & POINTER_EVENT_LEAVE)
-    	    CIN_TRACE("Pointer left the surface");
+		/* if(pointerEvent->eventMask & POINTER_EVENT_LEAVE)
+			CIN_TRACE("Pointer left the surface"); */
 
 		if(pointerEvent->eventMask & POINTER_EVENT_MOTION)
 		{
-			CIN_TRACE("Current cursor position: ({0}, {1})", (int)wl_fixed_to_double(pointerEvent->x), (int)wl_fixed_to_double(pointerEvent->y));
-
+			CIN_TRACE("Current cursor position: ({0}, {1})", wl_fixed_to_int(pointerEvent->x), wl_fixed_to_int(pointerEvent->y));
 			AddMousePositionEventGUI((float)wl_fixed_to_double(pointerEvent->x), (float)wl_fixed_to_double(pointerEvent->y));
 		}
 
@@ -464,10 +462,15 @@ namespace Cinnamon {
 		{
 			const char* state = pointerEvent->state == WL_POINTER_BUTTON_STATE_PRESSED ? "Pressed" : "Released";
 			CIN_UNUSED(state);
-			CIN_WARN("{} {}", state, (int)pointerEvent->button);
+			//CIN_WARN("{} {}", state, (int)pointerEvent->button);
 			//if(false)
 			AddMouseButtonEventGUI(static_cast<MouseCode>(pointerEvent->button), pointerEvent->state == WL_POINTER_BUTTON_STATE_PRESSED);
 		}
+
+		/* Todo:
+			add zxdg_toplevel_v6_resize & add zxdg_toplevel_v6_move
+			must use !decorations! for this bc on mouse button press we dont get pointer position
+		*/
 
 		memset(pointerEvent, 0, sizeof(PointerEvent));
 	}
@@ -780,11 +783,11 @@ namespace Cinnamon {
 	// -- xdg toplevel
 	InternalScope void xdgToplevelConfigureHandler
 	(
-	    void *data,
+	    void* data,
 	    zxdg_toplevel_v6 *xdgToplevel,
 	    int32_t width,
 	    int32_t height,
-	    wl_array *states
+	    wl_array* states
 	)
 	{
 	    (void)xdgToplevel;
@@ -798,7 +801,7 @@ namespace Cinnamon {
 	    const zxdg_toplevel_v6_state* state;
 	    wl_array_for_each_casted(state, states, zxdg_toplevel_v6_state*) // c++ being a crybaby about assigning void* to zxdg_toplevel_v6_state*
 	    {
-	        switch (*state)
+	        switch(*state)
 	        {
 	        case ZXDG_TOPLEVEL_V6_STATE_ACTIVATED:
 				pending.focused = false;
@@ -820,11 +823,11 @@ namespace Cinnamon {
 	        }
 	    }
 
-	    if(width && height)
-	    {
+		if(width && height)
+		{
 			pending.width = width;
 			pending.height = height;
-	    }
+		}
 		else
 		{
 			pending.width = windowProperties.Width;
@@ -926,6 +929,12 @@ namespace Cinnamon {
 
 	InternalScope CIN_FORCE_INLINE void SurfaceSetup(Window* window)
 	{
+		CIN_WARN("add decorations!");
+		CIN_ERROR("add decorations!");
+		CIN_WARN("add decorations!");
+		CIN_ERROR("add decorations!");
+		CIN_WARN("add decorations!");
+
 		PlatformWindowState* windowState = const_cast<PlatformWindowState*>(window->GetState());
 
 	    if(!windowState->xdgShell)
@@ -1027,8 +1036,6 @@ namespace Cinnamon {
 			CIN_CRITICAL("Could not recover");
 			CIN_PANIC_EXIT();
 		}
-
-		usleep(10);
 	}
 
 	void Window::SendEvent(Event& event)

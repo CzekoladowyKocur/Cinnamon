@@ -42,4 +42,10 @@ bin-int/
 *.exe
 
 # Generated Makefiles
-Makefile/
+*Makefile*
+
+# compile_commands.json
+compile_commands.json
+
+# clang stuff
+.cache

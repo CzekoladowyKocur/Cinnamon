@@ -41,7 +41,7 @@ namespace Cinnamon {
 		static bool Shutdown();
 
 		template<ELogLevel logLevel, typename ... Args>
-		static constexpr void Log(const fmt::string_view message, Args&& ... args)
+		static void Log(const fmt::string_view message, Args&& ... args)
 		{
 			if (logLevel < s_LogLevel)
 				return;
@@ -50,7 +50,7 @@ namespace Cinnamon {
 			STL::String formatted;
 			formatted.resize(512);
 
-			formatted = std::move(fmt::format("[{0}]", std::chrono::system_clock::now()));
+			formatted = fmt::format("[{0}]", std::chrono::system_clock::now());
 			formatted.append(fmt::vformat(message, fmt::make_format_args(std::forward<Args>(args)...)));
 			Output<logLevel>(formatted.c_str());
 		}
