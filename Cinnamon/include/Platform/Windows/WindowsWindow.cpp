@@ -23,6 +23,7 @@ namespace Cinnamon {
 	InternalScope LRESULT CALLBACK Windows32ProcessMessage(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam);
 	InternalScope void DefaultEventCallback(const Event& event);
 	InternalScope std::once_flag s_Win32ClassInitialized;
+	constinit InternalScope std::atomic<uint32_t> s_WindowInstanceCounter{ 0U };
 
 	constexpr CHAR WIN32_API_WINDOW_CLASS_NAME[] = "CINNAMON_ENGINE_WINDOW_CLASS";
 
@@ -44,25 +45,31 @@ namespace Cinnamon {
 		m_EventCallback(callback ? callback : DefaultEventCallback)
 	{
 		const HINSTANCE hInstance{ GetModuleHandle(NULL) };
+		CIN_VERIFY(hInstance);
+
 		/* Initialize win32 window class, only generic one for now */
-		std::call_once(s_Win32ClassInitialized, [=]() {
-			WNDCLASSEX windowClass;
-			windowClass.lpszClassName = WIN32_API_WINDOW_CLASS_NAME;
-			windowClass.lpszMenuName = NULL;
-			windowClass.hInstance = reinterpret_cast<HINSTANCE>(hInstance);
-			windowClass.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-			windowClass.hIconSm = windowClass.hIcon;
-			windowClass.hCursor = LoadCursor(NULL, IDC_ARROW);
-			windowClass.hbrBackground = reinterpret_cast<HBRUSH>(GetStockObject(WHITE_BRUSH));
-			windowClass.style =
-				CS_DBLCLKS | /* Sends message for double clicks */
-				CS_HREDRAW | /* Redraw window if width has changed */
-				CS_VREDRAW | /* Redraw window if height has changed */
-				CS_OWNDC;
-			windowClass.cbClsExtra = 0;
-			windowClass.cbWndExtra = 0;
-			windowClass.cbSize = sizeof(WNDCLASSEX);
-			windowClass.lpfnWndProc = Windows32ProcessMessage;
+		std::call_once(s_Win32ClassInitialized, [hInstance]() {
+			const WNDCLASSEX windowClass
+			{
+				.cbSize{ sizeof(WNDCLASSEX)},
+				.style
+				{
+					CS_DBLCLKS | /* Sends message for double clicks */
+					CS_HREDRAW | /* Redraw window if width has changed */
+					CS_VREDRAW | /* Redraw window if height has changed */
+					CS_OWNDC /* Application owns a device context */
+				},
+				.lpfnWndProc{ Windows32ProcessMessage },
+				.cbClsExtra{ 0U },
+				.cbWndExtra{ 0U },
+				.hInstance{ hInstance },
+				.hIcon{ LoadIcon(NULL, IDI_APPLICATION) },
+				.hCursor{ LoadCursor(NULL, IDC_ARROW) },
+				.hbrBackground{ reinterpret_cast<HBRUSH>(GetStockObject(WHITE_BRUSH)) },
+				.lpszMenuName{ nullptr },
+				.lpszClassName{ WIN32_API_WINDOW_CLASS_NAME },
+				.hIconSm{ windowClass.hIcon },
+			};
 
 			/* Register window class */
 			if (!RegisterClassExA(&windowClass))
@@ -73,18 +80,21 @@ namespace Cinnamon {
 			});
 
 		/* Initialize window */
-		m_State = cinew PlatformWindowState;
-		m_State->Instance = hInstance;
-		m_State->StyleFlags =
-			WS_OVERLAPPEDWINDOW | /* The window is an overlapped window. An overlapped window has a title bar and a border. Same as the WS_TILED style. */
-			WS_SYSMENU | /* The window has a window menu on its title bar. The WS_CAPTION style must also be specified. */
-			WS_CAPTION | /* The window has a title bar (includes the WS_BORDER style). */
-			WS_MAXIMIZEBOX |
-			WS_MINIMIZEBOX |
-			WS_THICKFRAME;
-
-		m_State->ExtendedStyleFlags =
-			WS_EX_APPWINDOW /* Forces a top-level window onto the taskbar when the window is visible. */;
+		m_State = cinew PlatformWindowState
+		{
+			.Handle{ nullptr }, /* Set later */
+			.Instance{ hInstance },
+			.StyleFlags
+			{ 
+				WS_OVERLAPPEDWINDOW | /* The window is an overlapped window. An overlapped window has a title bar and a border. Same as the WS_TILED style. */
+				WS_SYSMENU			| /* The window has a window menu on its title bar. The WS_CAPTION style must also be specified. */
+				WS_CAPTION			| /* The window has a title bar (includes the WS_BORDER style). */
+				WS_MAXIMIZEBOX		|
+				WS_MINIMIZEBOX		|
+				WS_THICKFRAME
+			},
+			.ExtendedStyleFlags{ WS_EX_APPWINDOW }, /* Forces a top-level window onto the taskbar when the window is visible. */
+		};
 
 		/* Obtain the size of border */
 		RECT windowBorderRectangle{ 0U, 0U, 0U, 0U };
@@ -139,6 +149,8 @@ namespace Cinnamon {
 			m_Properties.Mode = EWindowMode::Unspecified;
 			SetWindowMode(windowMode);
 		}
+
+		++s_WindowInstanceCounter;
 	}
 
 	Window::~Window() noexcept
@@ -153,6 +165,10 @@ namespace Cinnamon {
 
 		cindel m_InputState;
 		cindel m_State;
+
+		--s_WindowInstanceCounter;
+		if (s_WindowInstanceCounter < 1)
+			CIN_VERIFY(UnregisterClassA(WIN32_API_WINDOW_CLASS_NAME, GetModuleHandle(NULL)));
 	}
 
 	void Window::PollEvents()
