@@ -2,7 +2,7 @@
 #include "Cinnamon/include/Core/Filesystem.h"
 
 namespace Cinnamon {
-	static constexpr std::size_t g_BufferSize = { 2 << 16 };
+	constexpr std::size_t g_BufferSize = { 2 << 16 };
 	constexpr DWORD g_ListenFilters
 	{
 		FILE_NOTIFY_CHANGE_SECURITY		|
@@ -15,18 +15,14 @@ namespace Cinnamon {
 		FILE_NOTIFY_CHANGE_FILE_NAME
 	};
 
-	FileWatcher::FileWatcher(const Filepath& path, const STL::InitializerList<STL::String>& observedExtensions, FileWatcherCallback callback) noexcept
+	FileWatcher::FileWatcher(const FilepathT& path, const STL::InitializerList<STL::String>& observedExtensions, FileWatcherCallback callback) noexcept
 		:
 		m_IsWatching(true),
 		m_ObservedPath(path),
 		m_Callback(callback),
 		m_ObservedExtensions(observedExtensions),
 		m_WatchThread{},
-		m_CallbackThread{},
 		m_IsSetup{},
-		m_CallbackMutex{},
-		m_NewCallbackInformation{},
-		m_CallbackInformation{},
 #ifdef CIN_PLATFORM_WINDOWS
 		m_DirectoryHandle(nullptr),
 		m_QuitWatchingEvent(nullptr)
@@ -35,7 +31,6 @@ namespace Cinnamon {
 		CIN_ASSERT(FileExists(path)	and IsDirectory(path));
 		m_QuitWatchingEvent = CreateEvent(nullptr, true, false, nullptr);
 		CIN_ASSERT(m_QuitWatchingEvent);
-		m_CallbackThread = std::move(std::thread(&FileWatcher::CallbackThreadWork, this));
 		m_WatchThread = std::move(std::thread(&FileWatcher::WatcherThreadWork, this));
 
 		std::future<void> future = m_IsSetup.get_future();
@@ -50,17 +45,14 @@ namespace Cinnamon {
 		CIN_VERIFY(SetEvent(
 			m_QuitWatchingEvent));
 		
-		m_NewCallbackInformation.notify_all();
 		m_WatchThread.join();
-		m_CallbackThread.join();
-		
 		CIN_VERIFY(CloseHandle(
 			m_DirectoryHandle));
 	}
 
-	void FileWatcher::WatcherThreadWork()
+	void FileWatcher::WatcherThreadWork() noexcept
 	{
-		const DWORD fileInfo{ GetFileAttributesA(m_ObservedPath.c_str()) };
+		[[maybe_unused]] const DWORD fileInfo{ GetFileAttributesA(m_ObservedPath.c_str()) };
 		CIN_ASSERT(fileInfo != INVALID_FILE_ATTRIBUTES);
 
 		m_DirectoryHandle = CreateFileA
@@ -93,7 +85,7 @@ namespace Cinnamon {
 		[[likely]]
 		while (m_IsWatching)
 		{
-			STL::Vector<std::pair<Filepath, EFileAction>> parsedInformation;
+			STL::Vector<std::pair<FilepathT, EFileAction>> parsedInformation;
 			CIN_VERIFY(ReadDirectoryChangesW(
 				m_DirectoryHandle,
 				reinterpret_cast<LPVOID>(buffer.data()),
@@ -141,7 +133,7 @@ namespace Cinnamon {
 						};
 
 						const STL::String extension{ STL::Filepath(changedFileName).extension().string() };
-						if (std::find_if(m_ObservedExtensions.cbegin(), m_ObservedExtensions.cend(), [&extension](const STL::String& observedExtension) 
+						if (m_ObservedExtensions.empty() || std::find_if(m_ObservedExtensions.cbegin(), m_ObservedExtensions.cend(), [&extension](const STL::String& observedExtension) 
 							{
 								return observedExtension == extension;
 							}) != m_ObservedExtensions.cend())
@@ -175,7 +167,6 @@ namespace Cinnamon {
 				case WAIT_OBJECT_0 + 1:
 				{
 					/* Quits */
-					[[maybe_unused]] int x{ 0 };
 					break;
 				}
 
@@ -185,11 +176,9 @@ namespace Cinnamon {
 				}
 			}
 
-			{
-				[[maybe_unused]] const std::lock_guard<STL::Mutex> lock(m_CallbackMutex);
-				m_CallbackInformation.insert(m_CallbackInformation.end(), parsedInformation.begin(), parsedInformation.end());
-			}
-			m_NewCallbackInformation.notify_all();
+			[[likely]]
+			for (const auto& file : parsedInformation)
+				m_Callback(file.first, file.second);
 		}
 
 		[[likely]]
@@ -197,39 +186,12 @@ namespace Cinnamon {
 		{
 			CIN_VERIFY(CancelIo(
 				m_DirectoryHandle));
-			
+
 			GetOverlappedResult(
 				m_DirectoryHandle, 
 				&overlappedBuffer, 
 				&bytesReturned, 
-				TRUE);
-		}
-	}
-
-	void FileWatcher::CallbackThreadWork()
-	{
-		[[likely]]
-		while (m_IsWatching)
-		{
-			std::unique_lock<std::mutex> lock(m_CallbackMutex);
-			STL::Vector<std::pair<Filepath, EFileAction>> callbackInformation{};
-			{
-
-				if (m_CallbackInformation.empty() and m_IsWatching)
-				{
-					m_NewCallbackInformation.wait(lock, [this]()
-						{
-							return not m_CallbackInformation.empty() or not m_IsWatching;
-						});
-				}
-
-				std::swap(callbackInformation, m_CallbackInformation);
-				lock.unlock();
-			}
-
-			[[likely]]
-			for (const auto& file : callbackInformation)
-				m_Callback(file.first, file.second);
+				true);
 		}
 	}
 }

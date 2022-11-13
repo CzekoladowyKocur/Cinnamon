@@ -12,51 +12,75 @@ FMTInclude = "Cinnamon/include/ThirdParty/fmt/include"
 workspace ("Cinnamon")
 	architecture "x64"
 	platforms "x64"
-	targetdir (OutputDirectory)
 	startproject ("CinnamonEditor") 
+	targetdir (OutputDirectory)
 
 	configurations 
 	{ 
-		"Debug", 
+		"Debug",
+		"Debug-Optimized",
 		"Release",
 		"Distribution",
 	}
 
 	flags 
 	{
-		"MultiProcessorCompile",
-		"FatalCompileWarnings", -- Treat compiler warnings as errors
-		"FatalLinkWarnings", -- Treat linker warnings as errors,
+		"MultiProcessorCompile",	-- Multicore compilation
+		"FatalCompileWarnings",		-- Treat compiler warnings as errors
+		"FatalLinkWarnings",		-- Treat linker warnings as errors,
 	}
 
-	warnings "Extra" -- Warning level
-	exceptionhandling "Off" -- Disable exception handling
+	warnings "Extra"				-- Warning level
+	exceptionhandling "Off"			-- Disable exception handling as default
 
 	filter "configurations:Debug"
-		defines "CIN_DEBUG" -- Engine define
-		symbols "On" -- Specifies whether the compiler should generate debug symbols
-		optimize "Off" -- Disables Optimization
-		-- optimize "Debug" -- Optimization with some debugger step-through support
-		runtime "Debug" -- Specifies the type of runtime library to use
-		staticruntime "on" -- Sets runtime library to "MultiThreaded" instead of "MultiThreadedDLL"
+		defines						-- Engine defines
+		{
+			"CIN_DEBUG",
+		}
+		
+		symbols "On"				-- Specifies whether the compiler should generate debug symbols
+		optimize "Off"				-- Disables Optimization									
+		runtime "Debug"				-- Specifies the type of runtime library to use
+		staticruntime "on"			-- Links C/C++ runtime as a static library
+
+	filter "configurations:Debug-Optimized"
+		defines
+		{
+			"CIN_DEBUG",
+			"CIN_OPTIMIZED_DEBUG",
+		}
+
+		symbols "On"				-- Specifies whether the compiler should generate debug symbols
+		optimize "Debug"			-- Optimization with some debugger step-through support
+		runtime "Debug"				-- Specifies the type of runtime library to use
+		staticruntime "on"			-- Links C/C++ runtime as a static library
 
 	filter "configurations:Release"
-		defines "CIN_RELEASE"
-		defines "NDEBUG" -- Explicitly define NDEBUG
+		defines						-- Explicitly define NDEBUG
+		{
+			"CIN_RELEASE",
+			"NDEBUG",
+		}
+
 		symbols "On" 
 		optimize "On" 
 		runtime "Release"
 		staticruntime "on"
 
 	filter "configurations:Distribution"
-		defines "CIN_DISTRIBUTION"
-		defines "NDEBUG" -- Explicitly define NDEBUG
+		defines						-- Explicitly define NDEBUG
+		{
+			"CIN_DISTRIBUTION",
+			"NDEBUG",
+		}
+
 		symbols "Off" 
-		optimize "Speed" -- Optimize for speed
-		optimize "Full" -- Perform full optimization 
+		optimize "Speed"			-- Optimize for speed
+		optimize "Full"				-- Perform full optimization 
 		runtime "Release"
+		flags "LinkTimeOptimization"-- Enable link time optimization
 		staticruntime "on"
-		flags "LinkTimeOptimization" -- Enable link time optimization
 
 		-- Platforms --
 	filter "system:windows"
@@ -141,6 +165,8 @@ project ("CinnamonEditor")
 	targetdir ("bin/" .. (OutputDirectory) .. "/%{prj.name}")
 	objdir ("bin-int/" .. (OutputDirectory) .. "/%{prj.name}")
 
+	exceptionhandling "On"	-- Enable exception handling for editor
+
 	files 
 	{ 
 		"%{prj.name}/include/CinnamonEditor/**.h", 
@@ -176,6 +202,13 @@ project ("CinnamonEditor")
 			"wayland-client",
 			"xdg"
         }
+
+	filter "configurations:Distribution"
+		defines 
+		{
+			"_HAS_EXCEPTIONS=0",
+		}
+		kind "WindowedApp"
 
 project ("Sandbox")
 	location ("Sandbox/include")

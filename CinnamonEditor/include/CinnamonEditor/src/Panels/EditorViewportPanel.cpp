@@ -29,7 +29,7 @@ void EditorViewportPanel::OnGUIRender()
 	ImGui::End();
 }
 
-void EditorViewportPanel::OnEvent(const Cinnamon::Event& event)
+void EditorViewportPanel::OnEvent(const Event& event)
 {
 	CIN_UNUSED(event);
 }

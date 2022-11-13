@@ -191,7 +191,7 @@ namespace Cinnamon {
 	* int* integer = new (storagePointer) int;
 	* Note that _new_ expression performs no allocation.
 	*/
-#if (CIN_DEBUG)
+#if (false)
 	/* If exceptions are disabled, return value should be checked (no different from standard new) */
 #define cinew AllocationProxy(__FILE__, __LINE__) << new CIN_ALLOCATOR_THROW_ATTRIBUTE
 #define cindel DeallocationProxy() << 

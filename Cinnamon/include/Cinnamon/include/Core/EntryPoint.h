@@ -19,13 +19,13 @@ InternalScope int32_t CommonEntryPoint() noexcept
 		printf("Failed to initialize platform\n");
 		return EXIT_FAILURE;
 	}
-
+#ifndef CIN_DISTRIBUTION
 	if (!Logger::Initialize(ELogLevel::Trace))
 	{
 		printf("Failed to initialize platform\n");
 		return EXIT_FAILURE;
 	}
-
+#endif
 	/* Application lifetime */
 	{
 		Application* application{ CreateApplication() };
@@ -49,14 +49,14 @@ InternalScope int32_t CommonEntryPoint() noexcept
 
 		cindel application;
 	} /* Application lifetime */
-
-	/* Shutdown platform */
+#ifndef CIN_DISTRIBUTION
 	if (!Logger::Shutdown())
 	{
 		CIN_CRITICAL("Failed to shutdown logger");
 		return EXIT_FAILURE;
 	}
-
+#endif
+	/* Shutdown platform */
 	if (!Platform::Shutdown())
 	{
 		CIN_CRITICAL("Failed to shutdown platform");
@@ -70,7 +70,7 @@ InternalScope int32_t CommonEntryPoint() noexcept
 #ifdef APIENTRY
 #undef APIENTRY
 #endif /* APIENTRY */
-#define USE_CRT_MEMORY_LEAK_DETECTION 0 /* 1 */
+#define USE_CRT_MEMORY_LEAK_DETECTION 1 /* 1 */
 /* CRT detection tracks malloc only, so we override the new operators */
 #if USE_CRT_MEMORY_LEAK_DETECTION
 void* operator new(const std::size_t size)
@@ -98,23 +98,25 @@ INT WINAPI wWinMain(
 	CIN_UNUSED(lpCmdLine);
 	CIN_UNUSED(nShowCmd);
 
-#if USE_CRT_MEMORY_LEAK_DETECTION
+#if (USE_CRT_MEMORY_LEAK_DETECTION && CIN_DEBUG)
 	/* Using memory checkpoint to prevent static object initialization and deinitialization */
 	_CrtMemState memoryState;
 	_CrtMemCheckpoint(&memoryState);
 #endif
 	INT argc{ 0 };
 	LPWSTR* argv{ CommandLineToArgvW(GetCommandLineW(), &argc) };
-	(void)argv;
-	(void)argc;
+	CIN_UNUSED(argv);
+	CIN_UNUSED(argc);
+
 	int result{ EXIT_SUCCESS };
 	{
 		result = CommonEntryPoint(/*std::move(arguments)*/);
 
+		[[unlikely]]
 		if (result == EXIT_FAILURE)
 			Sleep(5000);
 	}
-#if USE_CRT_MEMORY_LEAK_DETECTION
+#if (USE_CRT_MEMORY_LEAK_DETECTION && CIN_DEBUG)
 	/* No point to log in case of invalid application initialization */
 	if (result == EXIT_SUCCESS)
 	{

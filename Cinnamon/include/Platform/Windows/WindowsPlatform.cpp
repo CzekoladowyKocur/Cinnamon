@@ -112,7 +112,7 @@ namespace Cinnamon {
 		QueryPerformanceFrequency(&frequency);
 		s_PlatformState.ClockFrequency = 1.0 / static_cast<double>(frequency.QuadPart);
 		QueryPerformanceCounter(&s_PlatformState.ClockStartTime);
-
+#ifndef CIN_DISTRIBUTION
 		s_PlatformState.StandardOutput = GetStdHandle(STD_OUTPUT_HANDLE);
 		s_PlatformState.StandardInput = GetStdHandle(STD_INPUT_HANDLE);
 		s_PlatformState.StandardError = GetStdHandle(STD_ERROR_HANDLE);
@@ -130,7 +130,7 @@ namespace Cinnamon {
 			/* TODO: Handle? */
 			return false;
 		}
-
+#endif
 		return true;
 	}
 
@@ -186,6 +186,38 @@ namespace Cinnamon {
 
 	void Platform::WriteToConsole(const char* message, const EConsoleTextColor color)
 	{
+#ifdef CIN_DISTRIBUTION
+		/* Move to logger? This should not be ever called in distribution */
+		const HANDLE dumpFile
+		{
+			CreateFile
+			(
+				"dump.txt",
+				GENERIC_WRITE,
+				0,
+				nullptr,
+				OPEN_ALWAYS,
+				FILE_ATTRIBUTE_NORMAL,
+				nullptr
+			)
+		};
+
+		[[unlikely]]
+		if (dumpFile == INVALID_HANDLE_VALUE)
+			CIN_PANIC_EXIT();
+
+		CHAR dumpMessage[]{ "Attempted trying to write to console in distribution mode." };
+		WriteFile(
+			dumpFile,
+			dumpMessage,
+			sizeof(dumpMessage) / sizeof(message[0]),
+			0,
+			nullptr);
+
+		CloseHandle(
+			dumpFile);
+		CIN_PANIC_EXIT();
+#endif
 		/* Reflected off EConsoleTextColor */
 		constexpr WORD colors[5]{ 
 			C_FOREGROUND_WHITE, 

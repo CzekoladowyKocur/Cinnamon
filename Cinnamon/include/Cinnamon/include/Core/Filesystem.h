@@ -33,36 +33,31 @@ namespace Cinnamon {
 		Deleted,
 		Modified,
 		RenamedOld,
-		RenamedNew
+		RenamedNew,
 	};
 
 	class FileWatcher
 	{
 	private:
 		NON_MOVABLE(FileWatcher)
-		NON_COPYABLE(FileWatcher)	
+		NON_COPYABLE(FileWatcher)
 	public:
-		using Filepath = std::string;
-		using FileWatcherCallback = void (*)(const Filepath, const EFileAction);
+		using FilepathT = STL::String;
+		using FileWatcherCallback = void (*)(const FilepathT, const EFileAction) noexcept;
 	public:
-		explicit FileWatcher(const Filepath& path, const STL::InitializerList<STL::String>& observedExtensions, FileWatcherCallback callback) noexcept;
+		explicit FileWatcher(const FilepathT& path, const STL::InitializerList<STL::String>& observedExtensions, FileWatcherCallback callback) noexcept;
 		~FileWatcher() noexcept;
 	private:
-		void WatcherThreadWork();
-		void CallbackThreadWork();
+		void WatcherThreadWork() noexcept;
 	private:
 		mutable std::atomic<bool> m_IsWatching;
-		const Filepath m_ObservedPath;
+		const FilepathT m_ObservedPath;
 		const FileWatcherCallback m_Callback;
 		const STL::Vector<STL::String> m_ObservedExtensions;
 
 		std::thread m_WatchThread;
-		std::thread m_CallbackThread;
 		/* Signaled when watcher thread is properly setup */
 		std::promise<void> m_IsSetup;
-		std::mutex m_CallbackMutex;
-		std::condition_variable m_NewCallbackInformation;
-		std::vector<std::pair<Filepath, EFileAction>> m_CallbackInformation;
 #ifdef CIN_PLATFORM_WINDOWS
 		HANDLE m_DirectoryHandle;
 		/* Fired when closing */

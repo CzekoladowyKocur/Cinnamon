@@ -2,6 +2,8 @@
 #include "ThirdParty/imgui/imgui.h"
 #include "ThirdParty/imgui/imgui_internal.h"
 
+using namespace Cinnamon;
+
 void SceneHierarchyPanel::OnUpdate(const Timestep timestep)
 {
 	CIN_UNUSED(timestep);
@@ -11,14 +13,14 @@ void SceneHierarchyPanel::OnGUIRender()
 {
 	const auto& colors{ ImGui::GetStyle().Colors };
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, colors[ImGuiCol_FrameBg]);
-	
+
 	ImGui::Begin(GetPanelName());
 	ImGui::End();
 
 	ImGui::PopStyleColor();
 }
 
-void SceneHierarchyPanel::OnEvent(const Cinnamon::Event& event)
+void SceneHierarchyPanel::OnEvent(const Event& event)
 {
 	CIN_UNUSED(event);
 }

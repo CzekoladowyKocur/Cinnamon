@@ -284,10 +284,10 @@ namespace Cinnamon {
 				colors[ImGuiCol_ScrollbarBg] = ImVec4(0.160f, 0.160f, 0.160f, 1.0f);
 				colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.277f, 0.277f, 0.277f, 1.000f);
 				colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.300f, 0.300f, 0.300f, 1.000f);
-				colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(1.000f, 0.391f, 0.000f, 1.000f);
+				colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.277f, 0.277f, 0.277f, 1.000f);
 				colors[ImGuiCol_CheckMark] = ImVec4(1.000f, 1.000f, 1.000f, 1.000f);
 				colors[ImGuiCol_SliderGrab] = ImVec4(0.391f, 0.391f, 0.391f, 1.000f);
-				colors[ImGuiCol_SliderGrabActive] = ImVec4(1.000f, 0.391f, 0.000f, 1.000f);
+				colors[ImGuiCol_SliderGrabActive] = ImVec4(0.277f, 0.277f, 0.277f, 1.000f);
 				colors[ImGuiCol_Button] = ImVec4(1.000f, 1.000f, 1.000f, 0.000f);
 				colors[ImGuiCol_ButtonHovered] = ImVec4(1.000f, 1.000f, 1.000f, 0.156f);
 				colors[ImGuiCol_ButtonActive] = ImVec4(1.000f, 1.000f, 1.000f, 0.391f);
@@ -297,7 +297,7 @@ namespace Cinnamon {
 				colors[ImGuiCol_Border] = ImVec4(0.469f, 0.469f, 0.469f, 1.000f);
 				colors[ImGuiCol_Separator] = ImVec4(0.135f, 0.135f, 0.135f, 1.0f);
 				colors[ImGuiCol_SeparatorHovered] = ImVec4(0.391f, 0.391f, 0.391f, 1.000f);
-				colors[ImGuiCol_SeparatorActive] = ImVec4(1.000f, 0.391f, 0.000f, 1.000f);
+				colors[ImGuiCol_SeparatorActive] = ImVec4(0.277f, 0.277f, 0.277f, 1.000f);
 				colors[ImGuiCol_ResizeGrip] = ImVec4(1.000f, 1.000f, 1.000f, 0.250f);
 				colors[ImGuiCol_ResizeGripHovered] = ImVec4(1.000f, 1.000f, 1.000f, 0.670f);
 				colors[ImGuiCol_ResizeGripActive] = ImVec4(1.000f, 1.0f, 1.000f, 1.000f);

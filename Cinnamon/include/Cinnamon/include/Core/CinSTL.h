@@ -6,7 +6,7 @@ namespace Cinnamon {
 		template<typename T>
 		using Unique = std::unique_ptr<T>;
 		template<typename T, typename ... Args>
-		constexpr Unique<T> MakeUnique(Args&& ... args)
+		constexpr Unique<T> MakeUnique(Args&& ... args) noexcept
 		{
 			return std::make_unique<T>(std::forward<Args>(args)...);
 		}
@@ -14,7 +14,7 @@ namespace Cinnamon {
 		template<typename T>
 		using Shared = std::shared_ptr<T>;
 		template<typename T, typename ... Args>
-		constexpr Shared<T> MakeShared(Args&& ... args)
+		constexpr Shared<T> MakeShared(Args&& ... args) noexcept
 		{
 			return std::make_shared<T>(std::forward<Args>(args)...);
 		}
