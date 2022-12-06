@@ -1,5 +1,5 @@
-#include "Cinnamon/include/Core/TypeDefines.h"
 #ifdef CIN_PLATFORM_LINUX
+#include "Cinnamon/include/Core/TypeDefines.h"
 #include "Cinnamon/include/Core/Window.h"
 #include "Cinnamon/include/Core/Input.h"
 #include "Cinnamon/include/Event/WindowEvent.h"
@@ -10,7 +10,6 @@
 #include <wayland-client.h>
 extern "C"
 {
-/* #include "ThirdParty/xdg/xdg-shell-unstable-v6.h" */
 #include "ThirdParty/xdg/xdg-shell.h"
 }
 
@@ -218,7 +217,7 @@ namespace Cinnamon {
 		wl_display* wlDisplay { nullptr };
 		wl_compositor* wlCompositor { nullptr };
 		wl_registry* wlRegistry { nullptr };
-		xdg_wm_base* xdgShell { nullptr };
+		xdg_wm_base* xdgWMBase { nullptr };
 		wl_output* wlOutput { nullptr };
 		wl_seat* wlSeat { nullptr };
 
@@ -470,8 +469,8 @@ namespace Cinnamon {
 		}
 
 		/* Todo:
-			add zxdg_toplevel_v6_resize & add zxdg_toplevel_v6_move
-			must use !decorations! for this bc on mouse button press we dont get pointer position
+			add xdg_toplevel_resize & add xdg_toplevel_move
+			must use !decorations! for this because on mouse button press we dont get pointer position
 		*/
 
 		memset(pointerEvent, 0, sizeof(PointerEvent));
@@ -703,21 +702,21 @@ namespace Cinnamon {
 	// wl seat --
 
 	// -- xdg shell
-	InternalScope void xdgShellPingHandler
+	InternalScope void xdgWMBasePingHandler
 	(
 	    void *data,
-	    xdg_wm_base* xdgShell,
+	    xdg_wm_base* xdgWMBase,
 	    uint32_t serial
 	)
 	{
 	    (void)data;
 
-		xdg_wm_base_pong(xdgShell, serial);
+		xdg_wm_base_pong(xdgWMBase, serial);
 	}
 
-	InternalScope constexpr xdg_wm_base_listener xdgShellListener
+	InternalScope constexpr xdg_wm_base_listener xdgWMBaseListener
 	{
-	    .ping = xdgShellPingHandler
+	    .ping = xdgWMBasePingHandler
 	};
 	// xdg shell --
 
@@ -908,7 +907,7 @@ namespace Cinnamon {
 	    }
 	    else if(strcmp(interface, xdg_wm_base_interface.name) == 0)
 	    {
-	        reinterpret_cast<PlatformWindowState*>(data)->xdgShell =
+	        reinterpret_cast<PlatformWindowState*>(data)->xdgWMBase =
 	        (xdg_wm_base*)wl_registry_bind(registry, name, &xdg_wm_base_interface, version);
 
 	        if(xdg_wm_base_interface.version != int(version))
@@ -959,17 +958,17 @@ namespace Cinnamon {
 
 	InternalScope CIN_FORCE_INLINE void SurfaceSetup(Window* window)
 	{
-		CIN_WARN("add decorations!");
-		CIN_ERROR("add decorations!");
-		CIN_WARN("add decorations!");
-		CIN_ERROR("add decorations!");
-		CIN_WARN("add decorations!");
+		CIN_WARN("add decorations, handle rest of xdg_toplevel callbacks!");
+		CIN_ERROR("add decorations, handle rest of xdg_toplevel callbacks!");
+		CIN_WARN("add decorations, handle rest of xdg_toplevel callbacks!");
+		CIN_ERROR("add decorations, handle rest of xdg_toplevel callbacks!");
+		CIN_WARN("add decorations, handle rest of xdg_toplevel callbacks!");
 
 		PlatformWindowState* windowState = const_cast<PlatformWindowState*>(window->GetState());
 
-	    if(!windowState->xdgShell)
+	    if(!windowState->xdgWMBase)
 		{
-			CIN_CRITICAL("Couldn't find xdg-shell resource, make sure your compositor supports xdg-shell extension");
+			CIN_CRITICAL("Couldn't find xdg_wm_base resource, make sure your compositor supports xdg-shell extension");
 			CIN_PANIC_EXIT();
 		}
 
@@ -979,10 +978,10 @@ namespace Cinnamon {
 		wl_callback* fCallback = wl_surface_frame(windowState->wlSurface);
 		wl_callback_add_listener(fCallback, &wlSurfaceFrameListener, window);
 
-        windowState->xdgSurface = xdg_wm_base_get_xdg_surface(windowState->xdgShell, windowState->wlSurface);
+        windowState->xdgSurface = xdg_wm_base_get_xdg_surface(windowState->xdgWMBase, windowState->wlSurface);
         windowState->xdgToplevel = xdg_surface_get_toplevel(windowState->xdgSurface);
 
-        xdg_wm_base_add_listener(windowState->xdgShell, &xdgShellListener, NULL);
+        xdg_wm_base_add_listener(windowState->xdgWMBase, &xdgWMBaseListener, NULL);
         xdg_surface_add_listener(windowState->xdgSurface, &xdgSurfaceListener, window);
         xdg_toplevel_add_listener(windowState->xdgToplevel, &xdgToplevelListener, window);
 

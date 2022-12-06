@@ -35,7 +35,7 @@ namespace Cinnamon {
 	    wl_display* wlDisplay { nullptr };
 	    wl_compositor* wlCompositor { nullptr };
 	    wl_registry* wlRegistry { nullptr };
-	    xdg_wm_base* xdgShell { nullptr };
+	    xdg_wm_base* xdgWMBase { nullptr };
 	    wl_output* wlOutput { nullptr };
 	    wl_seat* wlSeat { nullptr };
 

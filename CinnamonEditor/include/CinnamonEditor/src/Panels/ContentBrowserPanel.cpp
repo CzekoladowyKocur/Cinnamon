@@ -1,5 +1,6 @@
 #include "CinnamonEditor/include/Panels/ContentBrowserPanel.h"
 #include "Cinnamon/include/Core/Filesystem.h"
+#include "Cinnamon/include/Core/TypeDefines.h"
 #include "Cinnamon/include/GUI/Icons.h"
 
 #include "ThirdParty/imgui/imgui.h"
@@ -38,6 +39,7 @@ ContentBrowserPanel::ContentBrowserPanel() noexcept
 			//filesTriggered.push_back(file);
 			//if (fileWatchThreads.size() == expected_triggers)
 			//	promise.set_value();
+			CIN_UNUSED(file);
 
 			switch (action)
 			{
