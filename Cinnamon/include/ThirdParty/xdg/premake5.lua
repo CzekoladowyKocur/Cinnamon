@@ -8,6 +8,6 @@ project "xdg"
 	filter "system:linux"	
 		files
 		{
-			"xdg-shell-unstable-v6.c",
-			"xdg-shell-unstable-v6.h",
+			"xdg-shell.c",
+			"xdg-shell.h",
 		}
