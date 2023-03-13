@@ -1,5 +1,6 @@
 #include "CinnamonEditor/include/Panels/ContentBrowserPanel.h"
 #include "Cinnamon/include/Core/Filesystem.h"
+#include "Cinnamon/include/Core/TypeDefines.h"
 #include "Cinnamon/include/GUI/Icons.h"
 
 #include "ThirdParty/imgui/imgui.h"
@@ -257,8 +258,18 @@ ContentBrowserPanel::ContentBrowserPanel() noexcept
 	m_FileTree = STL::MakeUnique<FileTree>(m_WorkingDirectory);
 	m_FileWatcher = STL::MakeUnique<FileWatcher>(STL::String(m_WorkingDirectory.string()), STL::InitializerList<STL::String>{}, [](const STL::String file, const EFileAction action) noexcept
 		{
+<<<<<<< HEAD
 			s_FileTreeNeedsRescan = true;
 	
+=======
+			//std::lock_guard<std::mutex> lock(mutex);
+			//fileWatchThreads.insert(std::this_thread::get_id());
+			//filesTriggered.push_back(file);
+			//if (fileWatchThreads.size() == expected_triggers)
+			//	promise.set_value();
+			CIN_UNUSED(file);
+
+>>>>>>> refs/remotes/origin/master
 			switch (action)
 			{
 				case EFileAction::Created:

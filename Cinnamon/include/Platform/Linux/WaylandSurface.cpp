@@ -5,7 +5,8 @@
 #include <wayland-client.h>
 extern "C"
 {
-#include "ThirdParty/xdg/xdg-shell-unstable-v6.h"
+/* #include "ThirdParty/xdg/xdg-shell-unstable-v6.h" */
+#include "ThirdParty/xdg/xdg-shell.h"
 }
 
 #define VOLK_IMPLEMENTATION
@@ -34,7 +35,7 @@ namespace Cinnamon {
 	    wl_display* wlDisplay { nullptr };
 	    wl_compositor* wlCompositor { nullptr };
 	    wl_registry* wlRegistry { nullptr };
-	    zxdg_shell_v6* xdgShell { nullptr };
+	    xdg_wm_base* xdgWMBase { nullptr };
 	    wl_output* wlOutput { nullptr };
 	    wl_seat* wlSeat { nullptr };
 
@@ -42,8 +43,8 @@ namespace Cinnamon {
 
 		/* Surfaces */
 	    wl_surface* wlSurface { nullptr };
-	    zxdg_surface_v6* xdgSurface { nullptr };
-	    zxdg_toplevel_v6* xdgToplevel { nullptr };
+	    xdg_surface* xdgSurface { nullptr };
+	    xdg_toplevel* xdgToplevel { nullptr };
 
 		/* Input */
 		wl_keyboard* wlKeyboard { nullptr };

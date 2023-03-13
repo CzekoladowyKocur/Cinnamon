@@ -32,6 +32,7 @@ bool SandboxApplication::OnUserInitialize()
 				default:
 					break;
 			}
+			CIN_UNUSED(file);
 	}) };
 
 	cindel fileWatcher;

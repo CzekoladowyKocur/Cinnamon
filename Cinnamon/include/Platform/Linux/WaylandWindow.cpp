@@ -1,4 +1,9 @@
+#include "Cinnamon/include/Core/Logger.h"
+#include <cstdint>
+#include <cstdio>
+#include <wayland-client-protocol.h>
 #ifdef CIN_PLATFORM_LINUX
+#include "Cinnamon/include/Core/TypeDefines.h"
 #include "Cinnamon/include/Core/Window.h"
 #include "Cinnamon/include/Core/Input.h"
 #include "Cinnamon/include/Event/WindowEvent.h"
@@ -9,7 +14,7 @@
 #include <wayland-client.h>
 extern "C"
 {
-#include "ThirdParty/xdg/xdg-shell-unstable-v6.h"
+#include "ThirdParty/xdg/xdg-shell.h"
 }
 
 #include <sys/poll.h>
@@ -216,7 +221,7 @@ namespace Cinnamon {
 		wl_display* wlDisplay { nullptr };
 		wl_compositor* wlCompositor { nullptr };
 		wl_registry* wlRegistry { nullptr };
-		zxdg_shell_v6* xdgShell { nullptr };
+		xdg_wm_base* xdgWMBase { nullptr };
 		wl_output* wlOutput { nullptr };
 		wl_seat* wlSeat { nullptr };
 
@@ -224,8 +229,8 @@ namespace Cinnamon {
 
 		/* Surfaces */
 		wl_surface* wlSurface { nullptr };
-		zxdg_surface_v6* xdgSurface { nullptr };
-		zxdg_toplevel_v6* xdgToplevel { nullptr };
+		xdg_surface* xdgSurface { nullptr };
+		xdg_toplevel* xdgToplevel { nullptr };
 
 		/* Input */
 		wl_keyboard* wlKeyboard { nullptr };
@@ -454,7 +459,7 @@ namespace Cinnamon {
 
 		if(pointerEvent->eventMask & POINTER_EVENT_MOTION)
 		{
-			CIN_TRACE("Current cursor position: ({0}, {1})", wl_fixed_to_int(pointerEvent->x), wl_fixed_to_int(pointerEvent->y));
+			/*CIN_TRACE("Current cursor position: ({0}, {1})", wl_fixed_to_int(pointerEvent->x), wl_fixed_to_int(pointerEvent->y)); */
 			AddMousePositionEventGUI((float)wl_fixed_to_double(pointerEvent->x), (float)wl_fixed_to_double(pointerEvent->y));
 		}
 
@@ -468,8 +473,8 @@ namespace Cinnamon {
 		}
 
 		/* Todo:
-			add zxdg_toplevel_v6_resize & add zxdg_toplevel_v6_move
-			must use !decorations! for this bc on mouse button press we dont get pointer position
+			add xdg_toplevel_resize & add xdg_toplevel_move
+			must use !decorations! for this because on mouse button press we dont get pointer position
 		*/
 
 		memset(pointerEvent, 0, sizeof(PointerEvent));
@@ -522,7 +527,7 @@ namespace Cinnamon {
 
 		/* CIN_TRACE("wl-keyboard: Received keyboard focus"); */
 
-		uint32_t *key;
+		uint32_t* key;
 		wl_array_for_each_casted(key, keys, uint32_t*)
 		{
 			/* Manage properly? */
@@ -701,33 +706,33 @@ namespace Cinnamon {
 	// wl seat --
 
 	// -- xdg shell
-	InternalScope void xdgShellPingHandler
+	InternalScope void xdgWMBasePingHandler
 	(
 	    void *data,
-	    zxdg_shell_v6 *xdgShell,
+	    xdg_wm_base* xdgWMBase,
 	    uint32_t serial
 	)
 	{
 	    (void)data;
 
-	    zxdg_shell_v6_pong(xdgShell, serial);
+		xdg_wm_base_pong(xdgWMBase, serial);
 	}
 
-	InternalScope constexpr zxdg_shell_v6_listener xdgShellListener
+	InternalScope constexpr xdg_wm_base_listener xdgWMBaseListener
 	{
-	    .ping = xdgShellPingHandler
+	    .ping = xdgWMBasePingHandler
 	};
 	// xdg shell --
 
 	// -- xdg surface
 	InternalScope void xdgSurfaceConfigureHandler
 	(
-	    void *data,
-	    zxdg_surface_v6 *xdgSurface,
+	    void* data,
+	    xdg_surface* xdgSurface,
 	    uint32_t serial
 	)
 	{
-	    zxdg_surface_v6_ack_configure(xdgSurface, serial);
+	    xdg_surface_ack_configure(xdgSurface, serial);
 
 	    Window* window = reinterpret_cast<Window*>(data);
 		WindowProperties& windowProperties { window->GetProperties() };
@@ -745,17 +750,17 @@ namespace Cinnamon {
 		}
 	}
 
-	InternalScope  zxdg_surface_v6_listener xdgSurfaceListener
+	InternalScope xdg_surface_listener xdgSurfaceListener
 	{
 	    .configure {
 		[]
 		(
-			void *data,
-			zxdg_surface_v6 *xdgSurface,
+			void* data,
+			xdg_surface* xdgSurface,
 			uint32_t serial
 		)
 		{
-			zxdg_surface_v6_ack_configure(xdgSurface, serial);
+			xdg_surface_ack_configure(xdgSurface, serial);
 
 			Window* window = reinterpret_cast<Window*>(data);
 			WindowProperties& windowProperties { window->GetProperties() };
@@ -784,7 +789,7 @@ namespace Cinnamon {
 	InternalScope void xdgToplevelConfigureHandler
 	(
 	    void* data,
-	    zxdg_toplevel_v6 *xdgToplevel,
+	    xdg_toplevel *xdgToplevel,
 	    int32_t width,
 	    int32_t height,
 	    wl_array* states
@@ -798,24 +803,24 @@ namespace Cinnamon {
 		pending.mode = EWindowMode::Windowed;
 		pending.focused = false;
 
-	    const zxdg_toplevel_v6_state* state;
-	    wl_array_for_each_casted(state, states, zxdg_toplevel_v6_state*) // c++ being a crybaby about assigning void* to zxdg_toplevel_v6_state*
+	    xdg_toplevel_state* state;
+	    wl_array_for_each_casted(state, states, xdg_toplevel_state*) // c++ being a crybaby about assigning void* to zxdg_toplevel_state*
 	    {
 	        switch(*state)
 	        {
-	        case ZXDG_TOPLEVEL_V6_STATE_ACTIVATED:
+	        case XDG_TOPLEVEL_STATE_ACTIVATED:
 				pending.focused = false;
 	            break;
 
-	        case ZXDG_TOPLEVEL_V6_STATE_FULLSCREEN:
+	        case XDG_TOPLEVEL_STATE_FULLSCREEN:
 				pending.mode = EWindowMode::Fullscreen;
 	            break;
 
-	        case ZXDG_TOPLEVEL_V6_STATE_MAXIMIZED:
+	        case XDG_TOPLEVEL_STATE_MAXIMIZED:
 				pending.mode = EWindowMode::Maximized;
 	            break;
 
-	        case ZXDG_TOPLEVEL_V6_STATE_RESIZING:
+	        case XDG_TOPLEVEL_STATE_RESIZING:
 	            break;
 
 	        default:
@@ -837,8 +842,8 @@ namespace Cinnamon {
 
 	InternalScope void xdgToplevelCloseHandler
 	(
-	    void *data,
-	    zxdg_toplevel_v6 *xdgToplevel
+	    void* data,
+	    xdg_toplevel* xdgToplevel
 	)
 	{
 	    (void)xdgToplevel;
@@ -851,10 +856,48 @@ namespace Cinnamon {
 	    window->SendEvent(event);
 	}
 
-	InternalScope constexpr zxdg_toplevel_v6_listener xdgToplevelListener
+	InternalScope void xdgToplevelConfigureBoundsHandler
+	(
+		void* data,
+		struct xdg_toplevel* xdgToplevel,
+		int32_t width,
+		int32_t height
+	)
+	{
+		CIN_UNUSED(data);
+		CIN_UNUSED(xdgToplevel);
+		CIN_UNUSED(width);
+		CIN_UNUSED(height);
+
+		CIN_INFO("xdg_toplevel_listener.configure_bounds: bounds: width = {0}, height = {1}", width, height);
+	}
+
+	InternalScope void xdgToplevelWMCapabilities
+	(
+		void* data,
+		struct xdg_toplevel* xdgToplevel,
+		struct wl_array* capabilities
+	)
+	{
+		CIN_UNUSED(data);
+		CIN_UNUSED(xdgToplevel);
+		CIN_UNUSED(capabilities);
+
+		CIN_INFO("Capabilities:");
+
+		uint32_t* capability;
+		wl_array_for_each_casted(capability, capabilities, uint32_t*)
+		{
+			CIN_INFO("{0}", *capability);
+		}
+	}
+
+	InternalScope constexpr xdg_toplevel_listener xdgToplevelListener
 	{
 	    .configure = xdgToplevelConfigureHandler,
-	    .close = xdgToplevelCloseHandler
+	    .close = xdgToplevelCloseHandler,
+		.configure_bounds = xdgToplevelConfigureBoundsHandler,
+		.wm_capabilities =xdgToplevelWMCapabilities
 	};
 	// xdg toplevel --
 
@@ -876,13 +919,15 @@ namespace Cinnamon {
 	        if(wl_compositor_interface.version != int(version))
 	            CIN_INFO("Using wl_compositor_interface version {0} but the desired version is {1}", version, wl_compositor_interface.version);
 	    }
-	    else if(strcmp(interface, zxdg_shell_v6_interface.name) == 0)
+	    else if(strcmp(interface, xdg_wm_base_interface.name) == 0)
 	    {
-	        reinterpret_cast<PlatformWindowState*>(data)->xdgShell =
-	        (zxdg_shell_v6*)wl_registry_bind(registry, name, &zxdg_shell_v6_interface, version);
+	        reinterpret_cast<PlatformWindowState*>(data)->xdgWMBase =
+	        (xdg_wm_base*)wl_registry_bind(registry, name, &xdg_wm_base_interface, version);
 
-	        if(zxdg_shell_v6_interface.version != int(version))
-	            CIN_INFO("Using zxdg_shell_v6_interface version {0} but the desired version is {1}", version, zxdg_shell_v6_interface.version);
+        	/* xdg_wm_base_add_listener(reinterpret_cast<PlatformWindowState*>(data)->xdgWMBase, &xdgWMBaseListener, NULL); */
+
+	        if(xdg_wm_base_interface.version != int(version))
+	            CIN_INFO("Using xdg_wm_base_interface version {0} but the desired version is {1}", version, xdg_wm_base_interface.version);
 	    }
 	    else if(strcmp(interface, wl_output_interface.name) == 0)
 	    {
@@ -929,17 +974,17 @@ namespace Cinnamon {
 
 	InternalScope CIN_FORCE_INLINE void SurfaceSetup(Window* window)
 	{
-		CIN_WARN("add decorations!");
-		CIN_ERROR("add decorations!");
-		CIN_WARN("add decorations!");
-		CIN_ERROR("add decorations!");
-		CIN_WARN("add decorations!");
+		CIN_WARN("add decorations, handle rest of xdg_toplevel callbacks!");
+		CIN_ERROR("add decorations, handle rest of xdg_toplevel callbacks!");
+		CIN_WARN("add decorations, handle rest of xdg_toplevel callbacks!");
+		CIN_ERROR("add decorations, handle rest of xdg_toplevel callbacks!");
+		CIN_WARN("add decorations, handle rest of xdg_toplevel callbacks!");
 
 		PlatformWindowState* windowState = const_cast<PlatformWindowState*>(window->GetState());
 
-	    if(!windowState->xdgShell)
+	    if(!windowState->xdgWMBase)
 		{
-			CIN_CRITICAL("Couldn't find xdg-shell resource, make sure your compositor supports xdg-shell extension");
+			CIN_CRITICAL("Couldn't find xdg_wm_base resource, make sure your compositor supports xdg-shell extension");
 			CIN_PANIC_EXIT();
 		}
 
@@ -949,12 +994,12 @@ namespace Cinnamon {
 		wl_callback* fCallback = wl_surface_frame(windowState->wlSurface);
 		wl_callback_add_listener(fCallback, &wlSurfaceFrameListener, window);
 
-        windowState->xdgSurface = zxdg_shell_v6_get_xdg_surface(windowState->xdgShell, windowState->wlSurface);
-        windowState->xdgToplevel = zxdg_surface_v6_get_toplevel(windowState->xdgSurface);
+        windowState->xdgSurface = xdg_wm_base_get_xdg_surface(windowState->xdgWMBase, windowState->wlSurface);
+        windowState->xdgToplevel = xdg_surface_get_toplevel(windowState->xdgSurface);
 
-        zxdg_shell_v6_add_listener(windowState->xdgShell, &xdgShellListener, NULL);
-        zxdg_surface_v6_add_listener(windowState->xdgSurface, &xdgSurfaceListener, window);
-        zxdg_toplevel_v6_add_listener(windowState->xdgToplevel, &xdgToplevelListener, window);
+        xdg_wm_base_add_listener(windowState->xdgWMBase, &xdgWMBaseListener, NULL);
+        xdg_surface_add_listener(windowState->xdgSurface, &xdgSurfaceListener, window);
+        xdg_toplevel_add_listener(windowState->xdgToplevel, &xdgToplevelListener, window);
 
         wl_surface_commit(windowState->wlSurface);
 	}
@@ -966,7 +1011,7 @@ namespace Cinnamon {
 	    windowState->wlDisplay = wl_display_connect(NULL);
 	    if(!windowState->wlDisplay)
 		{
-			CIN_CRITICAL("Couldn't connect to a wayland display");
+			CIN_CRITICAL("Couldn't connect to the wayland display");
 			CIN_PANIC_EXIT();
 		}
 
@@ -1097,7 +1142,7 @@ namespace Cinnamon {
 	void Window::SetName(const char* windowName)
 	{
 		m_Properties.Name = windowName;
-		zxdg_toplevel_v6_set_title(m_State->xdgToplevel, m_Properties.Name);
+		xdg_toplevel_set_title(m_State->xdgToplevel, m_Properties.Name);
 	}
 
 	void Window::SetWidth(const uint32_t windowWidth)
@@ -1136,7 +1181,7 @@ namespace Cinnamon {
 			{
 				if(m_Properties.Mode != EWindowMode::Fullscreen)
 				{
-					zxdg_toplevel_v6_set_fullscreen(m_State->xdgToplevel, m_State->wlOutput);
+					xdg_toplevel_set_fullscreen(m_State->xdgToplevel, m_State->wlOutput);
 					m_Properties.Mode = EWindowMode::Fullscreen;
 				}
 
@@ -1147,7 +1192,7 @@ namespace Cinnamon {
 			{
 				if(m_Properties.Mode != EWindowMode::Maximized)
 				{
-					zxdg_toplevel_v6_set_maximized(m_State->xdgToplevel);
+					xdg_toplevel_set_maximized(m_State->xdgToplevel);
 					m_Properties.Mode = EWindowMode::Maximized;
 				}
 
@@ -1159,10 +1204,10 @@ namespace Cinnamon {
 				if(m_Properties.Mode != EWindowMode::Windowed)
 				{
 					if(m_Properties.Mode == EWindowMode::Fullscreen)
-						zxdg_toplevel_v6_unset_fullscreen(m_State->xdgToplevel);
+						xdg_toplevel_unset_fullscreen(m_State->xdgToplevel);
 
 					else if(m_Properties.Mode == EWindowMode::Maximized)
-						zxdg_toplevel_v6_unset_maximized(m_State->xdgToplevel);
+						xdg_toplevel_unset_maximized(m_State->xdgToplevel);
 
 					/* m_Properties.Mode = EWindowMode::Windowed; */
 				}
