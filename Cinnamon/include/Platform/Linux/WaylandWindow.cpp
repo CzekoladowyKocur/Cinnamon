@@ -1,3 +1,7 @@
+#include "Cinnamon/include/Core/Logger.h"
+#include <cstdint>
+#include <cstdio>
+#include <wayland-client-protocol.h>
 #ifdef CIN_PLATFORM_LINUX
 #include "Cinnamon/include/Core/TypeDefines.h"
 #include "Cinnamon/include/Core/Window.h"
@@ -455,7 +459,7 @@ namespace Cinnamon {
 
 		if(pointerEvent->eventMask & POINTER_EVENT_MOTION)
 		{
-			CIN_TRACE("Current cursor position: ({0}, {1})", wl_fixed_to_int(pointerEvent->x), wl_fixed_to_int(pointerEvent->y));
+			/*CIN_TRACE("Current cursor position: ({0}, {1})", wl_fixed_to_int(pointerEvent->x), wl_fixed_to_int(pointerEvent->y)); */
 			AddMousePositionEventGUI((float)wl_fixed_to_double(pointerEvent->x), (float)wl_fixed_to_double(pointerEvent->y));
 		}
 
@@ -523,7 +527,7 @@ namespace Cinnamon {
 
 		/* CIN_TRACE("wl-keyboard: Received keyboard focus"); */
 
-		uint32_t *key;
+		uint32_t* key;
 		wl_array_for_each_casted(key, keys, uint32_t*)
 		{
 			/* Manage properly? */
@@ -746,7 +750,7 @@ namespace Cinnamon {
 		}
 	}
 
-	InternalScope  xdg_surface_listener xdgSurfaceListener
+	InternalScope xdg_surface_listener xdgSurfaceListener
 	{
 	    .configure {
 		[]
@@ -799,7 +803,7 @@ namespace Cinnamon {
 		pending.mode = EWindowMode::Windowed;
 		pending.focused = false;
 
-	    const xdg_toplevel_state* state;
+	    xdg_toplevel_state* state;
 	    wl_array_for_each_casted(state, states, xdg_toplevel_state*) // c++ being a crybaby about assigning void* to zxdg_toplevel_state*
 	    {
 	        switch(*state)
@@ -864,6 +868,8 @@ namespace Cinnamon {
 		CIN_UNUSED(xdgToplevel);
 		CIN_UNUSED(width);
 		CIN_UNUSED(height);
+
+		CIN_INFO("xdg_toplevel_listener.configure_bounds: bounds: width = {0}, height = {1}", width, height);
 	}
 
 	InternalScope void xdgToplevelWMCapabilities
@@ -876,6 +882,14 @@ namespace Cinnamon {
 		CIN_UNUSED(data);
 		CIN_UNUSED(xdgToplevel);
 		CIN_UNUSED(capabilities);
+
+		CIN_INFO("Capabilities:");
+
+		uint32_t* capability;
+		wl_array_for_each_casted(capability, capabilities, uint32_t*)
+		{
+			CIN_INFO("{0}", *capability);
+		}
 	}
 
 	InternalScope constexpr xdg_toplevel_listener xdgToplevelListener
@@ -909,6 +923,8 @@ namespace Cinnamon {
 	    {
 	        reinterpret_cast<PlatformWindowState*>(data)->xdgWMBase =
 	        (xdg_wm_base*)wl_registry_bind(registry, name, &xdg_wm_base_interface, version);
+
+        	/* xdg_wm_base_add_listener(reinterpret_cast<PlatformWindowState*>(data)->xdgWMBase, &xdgWMBaseListener, NULL); */
 
 	        if(xdg_wm_base_interface.version != int(version))
 	            CIN_INFO("Using xdg_wm_base_interface version {0} but the desired version is {1}", version, xdg_wm_base_interface.version);
@@ -995,7 +1011,7 @@ namespace Cinnamon {
 	    windowState->wlDisplay = wl_display_connect(NULL);
 	    if(!windowState->wlDisplay)
 		{
-			CIN_CRITICAL("Couldn't connect to a wayland display");
+			CIN_CRITICAL("Couldn't connect to the wayland display");
 			CIN_PANIC_EXIT();
 		}
 
