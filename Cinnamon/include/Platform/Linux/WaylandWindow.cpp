@@ -1,8 +1,8 @@
+#ifdef CIN_PLATFORM_LINUX
 #include "Cinnamon/include/Core/Logger.h"
 #include <cstdint>
 #include <cstdio>
 #include <wayland-client-protocol.h>
-#ifdef CIN_PLATFORM_LINUX
 #include "Cinnamon/include/Core/TypeDefines.h"
 #include "Cinnamon/include/Core/Window.h"
 #include "Cinnamon/include/Core/Input.h"
