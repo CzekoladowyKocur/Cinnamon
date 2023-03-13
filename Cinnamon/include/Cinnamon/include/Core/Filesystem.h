@@ -62,6 +62,9 @@ namespace Cinnamon {
 		HANDLE m_DirectoryHandle;
 		/* Fired when closing */
 		HANDLE m_QuitWatchingEvent;
+#elif defined CIN_PLATFORM_LINUX
+		int m_InotifyHandle;
+		int m_InotifyWatcherDescriptor;
 #endif
 	};
 }

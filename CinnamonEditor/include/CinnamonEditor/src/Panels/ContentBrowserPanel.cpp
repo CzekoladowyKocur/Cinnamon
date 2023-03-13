@@ -193,8 +193,7 @@ private:
 					0U
 				};
 
-				const ImGuiTreeNodeFlags flags = directoryFlags | (currentNode.Children.empty() ? ImGuiTreeNodeFlags_Leaf : 0U);
-
+				const ImGuiTreeNodeFlags flags = directoryFlags | (currentNode.Children.empty() ? ImGuiTreeNodeFlags_Leaf : ImGuiTreeNodeFlags_None);
 				if (ImGui::TreeNodeEx(currentNode.ID(), currentNode.Parent ? flags : flags | ImGuiTreeNodeFlags_DefaultOpen, currentNode))
 				{
 					for (const FileNode& node : currentNode.Children)
@@ -235,7 +234,7 @@ private:
 };
 
 InternalScope constinit std::atomic<bool> s_FileTreeNeedsRescan{ true };
-#define MY_TEST_WINDOWS
+#define MY_TEST_LINUX
 ContentBrowserPanel::ContentBrowserPanel() noexcept
 	:
 	#ifdef MY_TEST_LINUX
@@ -257,50 +256,37 @@ ContentBrowserPanel::ContentBrowserPanel() noexcept
 
 	m_FileTree = STL::MakeUnique<FileTree>(m_WorkingDirectory);
 	m_FileWatcher = STL::MakeUnique<FileWatcher>(STL::String(m_WorkingDirectory.string()), STL::InitializerList<STL::String>{}, [](const STL::String file, const EFileAction action) noexcept
+	{
+		CIN_UNUSED(file);
+		s_FileTreeNeedsRescan = true;
+		switch (action)
 		{
-<<<<<<< HEAD
-			s_FileTreeNeedsRescan = true;
-	
-=======
-			//std::lock_guard<std::mutex> lock(mutex);
-			//fileWatchThreads.insert(std::this_thread::get_id());
-			//filesTriggered.push_back(file);
-			//if (fileWatchThreads.size() == expected_triggers)
-			//	promise.set_value();
-			CIN_UNUSED(file);
-
->>>>>>> refs/remotes/origin/master
-			switch (action)
+			case EFileAction::Created:
 			{
-				case EFileAction::Created:
-				{
-					CIN_INFO("Created file: {}", file);
-				} break;
+				CIN_INFO("Created file: {}", file);
+			} break;
+			case EFileAction::Modified:
+			{
+				CIN_INFO("Modified file: {}", file);
+			} break;	
+			case EFileAction::Deleted:
+			{
+				CIN_INFO("Deleted file: {}", file);
+			} break;
+			case EFileAction::RenamedOld:
+			{
+				CIN_INFO("Renamed file (old): {}", file);
+			} break;
+			
+			case EFileAction::RenamedNew:
+			{
+				CIN_INFO("Renamed file (new): {}", file);
+			} break;
 
-				case EFileAction::Modified:
-				{
-					CIN_INFO("Modified file: {}", file);
-				} break;
-	
-				case EFileAction::Deleted:
-				{
-					CIN_INFO("Deleted file: {}", file);
-				} break;
-
-				case EFileAction::RenamedOld:
-				{
-					CIN_INFO("Renamed file (old): {}", file);
-				} break;
-
-				case EFileAction::RenamedNew:
-				{
-					CIN_INFO("Renamed file (new): {}", file);
-				} break;
-	
-				default:
-					break;
-			}
-		});
+			default:
+				break;
+		}
+	});
 }
 
 ContentBrowserPanel::~ContentBrowserPanel() noexcept
