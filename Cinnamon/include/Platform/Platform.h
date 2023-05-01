@@ -13,9 +13,9 @@ namespace Cinnamon {
 	enum class EPlatformFlags
 	{
 		Windows = BIT(1U),
-		Linux = BIT(2U),
-		MacOS = BIT(3U),
-		IOS = BIT(4U),
+		Linux	= BIT(2U),
+		MacOS	= BIT(3U),
+		IOS		= BIT(4U),
 		Android = BIT(5U)
 	};
 
@@ -28,26 +28,16 @@ namespace Cinnamon {
 		Magenta = 4,
 	};
 
-	class Platform
-	{
-	private:
-		NON_CONSTRUCTIBLE(Platform)
-		NON_COPYABLE(Platform)
-	public:
-		[[nodiscard]] static bool Initialize();
-		[[nodiscard]] static bool Shutdown();
+	namespace Platform {
+		Errr Initialize();
+		void Shutdown();
 
-		[[nodiscard]] static double GetAbsoluteTime();
-		/* Vulkan */
-		[[nodiscard]] static STL::Vector<const char*> GetRequiredVulkanExtensions();
-		[[nodiscard]] static STL::Vector<const char*> GetRequestedVulkanLayers();
-
-		[[nodiscard]] static STL::Vector<const char*> GetRequiredVulkanDeviceExtensions();
-		[[nodiscard]] static STL::Vector<const char*> GetRequestedVulkanDeviceLayers();
-
-		[[nodiscard]] static STL::String GetBuildDate();
-		/* IO */
-		static void WriteToConsole(const char* message, const EConsoleTextColor color);
-	public:
-	};
+		void									WriteToConsole(const char* message, const EConsoleTextColor color);
+		[[nodiscard]] double					GetAbsoluteTime();
+		[[nodiscard]] STL::String				GetBuildDate();
+		[[nodiscard]] STL::Vector<const char*>	GetRequiredVulkanExtensions();
+		[[nodiscard]] STL::Vector<const char*>	GetRequestedVulkanLayers();
+		[[nodiscard]] STL::Vector<const char*>	GetRequiredVulkanDeviceExtensions();
+		[[nodiscard]] STL::Vector<const char*>	GetRequestedVulkanDeviceLayers();
+	}
 }

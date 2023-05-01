@@ -106,146 +106,148 @@ namespace Cinnamon {
 		const WORD m_DefaultAttributes;
 	};
 
-	bool Platform::Initialize()
-	{
-		LARGE_INTEGER frequency;
-		QueryPerformanceFrequency(&frequency);
-		s_PlatformState.ClockFrequency = 1.0 / static_cast<double>(frequency.QuadPart);
-		QueryPerformanceCounter(&s_PlatformState.ClockStartTime);
+	namespace Platform {
+		Errr Initialize()
+		{
+			LARGE_INTEGER frequency;
+			QueryPerformanceFrequency(&frequency);
+			s_PlatformState.ClockFrequency = 1.0 / static_cast<double>(frequency.QuadPart);
+			QueryPerformanceCounter(&s_PlatformState.ClockStartTime);
 #ifndef CIN_DISTRIBUTION
-		s_PlatformState.StandardOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-		s_PlatformState.StandardInput = GetStdHandle(STD_INPUT_HANDLE);
-		s_PlatformState.StandardError = GetStdHandle(STD_ERROR_HANDLE);
-	
-		if (!s_PlatformState.StandardOutput or !s_PlatformState.StandardInput or !s_PlatformState.StandardError)
-		{
-			/* TODO: Create new ones? */
-			return false;
-		}
+			s_PlatformState.StandardOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+			s_PlatformState.StandardInput = GetStdHandle(STD_INPUT_HANDLE);
+			s_PlatformState.StandardError = GetStdHandle(STD_ERROR_HANDLE);
 
-		if (!GetConsoleScreenBufferInfo(
-			s_PlatformState.StandardOutput, 
-			&s_PlatformState.DefaultConsoleBufferSpecification))
-		{
-			/* TODO: Handle? */
-			return false;
-		}
-#endif
-		return true;
-	}
+			if (not s_PlatformState.StandardOutput or not s_PlatformState.StandardInput or not s_PlatformState.StandardError)
+			{
+				/* TODO: Create new ones? */
+				return Error::Failure;
+			}
 
-	bool Platform::Shutdown()
-	{
-		return true;
-	}
-
-	double Platform::GetAbsoluteTime()
-	{
-		LARGE_INTEGER currentTime;
-		QueryPerformanceCounter(&currentTime);
-
-		return static_cast<double>(currentTime.QuadPart) * s_PlatformState.ClockFrequency;
-	}
-
-	/* Vulkan */
-	STL::Vector<const char*> Platform::GetRequiredVulkanExtensions()
-	{
-		return {
-			"VK_KHR_win32_surface",
-			"VK_KHR_surface",
-			"VK_KHR_get_physical_device_properties2",
-			/* "VK_KHR_bind_memory2", core in 1.1 */
-			/* VK_KHR_dedicated_allocation, core in 1.1 */
-#ifdef CIN_DEBUG
-			"VK_EXT_debug_report",
-			"VK_EXT_debug_utils",
-#endif
-		};
-	}
-
-	STL::Vector<const char*> Platform::GetRequestedVulkanLayers()
-	{
-		return {
-#ifdef CIN_DEBUG
-			"VK_LAYER_KHRONOS_validation",
-#endif
-		};
-	}
-
-	STL::Vector<const char*> Platform::GetRequiredVulkanDeviceExtensions()
-	{
-		return {
-			"VK_KHR_swapchain",
-		};
-	}
-
-	STL::Vector<const char*> Platform::GetRequestedVulkanDeviceLayers()
-	{
-		return {};
-	}
-
-	void Platform::WriteToConsole(const char* message, const EConsoleTextColor color)
-	{
-#ifdef CIN_DISTRIBUTION
-		/* Move to logger? This should not be ever called in distribution */
-		const HANDLE dumpFile
-		{
-			CreateFile
-			(
-				"dump.txt",
-				GENERIC_WRITE,
-				0,
-				nullptr,
-				OPEN_ALWAYS,
-				FILE_ATTRIBUTE_NORMAL,
-				nullptr
-			)
-		};
-
-		[[unlikely]]
-		if (dumpFile == INVALID_HANDLE_VALUE)
-			CIN_PANIC_EXIT();
-
-		CHAR dumpMessage[]{ "Attempted trying to write to console in distribution mode." };
-		WriteFile(
-			dumpFile,
-			dumpMessage,
-			sizeof(dumpMessage) / sizeof(message[0]),
-			0,
-			nullptr);
-
-		CloseHandle(
-			dumpFile);
-		CIN_PANIC_EXIT();
-#endif
-		/* Reflected off EConsoleTextColor */
-		constexpr WORD colors[5]{ 
-			C_FOREGROUND_WHITE, 
-			C_FOREGROUND_GRAY, 
-			C_FOREGROUND_YELLOW, 
-			C_FOREGROUND_RED, 
-			C_FOREGROUND_MAGENTA };
-
-		/* Send to debugger */
-		OutputDebugStringA(message);
-		{
-			ScopedOutputColor scoped{
+			if (!GetConsoleScreenBufferInfo(
 				s_PlatformState.StandardOutput,
-				s_PlatformState.DefaultConsoleBufferSpecification.wAttributes,
-				colors[static_cast<std::size_t>(color)] };
-
-			WriteConsoleA(
-				s_PlatformState.StandardOutput, 
-				message, 
-				static_cast<DWORD>(strlen(message)), 
-				NULL, 
-				NULL);
+				&s_PlatformState.DefaultConsoleBufferSpecification))
+			{
+				/* TODO: Handle? */
+				return Error::Failure;
+			}
+#endif
+			return Error::Success;
 		}
-	}
 
-	STL::String Platform::GetBuildDate()
-	{
-		return CIN_TIMESTAMP;
+		void Shutdown()
+		{}
+			
+		STL::String GetBuildDate()
+		{
+			return CIN_TIMESTAMP;
+		}
+
+		void WriteToConsole(const char* message, const EConsoleTextColor color)
+		{
+#ifdef CIN_DISTRIBUTION
+			/* Move to logger? This should not be ever called in distribution */
+			const HANDLE dumpFile
+			{
+				CreateFile
+				(
+					"dump.txt",
+					GENERIC_WRITE,
+					0,
+					nullptr,
+					OPEN_ALWAYS,
+					FILE_ATTRIBUTE_NORMAL,
+					nullptr
+				)
+			};
+
+			[[unlikely]]
+			if (dumpFile == INVALID_HANDLE_VALUE)
+				CIN_PANIC_EXIT();
+
+			CHAR dumpMessage[]{ "Attempted trying to write to console in distribution mode." };
+			WriteFile(
+				dumpFile,
+				dumpMessage,
+				sizeof(dumpMessage) / sizeof(message[0]),
+				0,
+				nullptr);
+
+			CloseHandle(
+				dumpFile);
+			CIN_PANIC_EXIT();
+#endif
+			/* Reflected off EConsoleTextColor */
+			constexpr WORD colors[5]{
+				C_FOREGROUND_WHITE,
+				C_FOREGROUND_GRAY,
+				C_FOREGROUND_YELLOW,
+				C_FOREGROUND_RED,
+				C_FOREGROUND_MAGENTA };
+
+			/* Send to debugger */
+			OutputDebugStringA(message);
+			{
+				ScopedOutputColor scoped{
+					s_PlatformState.StandardOutput,
+					s_PlatformState.DefaultConsoleBufferSpecification.wAttributes,
+					colors[static_cast<std::size_t>(color)] };
+
+				WriteConsoleA(
+					s_PlatformState.StandardOutput,
+					message,
+					static_cast<DWORD>(strlen(message)),
+					NULL,
+					NULL);
+			}
+		}
+
+		double GetAbsoluteTime()
+		{
+			LARGE_INTEGER currentTime;
+			QueryPerformanceCounter(&currentTime);
+
+			return static_cast<double>(currentTime.QuadPart) * s_PlatformState.ClockFrequency;
+		}
+
+		STL::Vector<const char*> GetRequiredVulkanExtensions()
+		{
+			return 
+			{
+				"VK_KHR_win32_surface",
+				"VK_KHR_surface",
+				"VK_KHR_get_physical_device_properties2",
+				/* "VK_KHR_bind_memory2", core in 1.1 */
+				/* VK_KHR_dedicated_allocation, core in 1.1 */
+#ifdef CIN_DEBUG
+				"VK_EXT_debug_report",
+				"VK_EXT_debug_utils",
+#endif
+			};
+		}
+
+		STL::Vector<const char*> GetRequestedVulkanLayers()
+		{
+			return 
+			{
+#ifdef CIN_DEBUG
+				"VK_LAYER_KHRONOS_validation",
+#endif
+			};
+		}
+
+		STL::Vector<const char*> GetRequiredVulkanDeviceExtensions()
+		{
+			return 
+			{
+				"VK_KHR_swapchain",
+			};
+		}
+
+		STL::Vector<const char*> GetRequestedVulkanDeviceLayers()
+		{
+			return {};
+		}
 	}
 }
 #endif

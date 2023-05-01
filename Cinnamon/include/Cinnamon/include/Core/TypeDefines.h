@@ -118,3 +118,29 @@ public:
 private:
     Type m_DeltaTime;
 };
+
+enum class ErrorCode
+{
+    Failure = 0U,
+    Success
+};
+
+struct [[nodiscard]] Errr final
+{
+    ErrorCode Error;
+
+	consteval explicit Errr(const ErrorCode error) noexcept
+        :
+        Error(error)
+    {}
+
+    constexpr operator bool() noexcept
+    {
+        return Error == ErrorCode::Success;
+    }
+};
+
+namespace Error {
+    static constexpr Errr Success{ ErrorCode::Success };
+    static constexpr Errr Failure{ ErrorCode::Failure };
+}

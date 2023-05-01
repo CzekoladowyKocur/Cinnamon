@@ -57,12 +57,7 @@ InternalScope int32_t CommonEntryPoint() noexcept
 	}
 #endif
 	/* Shutdown platform */
-	if (!Platform::Shutdown())
-	{
-		CIN_CRITICAL("Failed to shutdown platform");
-		return EXIT_FAILURE;
-	}
-
+	Platform::Shutdown();
 	return EXIT_SUCCESS;
 }
 
