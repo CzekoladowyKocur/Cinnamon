@@ -2,7 +2,7 @@
 #include "Cinnamon/include/Core/Layer.h"
 
 namespace Cinnamon {
-	class LayerStack
+	class LayerStack final
 	{
 	public:
 		LayerStack() noexcept;

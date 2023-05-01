@@ -12,7 +12,7 @@ namespace Cinnamon {
 		uint32_t ExtendedStyleFlags{ 0U };
 	};
 
-	Surface::Surface(const Window* const windowContext) noexcept
+	Surface::Surface(const STL::Unique<Window>& windowContext) noexcept
 		:
 		m_WindowState(windowContext->GetState()),
 		m_UseVSync(windowContext->GetProperties().UseVSync),
@@ -21,7 +21,33 @@ namespace Cinnamon {
 	{
 		CIN_ASSERT(m_WindowState, "Window state is invalid");
 
-		const VkWin32SurfaceCreateInfoKHR win32SurfaceCreateInfo{
+		const VkWin32SurfaceCreateInfoKHR win32SurfaceCreateInfo
+		{
+			.sType{ VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR },
+			.pNext{ nullptr },
+			.flags{ 0U },
+			.hinstance{ m_WindowState->Instance },
+			.hwnd{ m_WindowState->Handle },
+		};
+
+		VK_CHECK(vkCreateWin32SurfaceKHR(
+			GraphicsContext::GetInstance(),
+			&win32SurfaceCreateInfo,
+			GraphicsContext::GetAllocator(),
+			&m_Handle));
+	}
+
+	void Surface::Recreate()
+	{
+		CIN_ASSERT(m_Handle);
+		vkDestroySurfaceKHR(
+			GraphicsContext::GetInstance(),
+			m_Handle,
+			GraphicsContext::GetAllocator());
+
+		CIN_ASSERT(m_WindowState, "Window state is invalid");
+		const VkWin32SurfaceCreateInfoKHR win32SurfaceCreateInfo
+		{
 			.sType{ VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR },
 			.pNext{ nullptr },
 			.flags{ 0U },

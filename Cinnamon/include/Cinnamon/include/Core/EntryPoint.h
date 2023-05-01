@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Cinnamon/include/Core/Application.h"
+#include "Cinnamon/include/Renderer/GraphicsContext.h"
 
 #ifndef EXIT_SUCCESS 
 #define EXIT_SUCCESS 0
@@ -18,6 +19,12 @@ InternalScope int32_t CommonEntryPoint() noexcept
 	{
 		printf("Failed to initialize platform\n");
 		return EXIT_FAILURE;
+	}
+	/* Initialize graphics context (vulkan) */
+	if (!GraphicsContext::Initialize())
+	{
+		CIN_CRITICAL("Failed to initialize graphics context");
+		return false;
 	}
 #ifndef CIN_DISTRIBUTION
 	if (!Logger::Initialize(ELogLevel::Trace))
@@ -41,12 +48,7 @@ InternalScope int32_t CommonEntryPoint() noexcept
 			return EXIT_FAILURE;
 		}
 
-		if (!application->Shutdown())
-		{
-			CIN_CRITICAL("Failed to properly shutdown the application");
-			return EXIT_FAILURE;
-		}
-
+		application->Shutdown();
 		cindel application;
 	} /* Application lifetime */
 #ifndef CIN_DISTRIBUTION
@@ -56,6 +58,8 @@ InternalScope int32_t CommonEntryPoint() noexcept
 		return EXIT_FAILURE;
 	}
 #endif
+	/* Shutdown graphics context */
+	GraphicsContext::Shutdown();
 	/* Shutdown platform */
 	Platform::Shutdown();
 	return EXIT_SUCCESS;

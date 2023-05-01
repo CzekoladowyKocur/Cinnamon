@@ -6,10 +6,12 @@ namespace Cinnamon {
 	class Surface
 	{
 	private:
+		NON_COPYABLE(Surface)
 	public:
-		explicit Surface(const Window* const windowContext) noexcept;
+		explicit Surface(const STL::Unique<Window>& windowContext) noexcept;
 		~Surface() noexcept;
 
+		void Recreate();
 		VkPresentModeKHR GetDesiredPresentMode() const;
 		VkSurfaceKHR GetHandle() const;
 	private:

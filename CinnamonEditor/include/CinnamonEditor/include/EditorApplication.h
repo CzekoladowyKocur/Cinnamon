@@ -9,8 +9,8 @@ public:
 	explicit EditorApplication() noexcept;
 	virtual ~EditorApplication() noexcept;
 
-	virtual bool OnUserInitialize() override;
-	virtual bool OnUserShutdown() override;
+	virtual Errr OnUserInitialize() override;
+	virtual void OnUserShutdown() override;
 private:
 	Cinnamon::Layer* m_EditorLayer;
 };

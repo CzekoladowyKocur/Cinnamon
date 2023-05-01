@@ -21,20 +21,22 @@ namespace Cinnamon {
 
 	enum class EConsoleTextColor
 	{
-		White = 0,
-		Gray = 1,
-		Yellow = 2,
-		Red = 3,
+		White	= 0,
+		Gray	= 1,
+		Yellow	= 2,
+		Red		= 3,
 		Magenta = 4,
 	};
 
-	namespace Platform {
+	namespace Platform 
+	{
 		Errr Initialize();
 		void Shutdown();
 
 		void									WriteToConsole(const char* message, const EConsoleTextColor color);
 		[[nodiscard]] double					GetAbsoluteTime();
 		[[nodiscard]] STL::String				GetBuildDate();
+		[[nodiscard]] STL::String				GenerateUUID();
 		[[nodiscard]] STL::Vector<const char*>	GetRequiredVulkanExtensions();
 		[[nodiscard]] STL::Vector<const char*>	GetRequestedVulkanLayers();
 		[[nodiscard]] STL::Vector<const char*>	GetRequiredVulkanDeviceExtensions();

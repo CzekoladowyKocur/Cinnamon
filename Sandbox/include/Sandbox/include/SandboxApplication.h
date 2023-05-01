@@ -7,9 +7,10 @@ private:
 	NON_COPYABLE(SandboxApplication)
 public:
 	explicit SandboxApplication() noexcept;
-	virtual ~SandboxApplication() noexcept = default;
+	virtual ~SandboxApplication() noexcept;
 
-	virtual bool OnUserInitialize() override;
-	virtual bool OnUserShutdown() override;
+	virtual Errr OnUserInitialize() override;
+	virtual void OnUserShutdown() override;
 private:
+	Cinnamon::Layer* m_SandboxLayer;
 };

@@ -2,7 +2,7 @@
 #include "Cinnamon/include/Core/Core.h"
 
 namespace Cinnamon {
-	class Window;
+	class Renderer;
 }
 
 namespace Cinnamon {
@@ -12,23 +12,25 @@ namespace Cinnamon {
 		Default = Dark,
 	};
 
-	class GUIRenderer
+	class GUIRenderer final
 	{
 	private:
-		NON_CONSTRUCTIBLE(GUIRenderer)
 		NON_COPYABLE(GUIRenderer)
 	public:
-		[[nodiscard]] static bool Initialize(const Window* const window);
-		[[nodiscard]] static bool Shutdown ();
-			
-		static void BeginFrame();
-		static void EndFrame();
-		static void SetTheme(const EUITheme theme);
+		explicit GUIRenderer(const STL::Unique<Renderer>& renderer);
+		~GUIRenderer();
+
+		void BeginFrame();
+		void EndFrame();
+		void SetTheme(const EUITheme theme);
 
 		[[nodiscard]] static float GetFontSize();
 		[[nodiscard]] static float GetIconFontSize();
 	private:
 		static void UploadFontAtlas();
 		static void UploadIconFontAtlas();
+	private:
+		const STL::Unique<Renderer>& m_Renderer;
+		struct InternalGUIRendererState* m_InternalState;
 	};
 }

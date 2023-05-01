@@ -10,9 +10,11 @@ Cinnamon::Application* Cinnamon::CreateApplication() noexcept				\
 }							
 
 namespace Cinnamon {
-	class Window;
 	class Layer;
 	class LayerStack;
+	class Window;
+	class Renderer;
+	class GUIRenderer;
 	class Event;
 	class ApplicationRenderEvent;
 	class WindowResizedEvent;
@@ -26,34 +28,41 @@ namespace Cinnamon {
 	private:
 		NON_COPYABLE(Application)
 	public:
-		Application() noexcept;
+		explicit Application(
+			const STL::StringView windowTitle, 
+			const uint32_t windowWidth, 
+			const uint32_t windowHeight, 
+			const bool enableVSync) noexcept;
+		
 		virtual ~Application() noexcept;
 
-		[[nodiscard]] bool Initialize();
-		[[nodiscard]] bool Run();
-		[[nodiscard]] bool Shutdown();
+		Errr Initialize();
+		Errr Run();
+		void Shutdown();
 		
 		void PushLayer(Layer* const layer);
 		void PopLayer(Layer* const layer);
 		void PushOverlay(Layer* const layer);
 		void PopOverlay(Layer* const layer);
 
-		[[nodiscard]] const Window* GetWindow() const;
+		[[nodiscard]] const Window* GetMainWindow() const;
 	protected: 
 		/* User functions */
-		[[nodiscard]] virtual bool OnUserInitialize() = 0;
-		[[nodiscard]] virtual bool OnUserShutdown() = 0;
+		virtual Errr OnUserInitialize() = 0;
+		virtual void OnUserShutdown() = 0;
 	private:
 		bool OnApplicationRender(const ApplicationRenderEvent& event);
 		bool OnWindowResized(const WindowResizedEvent& event);
 		bool OnWindowClosed(const WindowClosedEvent& event);
 		bool OnKeyPressed(const KeyPressedEvent& event);
 	protected:
-		mutable bool m_Running;
+		bool m_Running;
 		bool m_Minimized;
 
-		Window* m_Window;
-		LayerStack* m_LayerStack;
+		STL::Unique<LayerStack> m_LayerStack;
+		STL::Unique<Window> m_Window;
+		STL::Unique<Renderer> m_Renderer;
+		STL::Unique<GUIRenderer> m_GUIRenderer;
 	public:
 		static const Application* Get();
 		static void Close();

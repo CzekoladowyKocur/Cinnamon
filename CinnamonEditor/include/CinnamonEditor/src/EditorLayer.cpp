@@ -3,6 +3,8 @@
 #include "Cinnamon/include/Core/Input.h"
 #include "Cinnamon/include/Core/Application.h"
 #include "Cinnamon/include/Event/KeyEvent.h"
+#include "Cinnamon/include/Core/Window.h"
+
 using namespace Cinnamon;
 
 /* Panels */

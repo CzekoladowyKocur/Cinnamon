@@ -5,7 +5,7 @@
 using namespace Cinnamon;
 EditorApplication::EditorApplication() noexcept
 	:
-	Application(),
+	Application("Cinnamon Editor", 800U, 600U, false),
 	m_EditorLayer(cinew EditorLayer)
 {}
 
@@ -15,20 +15,18 @@ EditorApplication::~EditorApplication() noexcept
 	cindel m_EditorLayer;
 }
 
-bool EditorApplication::OnUserInitialize()
+Errr EditorApplication::OnUserInitialize()
 {
 	PushLayer(m_EditorLayer);
 	CIN_TRACE("Pushed editor application layer");
 
-	return true;
+	return Error::Success;
 }
 
-bool EditorApplication::OnUserShutdown()
+void EditorApplication::OnUserShutdown()
 {
 	PopLayer(m_EditorLayer);
 	CIN_TRACE("Popped editor application layer");
-
-	return true;
 }
 
 REGISTER_CINNAMON_APPLICATION(EditorApplication);

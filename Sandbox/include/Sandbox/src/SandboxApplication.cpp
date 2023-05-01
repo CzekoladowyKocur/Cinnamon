@@ -1,21 +1,28 @@
 #include "Sandbox/include/SandboxApplication.h"
-#include "Cinnamon/include/Core/Filesystem.h"
+#include "Sandbox/include/SandboxLayer.h"
 
 using namespace Cinnamon;
-
 SandboxApplication::SandboxApplication() noexcept
 	:
-	Application()
-{}
-
-bool SandboxApplication::OnUserInitialize()
+	Application("Sandbox application", 400, 400, false),
+	m_SandboxLayer(cinew SandboxLayer)
 {
-	return true;
+	PushLayer(m_SandboxLayer);
 }
 
-bool SandboxApplication::OnUserShutdown()
+SandboxApplication::~SandboxApplication() noexcept
 {
-	return true;
+	PopLayer(m_SandboxLayer);
+	cindel m_SandboxLayer;
+}
+
+Errr SandboxApplication::OnUserInitialize()
+{
+	return Error::Success;
+}
+
+void SandboxApplication::OnUserShutdown()
+{
 }
 
 REGISTER_CINNAMON_APPLICATION(SandboxApplication);

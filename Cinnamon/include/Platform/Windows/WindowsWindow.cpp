@@ -22,16 +22,15 @@ extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam
 namespace Cinnamon {
 	InternalScope LRESULT CALLBACK Windows32ProcessMessage(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam);
 	InternalScope void DefaultEventCallback(const Event& event);
-	InternalScope std::once_flag s_Win32ClassInitialized;
-	constinit InternalScope std::atomic<uint32_t> s_WindowInstanceCounter{ 0U };
 
-	constexpr CHAR WIN32_API_WINDOW_CLASS_NAME[] = "CINNAMON_ENGINE_WINDOW_CLASS";
+	//constexpr CHAR WIN32_API_WINDOW_CLASS_NAME[] = "CINNAMON_ENGINE_WINDOW_CLASS";
 
 	/* Declared in Window.h */
 	struct PlatformWindowState
 	{
 		HWND Handle{ nullptr };
 		HINSTANCE Instance{ nullptr };
+		STL::String WindowClassName;
 
 		uint32_t StyleFlags{ 0U };
 		uint32_t ExtendedStyleFlags{ 0U };
@@ -47,37 +46,37 @@ namespace Cinnamon {
 		const HINSTANCE hInstance{ GetModuleHandle(NULL) };
 		CIN_VERIFY(hInstance);
 
+		const std::string windowClassName{ "CinnamonWC-" + Platform::GenerateUUID() };
+		CIN_TRACE("Generated window class name: {}", windowClassName);
 		/* Initialize win32 window class, only generic one for now */
-		std::call_once(s_Win32ClassInitialized, [hInstance]() {
-			const WNDCLASSEX windowClass
+		const WNDCLASSEX windowClass
+		{
+			.cbSize{ sizeof(WNDCLASSEX)},
+			.style
 			{
-				.cbSize{ sizeof(WNDCLASSEX)},
-				.style
-				{
-					CS_DBLCLKS | /* Sends message for double clicks */
-					CS_HREDRAW | /* Redraw window if width has changed */
-					CS_VREDRAW | /* Redraw window if height has changed */
-					CS_OWNDC /* Application owns a device context */
-				},
-				.lpfnWndProc{ Windows32ProcessMessage },
-				.cbClsExtra{ 0U },
-				.cbWndExtra{ 0U },
-				.hInstance{ hInstance },
-				.hIcon{ LoadIcon(NULL, IDI_APPLICATION) },
-				.hCursor{ LoadCursor(NULL, IDC_ARROW) },
-				.hbrBackground{ reinterpret_cast<HBRUSH>(GetStockObject(WHITE_BRUSH)) },
-				.lpszMenuName{ nullptr },
-				.lpszClassName{ WIN32_API_WINDOW_CLASS_NAME },
-				.hIconSm{ windowClass.hIcon },
-			};
+				CS_DBLCLKS | /* Sends message for double clicks */
+				CS_HREDRAW | /* Redraw window if width has changed */
+				CS_VREDRAW | /* Redraw window if height has changed */
+				CS_OWNDC /* Application owns a device context */
+			},
+			.lpfnWndProc{ Windows32ProcessMessage },
+			.cbClsExtra{ 0U },
+			.cbWndExtra{ 0U },
+			.hInstance{ hInstance },
+			.hIcon{ LoadIcon(NULL, IDI_APPLICATION) },
+			.hCursor{ LoadCursor(NULL, IDC_ARROW) },
+			.hbrBackground{ reinterpret_cast<HBRUSH>(GetStockObject(WHITE_BRUSH)) },
+			.lpszMenuName{ nullptr },
+			.lpszClassName{ windowClassName.c_str() },
+			.hIconSm{ windowClass.hIcon },
+		};
 
-			/* Register window class */
-			if (!RegisterClassExA(&windowClass))
-			{
-				MessageBox(NULL, "Engine window class registration failed", "Error!", MB_ICONEXCLAMATION | MB_OK);
-				CIN_PANIC_EXIT();
-			}
-			});
+		/* Register window class */
+		if (!RegisterClassExA(&windowClass))
+		{
+			MessageBox(NULL, "Engine window class registration failed", "Error!", MB_ICONEXCLAMATION | MB_OK);
+			CIN_PANIC_EXIT();
+		}
 
 		/* Initialize window */
 		m_State = cinew PlatformWindowState
@@ -106,7 +105,7 @@ namespace Cinnamon {
 
 		const HWND windowHandle{ CreateWindowEx(
 			m_State->ExtendedStyleFlags, /* extended styles */
-			reinterpret_cast<LPCSTR>(WIN32_API_WINDOW_CLASS_NAME),
+			reinterpret_cast<LPCSTR>(windowClassName.c_str()),
 			reinterpret_cast<LPCSTR>(m_Properties.Name),
 			m_State->StyleFlags, /* basic styles */
 			0,
@@ -126,6 +125,7 @@ namespace Cinnamon {
 		}
 
 		m_State->Handle = windowHandle;
+		m_State->WindowClassName = windowClassName;
 		/* TODO: if the window should not accept input, this should be false */
 		const bool shouldActivate{ TRUE };
 		const int32_t showWindowCommandFlags = shouldActivate ? SW_SHOW : SW_SHOWNOACTIVATE;
@@ -149,8 +149,6 @@ namespace Cinnamon {
 			m_Properties.Mode = EWindowMode::Unspecified;
 			SetWindowMode(windowMode);
 		}
-
-		++s_WindowInstanceCounter;
 	}
 
 	Window::~Window() noexcept
@@ -163,22 +161,21 @@ namespace Cinnamon {
 			CIN_PANIC_EXIT();
 		}
 
+		CIN_VERIFY(UnregisterClassA(m_State->WindowClassName.c_str(), GetModuleHandle(NULL)));
 		cindel m_InputState;
 		cindel m_State;
-
-		--s_WindowInstanceCounter;
-		if (s_WindowInstanceCounter < 1)
-			CIN_VERIFY(UnregisterClassA(WIN32_API_WINDOW_CLASS_NAME, GetModuleHandle(NULL)));
 	}
 
 	void Window::PollEvents()
 	{
 		MSG message;
-		PeekMessage(&message, m_State->Handle, NULL, NULL, PM_REMOVE);
+		PeekMessage(&message, NULL, NULL, NULL, PM_REMOVE);
 		{
 			TranslateMessage(&message);
 			DispatchMessage(&message);
 		}
+
+		InvalidateRect(m_State->Handle, NULL, TRUE);
 	}
 
 	void Window::SendEvent(Event& event)
@@ -407,7 +404,7 @@ namespace Cinnamon {
 
 				return DefWindowProcA(hwnd, message, wParam, lParam);
 			}
-
+		
 			case WM_ACTIVATE:
 			{
 				return 0;

@@ -45,18 +45,18 @@ namespace Cinnamon {
 	bool Input::IsKeyPressed(const Key key)
 	{
 		const Application* application{ Application::Get() };
-		return application->GetWindow()->GetInputState()->GetKeyState(key) & EKeyState::Pressed;
+		return application->GetMainWindow()->GetInputState()->GetKeyState(key) & EKeyState::Pressed;
 	}
 
 	bool Input::IsMouseButtonPressed(const Mouse mouseButton)
 	{
 		const Application* application{ Application::Get() };
-		return application->GetWindow()->GetInputState()->GetMouseButtonState(mouseButton) & EMouseState::Pressed;
+		return application->GetMainWindow()->GetInputState()->GetMouseButtonState(mouseButton) & EMouseState::Pressed;
 	}
 
 	std::pair<uint32_t, uint32_t> Input::GetMousePosition()
 	{
 		const Application * application{ Application::Get() };
-		return application->GetWindow()->GetInputState()->GetMousePosition();
+		return application->GetMainWindow()->GetInputState()->GetMousePosition();
 	}
 }

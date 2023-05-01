@@ -1,6 +1,10 @@
 #ifdef CIN_PLATFORM_WINDOWS
 #include "Cinnamon/include/Core/Core.h"
 
+/* For UUIDS */
+#include <Rpcdce.h>
+#pragma comment(lib, "Rpcrt4.lib")
+
 constexpr WORD C_FOREGROUND_BLACK = 0;
 constexpr WORD C_FOREGROUND_BLUE = 1;
 constexpr WORD C_FOREGROUND_GREEN = 2;
@@ -141,6 +145,18 @@ namespace Cinnamon {
 		STL::String GetBuildDate()
 		{
 			return CIN_TIMESTAMP;
+		}
+
+		STL::String GenerateUUID()
+		{
+			UUID uuid;
+			RPC_CSTR szUuid{ NULL };
+
+			(void)UuidCreate(&uuid);
+			(void)UuidToStringA(&uuid, &szUuid);
+
+			const std::string stringUUID{ std::move(std::string(reinterpret_cast<char*>(szUuid))) };
+			return stringUUID;
 		}
 
 		void WriteToConsole(const char* message, const EConsoleTextColor color)

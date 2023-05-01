@@ -1,6 +1,7 @@
 #pragma once
 #include "Cinnamon/include/Core/Core.h"
 #include "Cinnamon/include/Event/Event.h"
+#include "Cinnamon/include/Event/Event.h"
 
 namespace Cinnamon {
 	struct PlatformWindowState;
@@ -43,7 +44,7 @@ namespace Cinnamon {
 		constexpr ~WindowProperties() noexcept = default;
 	};
 
-	class Window
+	class Window final
 	{
 	private:
 		NON_COPYABLE(Window)

@@ -8,16 +8,23 @@
 #include "Cinnamon/include/Event/WindowEvent.h"
 #include "Cinnamon/include/Event/KeyEvent.h"
 #include "Cinnamon/include/Event/MouseEvent.h"
+#include "Cinnamon/include/Renderer/Renderer.h"
 
 namespace Cinnamon {
 	constinit InternalScope Application* s_ApplicationInstance{ nullptr };
 
-	Application::Application() noexcept
+	Application::Application(
+		const STL::StringView windowTitle,
+		const uint32_t windowWidth,
+		const uint32_t windowHeight,
+		const bool enableVSync) noexcept
 		:
 		m_Running(true),
 		m_Minimized(false),
-		m_Window(nullptr),
-		m_LayerStack(nullptr)
+		m_LayerStack(STL::MakeUnique<LayerStack>()),
+		m_Window(STL::MakeUnique<Window>(WindowProperties{ windowTitle.data(), windowWidth, windowHeight, EWindowMode::Windowed, enableVSync })),
+		m_Renderer(STL::MakeUnique<Renderer>(m_Window)),
+		m_GUIRenderer(STL::MakeUnique<GUIRenderer>(m_Renderer))
 	{
 		CIN_ASSERT(s_ApplicationInstance == nullptr, "Application already instantiated!");
 		CIN_TRACE("Running cinnamon build {}", Platform::GetBuildDate());
@@ -27,58 +34,36 @@ namespace Cinnamon {
 
 	Application::~Application() noexcept
 	{
-		cindel m_LayerStack;
-		cindel m_Window;
+		s_ApplicationInstance = nullptr;
 		CIN_DUMP_ALLOCATIONS();
 	}
 
-	bool Application::Initialize()
+	Errr Application::Initialize()
 	{
-		m_Window = cinew Window(WindowProperties{ "Cinnamon Application", 800U, 600U, EWindowMode::Windowed, false });
-		m_LayerStack = cinew LayerStack;
-
-		if (!GraphicsContext::Initialize())
-		{
-			CIN_CRITICAL("Failed to initialize graphics context");
-			return false;
-		}
-
-		if (!GraphicsContext::CreateSurface(m_Window))
-		{
-			CIN_CRITICAL("Failed to set main window as graphics context");
-			return false;
-		}
-
-		if (!GUIRenderer::Initialize(m_Window))
-		{
-			CIN_CRITICAL("Failed to initialize gui renderer");
-			return false;
-		}
-
 		CIN_WARN("Queues from same families might be faster");
 		m_Window->SetEventCallback([this](const Event& event)
-			{ 
-				const EventDispatcher dispatcher(event);
-				dispatcher.Dispatch<ApplicationRenderEvent>(std::bind(&Application::OnApplicationRender, this, std::placeholders::_1));
-				dispatcher.Dispatch<WindowResizedEvent>(std::bind(&Application::OnWindowResized, this, std::placeholders::_1));
-				dispatcher.Dispatch<WindowClosedEvent>(std::bind(&Application::OnWindowClosed, this, std::placeholders::_1));
-				dispatcher.Dispatch<KeyPressedEvent>(std::bind(&Application::OnKeyPressed, this, std::placeholders::_1));
+		{ 
+			const EventDispatcher dispatcher(event);
+			dispatcher.Dispatch<ApplicationRenderEvent>(std::bind(&Application::OnApplicationRender, this, std::placeholders::_1));
+			dispatcher.Dispatch<WindowResizedEvent>(std::bind(&Application::OnWindowResized, this, std::placeholders::_1));
+			dispatcher.Dispatch<WindowClosedEvent>(std::bind(&Application::OnWindowClosed, this, std::placeholders::_1));
+			dispatcher.Dispatch<KeyPressedEvent>(std::bind(&Application::OnKeyPressed, this, std::placeholders::_1));
 
-				for (Layer* const layer : *m_LayerStack)
-					[[likely]] if(not event.IsHandled)
-						layer->OnEvent(event);
-			});
+			for (Layer* const layer : *m_LayerStack)
+				[[likely]] if(not event.IsHandled)
+					layer->OnEvent(event);
+		});
 
 		if (!OnUserInitialize())
 		{
 			CIN_CRITICAL("Failed to initialize user data");
-			return false;
+			return Error::Failure;
 		}
 
-		return true;
+		return Error::Success;
 	}
 
-	bool Application::Run()
+	Errr Application::Run()
 	{
 		//double lastFrameTime{ Platform::GetAbsoluteTime() };
 
@@ -86,38 +71,18 @@ namespace Cinnamon {
 		while (m_Running)
 		{
 			m_Window->PollEvents();
-	
+			OnApplicationRender({});
 			//const double currentTime{ Platform::GetAbsoluteTime() };
 			//const Timestep timestep{ static_cast<Timestep::Type>(currentTime - lastFrameTime) };
 			//lastFrameTime = currentTime;
 		}
 
-		return true;
+		return Error::Success;
 	}
 
-	bool Application::Shutdown()
+	void Application::Shutdown()
 	{
-		bool shutdownSuccessful{ true };
-
-		if (!OnUserShutdown())
-		{
-			CIN_CRITICAL("Failed to shutdown user data");
-			shutdownSuccessful = false;
-		}
-
-		if (!GUIRenderer::Shutdown())
-		{
-			CIN_CRITICAL("Failed to shutdown GUI renderer");
-			shutdownSuccessful = false;
-		}
-
-		if (!GraphicsContext::Shutdown())
-		{
-			CIN_CRITICAL("Failed to shutdown graphics context");
-			shutdownSuccessful = false;
-		}
-
-		return shutdownSuccessful;
+		OnUserShutdown();
 	}
 
 	void Application::PushLayer(Layer* const layer)
@@ -148,9 +113,9 @@ namespace Cinnamon {
 		m_LayerStack->PopOverlay(layer);
 	}
 
-	const Window* Application::GetWindow() const
+	const Window* Application::GetMainWindow() const
 	{
-		return m_Window;
+		return m_Window.get();
 	}
 
 	bool Application::OnApplicationRender(const ApplicationRenderEvent& event)
@@ -164,16 +129,16 @@ namespace Cinnamon {
 			const Timestep timestep{ static_cast<Timestep::Type>(currentTime - f_LastFrameTime) };
 			f_LastFrameTime = currentTime;
 
-			GraphicsContext::AcquireNextImage();
+			m_Renderer->BeginFrame();
 			{
-				GUIRenderer::BeginFrame();
+				m_GUIRenderer->BeginFrame();
 
 				for (Layer* const layer : *m_LayerStack)
 					layer->OnUpdate(timestep);
 
-				GUIRenderer::EndFrame();
+				m_GUIRenderer->EndFrame();
 			}
-			GraphicsContext::PresentImage();
+			m_Renderer->EndFrame();
 		}
 
 		CIN_UNUSED(event);
@@ -186,8 +151,8 @@ namespace Cinnamon {
 		m_Minimized = (width == 0U) or (height == 0U);
 
 		[[likely]]
-		if(not m_Minimized)
-			GraphicsContext::ResizeSwapchain();
+		if (not m_Minimized)
+			m_Renderer->SetViewportSize(width, height);
 		
 		return true;
 	}
