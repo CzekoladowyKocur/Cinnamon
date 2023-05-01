@@ -1,6 +1,7 @@
 #include "Cinnamon/include/Renderer/Swapchain.h"
 #include "Cinnamon/include/Renderer/GraphicsContext.h"
 #include "Cinnamon/include/Renderer/Surface.h"
+#include "vulkan/vulkan_core.h"
 
 namespace Cinnamon {
 	Swapchain::Swapchain(const uint32_t width, const uint32_t height, const Surface* const surface) noexcept
@@ -163,6 +164,12 @@ namespace Cinnamon {
 			GraphicsContext::GetQueueFamily(GraphicsContext::EQueueFamily::Present), 
 		};
 
+		VkCompositeAlphaFlagBitsKHR compositeAlpha{ VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR };
+		if(m_SurfaceCapabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)
+			compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+		else if(m_SurfaceCapabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR)
+			compositeAlpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
+
 		const VkSwapchainCreateInfoKHR swapchainCreateInfo{
 			.sType{ VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR },
 			.pNext{ nullptr },
@@ -178,7 +185,7 @@ namespace Cinnamon {
 			.queueFamilyIndexCount{ queuesFamiliesShared ? VK_QUEUE_FAMILY_IGNORED : static_cast<uint32_t>(queueFamilyIndices.size()) },
 			.pQueueFamilyIndices{ queuesFamiliesShared ? nullptr : &queueFamilyIndices[0U] },
 			.preTransform{ m_SurfaceCapabilities.currentTransform },
-			.compositeAlpha{ VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR },
+			.compositeAlpha{ compositeAlpha },
 			.presentMode{ m_PresentMode },
 			.clipped{ VK_TRUE },
 			.oldSwapchain{ m_CachedSwapchain },

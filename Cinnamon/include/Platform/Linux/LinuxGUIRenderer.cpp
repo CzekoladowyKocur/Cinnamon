@@ -511,6 +511,7 @@ namespace Cinnamon {
 	{
 		ImGuiIO& io{ ImGui::GetIO() };
 		/* Regular font */
+		CIN_TRACE("Loading regular font: Resources/fonts/opensans/OpenSans-Regular.ttf");
 		io.Fonts->AddFontFromFileTTF("Resources/fonts/opensans/OpenSans-Regular.ttf", GetFontSize());
 	}
 
@@ -524,11 +525,10 @@ namespace Cinnamon {
 		config.MergeMode = true;
 		config.GlyphMinAdvanceX = GetIconFontSize(); // Use if you want to make the icon monospaced
 
+		CIN_TRACE("Loading icon font: Resources/fonts/FontAwesome/fa-solid-900.ttf");
 		io.Fonts->AddFontFromFileTTF("Resources/fonts/FontAwesome/fa-solid-900.ttf", GetIconFontSize(), &config, icon_ranges);
 	}
 }
 
 #include "ThirdParty/imgui/backends/imgui_impl_vulkan.cpp"
-//#include "ThirdParty/imgui/backends/imgui_impl_win32.cpp"
-//#pragma warning(pop)
 #endif

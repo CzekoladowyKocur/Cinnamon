@@ -24,15 +24,13 @@ constexpr char C_FOREGROUND_DEFAULT[]				{ "\033[0;0m"  };
 
 namespace Cinnamon {
 
-	bool Platform::Initialize()
+	Errr Platform::Initialize()
 	{
-        return true;
+        return Error::Success;
 	}
 
-	bool Platform::Shutdown()
-	{
-		return true;
-	}
+	void Platform::Shutdown()
+	{}
 
 	double Platform::GetAbsoluteTime()
 	{

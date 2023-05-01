@@ -49,3 +49,6 @@ compile_commands.json
 
 # clang stuff
 .cache
+
+# Vulkan SDK on linux. TODO: Change the installation path
+**/VulkanSDK/

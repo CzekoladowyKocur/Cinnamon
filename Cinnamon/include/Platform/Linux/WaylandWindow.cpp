@@ -264,11 +264,25 @@ namespace Cinnamon {
 	    (void)wlSurface;
 	    (void)output;
 	}
-
+	#if 0
+	InternalScope void wlSurfacePreferredBufferScale
+	(
+		void* data,
+		wl_output* wlOutput,
+		int scale
+	)
+	{
+		(void)data;
+		(void)wlOutput;
+		(void)scale;
+	}
+	#endif
 	InternalScope constexpr wl_surface_listener wlSurfaceListener
 	{
 	    .enter = wlSurfaceEnter,
-	    .leave = wlSurfaceLeave 
+	    .leave = wlSurfaceLeave,
+		.preferred_buffer_scale = NULL,
+		.preferred_buffer_transform = NULL
 	};
 	// wayland surface --
 
@@ -505,7 +519,8 @@ namespace Cinnamon {
        	.axis_source = wlPointerAxisSource,
        	.axis_stop = wlPointerAxisStop,
        	.axis_discrete = wlPointerAxisDiscrete,	
-		.axis_value120 = wlPointerAxisValue120
+		.axis_value120 = wlPointerAxisValue120,
+		.axis_relative_direction = NULL
 	};
 
 	// wl pointer --
