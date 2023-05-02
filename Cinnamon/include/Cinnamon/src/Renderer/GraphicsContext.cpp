@@ -267,7 +267,7 @@ namespace Cinnamon {
 			CIN_ASSERT(sharedVulkanLibraryModule, "Invalid module");
 			CIN_VERIFY(FreeLibrary(sharedVulkanLibraryModule));
 #else
-			CIN_WARN("Vulkan library was left unloaded")
+			CIN_WARN("Vulkan library was left unloaded");
 #endif
 		}
 

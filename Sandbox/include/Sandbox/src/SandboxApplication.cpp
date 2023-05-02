@@ -5,7 +5,7 @@ using namespace Cinnamon;
 SandboxApplication::SandboxApplication() noexcept
 	:
 	Application("Sandbox application", 400, 400, false),
-	m_SandboxLayer(cinew SandboxLayer)
+	m_SandboxLayer(cinew SandboxLayer())
 {
 	PushLayer(m_SandboxLayer);
 }

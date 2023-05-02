@@ -1,12 +1,11 @@
 #pragma once
 #include "Cinnamon/include/Core/Layer.h"
 #include "Cinnamon/include/Core/Window.h"
+#include "Cinnamon/include/Renderer/Renderer.h"
 
-namespace Cinnamon {
-	class Renderer;
-}
+using namespace Cinnamon;
 
-class SandboxLayer final : public Cinnamon::Layer
+class SandboxLayer final : public Layer
 {
 public:
 	SandboxLayer() noexcept;
@@ -16,8 +15,8 @@ public:
 	virtual void OnUpdate(const Timestep timestep) override final;
 	virtual void OnDetach() override final;
 
-	virtual void OnEvent(const Cinnamon::Event& event) override final;
+	virtual void OnEvent(const Event& event) override final;
 private:
-	Cinnamon::STL::Vector<Cinnamon::STL::Unique<Cinnamon::Window>> m_Windows;
-	Cinnamon::STL::Vector<Cinnamon::Renderer*> m_Renderers;
+	STL::Vector<STL::Unique<Cinnamon::Window>> m_Windows;
+	STL::Vector<STL::Unique<Cinnamon::Renderer>> m_Renderers;
 };

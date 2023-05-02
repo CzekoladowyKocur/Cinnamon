@@ -52,7 +52,7 @@ namespace Cinnamon {
 		PointerEvent pointerEvent;
 	};
 
-	Surface::Surface(const Window* const windowContext) noexcept
+	Surface::Surface(const STL::Unique<Window>& windowContext) noexcept
 		:
 		m_WindowState(windowContext->GetState()),
 		m_UseVSync(windowContext->GetProperties().UseVSync),
@@ -82,6 +82,29 @@ namespace Cinnamon {
 			m_Handle,
 			GraphicsContext::GetAllocator());
 	}
+
+	void Surface::Recreate()
+	{
+		vkDestroySurfaceKHR(
+			GraphicsContext::GetInstance(),
+			m_Handle,
+			GraphicsContext::GetAllocator());
+			
+		CIN_ASSERT(m_WindowState, "Window state is invalid");
+
+		VkWaylandSurfaceCreateInfoKHR waylandSurfaceCreateInfo;
+		waylandSurfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
+		waylandSurfaceCreateInfo.display = m_WindowState->wlDisplay;
+		waylandSurfaceCreateInfo.surface = m_WindowState->wlSurface;
+		waylandSurfaceCreateInfo.flags = 0;
+		waylandSurfaceCreateInfo.pNext = nullptr;
+
+		VK_CHECK(vkCreateWaylandSurfaceKHR(
+			GraphicsContext::GetInstance(),
+			&waylandSurfaceCreateInfo,
+			GraphicsContext::GetAllocator(),
+			&m_Handle));
+	}	
 
 	VkPresentModeKHR Surface::GetDesiredPresentMode() const
 	{

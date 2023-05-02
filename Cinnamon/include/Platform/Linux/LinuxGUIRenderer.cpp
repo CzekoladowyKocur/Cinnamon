@@ -1,8 +1,12 @@
+#include "Cinnamon/include/Core/TypeDefines.h"
+#include "ThirdParty/imgui/imgui_internal.h"
 #ifdef CIN_PLATFORM_LINUX
 #include <linux/uinput.h>
 #include "Cinnamon/include/GUI/GUIRenderer.h"
 #include "Cinnamon/include/GUI/Icons.h"
 #include "Cinnamon/include/Renderer/GraphicsContext.h"
+#include "Cinnamon/include/Renderer/Device.h"
+#include "Cinnamon/include/Renderer/Renderer.h"
 #include "Cinnamon/include/Renderer/Swapchain.h"
 #include "Cinnamon/include/Core/Window.h"
 #include "Cinnamon/include/Core/Input.h"
@@ -13,31 +17,62 @@
 //#include "ThirdParty/imgui/backends/imgui_impl_win32.h"
 
 namespace Cinnamon {
-	InternalScope VkDescriptorPool s_DescriptorPool{ VK_NULL_HANDLE };
-	InternalScope VkCommandPool s_CommandPool{ VK_NULL_HANDLE };
-	InternalScope STL::Vector<VkCommandBuffer> s_CommandBuffers;
-	InternalScope EUITheme s_UITheme{ EUITheme::Default };
-
 	struct LinuxBackendData
 	{
 		const Window* WindowHandle{ nullptr };
 		ImGuiMouseCursor LastMouseCursor{};
-	} constinit static* s_BackendData{ nullptr };
-	
-	static bool LinuxBackendUpdateMouseCursor()
+	};
+
+	struct InternalGUIRendererState
 	{
+		ImGuiContext* 					Context{ nullptr };
+		LinuxBackendData*				Backend{ nullptr };
+
+		/* Vulkan context */
+		VkDescriptorPool				DescriptorPool{ VK_NULL_HANDLE };
+		VkCommandPool					CommandPool{ VK_NULL_HANDLE };
+		STL::Vector<VkCommandBuffer>	CommandBuffers{};
+	};
+
+	static LinuxBackendData* LinuxBackendInitialize(const Window* const window)
+	{
+		ImGuiIO& io { ImGui::GetIO() };
+		IM_ASSERT(io.BackendPlatformUserData == nullptr && "Already initialized a platform backend");
+
+		LinuxBackendData* backendData{ cinew LinuxBackendData() };
+		backendData->WindowHandle = window;
+		backendData->LastMouseCursor = {};
+
+		io.BackendPlatformUserData = reinterpret_cast<void*>(backendData);
+		io.BackendPlatformName = "Linux backend";
+		io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
+		io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;
+		//io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;
+		io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport;
+
+		return backendData;
+	}
+
+	static void LinuxBackendShutdown(LinuxBackendData* backendData)
+	{
+		CIN_ASSERT(backendData)
+		delete backendData;
+	}
+
+	static bool LinuxBackendUpdateMouseCursor(LinuxBackendData* backendData)
+	{
+		CIN_UNUSED(backendData);
+
 		ImGuiIO& io { ImGui::GetIO() };
     	if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange)
     	    return false;
 
-
-
 		return true;
 	}
 
-	static void LinuxBackendNewFrame()
+	static void LinuxBackendNewFrame(LinuxBackendData* backendData)
 	{
-		const Window* window{ s_BackendData->WindowHandle };
+		const Window* window{ backendData->WindowHandle };
 		const auto[width, height]{ window->GetSize() };
 		
 		ImGuiIO& io { ImGui::GetIO() };
@@ -59,56 +94,35 @@ namespace Cinnamon {
 		}
 
 		ImGuiMouseCursor mouse_cursor = io.MouseDrawCursor ? ImGuiMouseCursor_None : ImGui::GetMouseCursor();
-    	if (s_BackendData->LastMouseCursor != mouse_cursor)
+    	if (backendData->LastMouseCursor != mouse_cursor)
     	{
-    	    s_BackendData->LastMouseCursor = mouse_cursor;
-			LinuxBackendUpdateMouseCursor();
+    	    backendData->LastMouseCursor = mouse_cursor;
+			LinuxBackendUpdateMouseCursor(backendData);
     	    //ImGui_ImplWin32_UpdateMouseCursor();
     	}
 	}
-
-	static bool LinuxBackendInitialize(const Window* const window)
+	
+	GUIRenderer::GUIRenderer(const STL::Unique<Renderer>& renderer)
+		:
+		m_Renderer(renderer),
+		m_InternalState(cinew InternalGUIRendererState)
 	{
-		ImGuiIO& io { ImGui::GetIO() };
-		IM_ASSERT(io.BackendPlatformUserData == nullptr && "Already initialized a platform backend");
-
-		LinuxBackendData* backendData{ cinew LinuxBackendData() };
-		backendData->WindowHandle = window;
-		backendData->LastMouseCursor = {};
-
-		io.BackendPlatformUserData = reinterpret_cast<void*>(backendData);
-		io.BackendPlatformName = "Linux backend";
-		io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
-		io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;
-		//io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;
-		io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport;
-
-
-		s_BackendData = backendData;
-		return true;
-	}
-
-	static bool LinuxBackendShutdown()
-	{
-		cindel s_BackendData;
-		return true;
-	}
-
-	bool GUIRenderer::Initialize(const Window* const window)
-	{
+		CIN_ASSERT(renderer);
 		IMGUI_CHECKVERSION();
-		if (!ImGui::CreateContext())
-			return false;
+
+		if (not (m_InternalState->Context = ImGui::CreateContext()))
+			CIN_PANIC_EXIT();
+
+		ImGui::SetCurrentContext(m_InternalState->Context);
 
 		ImGuiIO& io{ ImGui::GetIO() };
 		ImGuiStyle& style{ ImGui::GetStyle() };
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-		/* TODO: Revisit (causes input and renderpass errors) */
-		//io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-		CIN_UNUSED(style);
 
-		SetTheme(s_UITheme);
+		CIN_UNUSED(style);
+		SetTheme(EUITheme::Default);
+
 		constexpr std::size_t descriptorPoolCommonResourceSize = 100U;
 		constexpr std::size_t descriptorPoolUncommonResourceSize = 10U;
 
@@ -127,7 +141,8 @@ namespace Cinnamon {
 			{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, descriptorPoolUncommonResourceSize }
 		};
 
-		const VkDescriptorPoolCreateInfo descriptorPoolCreateInfo{
+		const VkDescriptorPoolCreateInfo descriptorPoolCreateInfo
+		{
 			.sType{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO },
 			.pNext{ nullptr },
 			.flags{ VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT },
@@ -136,23 +151,26 @@ namespace Cinnamon {
 			.pPoolSizes{ descriptorPoolSizes },
 		};
 
+		const auto& device{ renderer->GetDevice() };
+		const auto& swapchain{ renderer->GetSwapchain() };
+
 		VK_CHECK(vkCreateDescriptorPool(
-			GraphicsContext::GetDevice(),
+			device->GetLogicalDevice(),
 			&descriptorPoolCreateInfo,
 			GraphicsContext::GetAllocator(),
-			&s_DescriptorPool));
+			&m_InternalState->DescriptorPool));
 
 		ImGui_ImplVulkan_InitInfo vulkanInitializeInfo{
 			.Instance{ GraphicsContext::GetInstance() },
-			.PhysicalDevice{ GraphicsContext::GetPhysicalDevice() },
-			.Device{ GraphicsContext::GetDevice() },
-			.QueueFamily{ GraphicsContext::GetQueueFamily(GraphicsContext::EQueueFamily::Graphics) },
-			.Queue{ GraphicsContext::GetGraphicsQueue() },
+			.PhysicalDevice{ device->GetPhysicalDevice() },
+			.Device{ device->GetLogicalDevice() },
+			.QueueFamily{ device->GetQueueFamilies().Graphics },
+			.Queue{ device->GetQueues().Graphics },
 			.PipelineCache{ VK_NULL_HANDLE },
-			.DescriptorPool{ s_DescriptorPool },
+			.DescriptorPool{ m_InternalState->DescriptorPool },
 			.Subpass{ 0U },
 			.MinImageCount{ 3 },
-			.ImageCount{ GraphicsContext::GetSwapchainImageCount() },
+			.ImageCount{ swapchain->GetImageCount() },
 			.MSAASamples{ VK_SAMPLE_COUNT_1_BIT },
 			.Allocator{ GraphicsContext::GetAllocator() },
 #ifdef CIN_DEBUG
@@ -181,10 +199,15 @@ namespace Cinnamon {
 #endif
 		};
 
-		//CIN_VERIFY(ImGui_ImplWin32_Init(
-		//	const_cast<void*>(const_cast<Window*>(window)->GetNativeHandle())));
+		CIN_VERIFY(ImGui_ImplVulkan_LoadFunctions([](const char* function_name, void* userData)
+		{
+			CIN_UNUSED(userData);
+			return vkGetInstanceProcAddr(
+				GraphicsContext::GetInstance(),
+				function_name);
+		}));
 
-		CIN_VERIFY(LinuxBackendInitialize(const_cast<Window*>(window)));
+		m_InternalState->Backend = LinuxBackendInitialize(const_cast<Window*>(m_Renderer->GetWindow().get()));
 
 		CIN_VERIFY(ImGui_ImplVulkan_LoadFunctions([](const char* function_name, void* userData)
 			{
@@ -195,68 +218,208 @@ namespace Cinnamon {
 			}));
 
 		//ImGui::GetPlatformIO().Platform_CreateVkSurface = [](ImGuiViewport* viewport, ImU64 vulkanInstance, const void* allocator, ImU64* outVulkanSurface) {
-		//	const VkWin32SurfaceCreateInfoKHR createInfo{
-		//		.sType{ VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR} ,
-		//		.pNext{ nullptr },
-		//		.flags{ 0U },
-		//		.hinstance{  GetModuleHandle(NULL) },
-		//		.hwnd{ reinterpret_cast<HWND>(viewport->PlatformHandleRaw) },
-		//	};
-		
-		//	VK_CHECK(vkCreateWin32SurfaceKHR(
-		//		reinterpret_cast<VkInstance>(vulkanInstance),
-		//		&createInfo,
-		//		GraphicsContext::GetAllocator(),
-		//		reinterpret_cast<VkSurfaceKHR*>(outVulkanSurface)));
-		
-		//	return static_cast<int>(VK_SUCCESS);
 		//};
 
 		CIN_VERIFY(ImGui_ImplVulkan_Init(
 			&vulkanInitializeInfo,
-			GraphicsContext::GetSwapchainRenderPass()));
+			swapchain->GetRenderPass()));
 
 		UploadFontAtlas();
 		UploadIconFontAtlas();
-		
-		GraphicsContext::PerformSingleSubmitGraphicsOperation([](VkCommandBuffer fontCommandBuffer)
-			{
-				ImGui_ImplVulkan_CreateFontsTexture(fontCommandBuffer);
-			});
+
+		device->PerformSingleSubmitGraphicsOperation([](VkCommandBuffer fontCommandBuffer)
+		{
+			ImGui_ImplVulkan_CreateFontsTexture(fontCommandBuffer);
+		});
 
 		ImGui_ImplVulkan_DestroyFontUploadObjects();
-		const VkCommandPoolCreateInfo commandPoolCreateInfo{
+		const VkCommandPoolCreateInfo commandPoolCreateInfo
+		{
 			.sType{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO },
 			.pNext{ nullptr },
-			.flags{ 
-				VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | 
+			.flags
+			{
+				VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT |
 				VK_COMMAND_POOL_CREATE_TRANSIENT_BIT /* Command buffers will be short lived */
-		},
-			.queueFamilyIndex{ GraphicsContext::GetQueueFamily(GraphicsContext::EQueueFamily::Graphics) },
+			},
+			.queueFamilyIndex{ device->GetQueueFamilies().Graphics },
 		};
 
 		VK_CHECK(vkCreateCommandPool(
-			GraphicsContext::GetDevice(),
+			device->GetLogicalDevice(),
 			&commandPoolCreateInfo,
 			GraphicsContext::GetAllocator(),
-			&s_CommandPool));
+			&m_InternalState->CommandPool));
 
 		const VkCommandBufferAllocateInfo imGuiCommandBufferAllocateInfo{
 			.sType{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO },
 			.pNext{ nullptr },
-			.commandPool{ s_CommandPool },
+			.commandPool{ m_InternalState->CommandPool },
 			.level{ VK_COMMAND_BUFFER_LEVEL_SECONDARY },
-			.commandBufferCount{ GraphicsContext::GetSwapchainImageCount() },
+			.commandBufferCount{ swapchain->GetImageCount() },
 		};
 
-		s_CommandBuffers.resize(GraphicsContext::GetSwapchainImageCount());
+		m_InternalState->CommandBuffers.resize(swapchain->GetImageCount());
 		VK_CHECK(vkAllocateCommandBuffers(
-			GraphicsContext::GetDevice(),
+			device->GetLogicalDevice(),
 			&imGuiCommandBufferAllocateInfo,
-			&s_CommandBuffers[0]));
+			&m_InternalState->CommandBuffers[0]));
+	}
 
-		CIN_UNUSED(window);
-		return true;
+	GUIRenderer::~GUIRenderer()
+	{
+		auto& device{ m_Renderer->GetDevice() };
+
+		VK_CHECK(vkDeviceWaitIdle(
+			device->GetLogicalDevice()));
+
+		vkDestroyDescriptorPool(
+			device->GetLogicalDevice(),
+			m_InternalState->DescriptorPool,
+			GraphicsContext::GetAllocator());
+
+		vkDestroyCommandPool(
+			device->GetLogicalDevice(),
+			m_InternalState->CommandPool,
+			GraphicsContext::GetAllocator());
+
+		ImGui_ImplVulkan_Shutdown();
+		LinuxBackendShutdown(m_InternalState->Backend);
+		ImGui::DestroyContext(m_InternalState->Context);
+		
+		cindel m_InternalState;
+	}
+
+	void GUIRenderer::BeginFrame()
+	{
+		LinuxBackendNewFrame(m_InternalState->Backend);
+		ImGui_ImplVulkan_NewFrame();
+
+		ImGui::NewFrame();
+	}
+
+	void GUIRenderer::EndFrame()
+	{
+		ImGui::Render();
+		Swapchain* swapchain = m_Renderer->GetSwapchain().get();
+		swapchain->RecordCommands([this, swapchain]() {
+			const uint32_t frameIndex{ swapchain->GetImageIndex() };
+			const VkExtent2D extent{ swapchain->GetExtent() };
+			const VkCommandBuffer swapchainDrawCommandBuffer{ swapchain->GetCurrentCommandBuffer() };
+			const VkFramebuffer swapchainDrawFramebuffer{ swapchain->GetCurrentFramebuffer() };
+			const VkRenderPass swapchainDrawRenderPass{ swapchain->GetRenderPass() };
+
+			constexpr std::array<VkClearValue, 1> clearValues
+			{
+				{ { 0.15f, 0.15f, 0.15f, 1.0f } }
+			};
+
+			constexpr VkCommandBufferBeginInfo drawCommandBufferBeginInfo
+			{
+				.sType{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO },
+				.pNext{ nullptr },
+				.flags{ 0U },
+				.pInheritanceInfo{ nullptr },
+			};
+
+			const VkRenderPassBeginInfo renderPassBeginInfo
+			{
+				.sType{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO },
+				.pNext{ nullptr },
+				.renderPass{ swapchainDrawRenderPass },
+				.framebuffer{ swapchainDrawFramebuffer },
+				.renderArea{
+					.offset{ 0, 0 },
+					.extent{ extent },
+				},
+				.clearValueCount{ 1U },
+				.pClearValues{ &clearValues[0] },
+			};
+
+			const VkCommandBufferInheritanceInfo commandBufferInheritanceInfo
+			{
+				.sType{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO },
+				.pNext{ nullptr },
+				.renderPass{ swapchainDrawRenderPass },
+				.subpass{ 0U },
+				.framebuffer{ swapchainDrawFramebuffer },
+				.occlusionQueryEnable{ VK_FALSE },
+				.queryFlags{ 0U },
+				.pipelineStatistics{ 0U },
+			};
+
+			const VkCommandBufferBeginInfo imGuiCommandBufferBeginInfo
+			{
+				.sType{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO },
+				.pNext{ nullptr },
+				.flags{ VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT },
+				.pInheritanceInfo{ &commandBufferInheritanceInfo },
+			};
+
+			const VkViewport viewport
+			{
+				.x{ 0.0f },
+				.y{ 0.0f },
+				.width{ static_cast<float>(extent.width) },
+				.height{ static_cast<float>(extent.height) },
+				.minDepth{ 0.0f },
+				.maxDepth{ 1.0f },
+			};
+
+			const VkRect2D scissor
+			{
+				.offset{ 0, 0 },
+				.extent{ extent },
+			};
+
+			const VkCommandBuffer imguiCommandBuffer{ m_InternalState->CommandBuffers[frameIndex] };
+			VK_CHECK(vkBeginCommandBuffer(
+				swapchainDrawCommandBuffer,
+				&drawCommandBufferBeginInfo));
+
+			vkCmdBeginRenderPass(
+				swapchainDrawCommandBuffer,
+				&renderPassBeginInfo,
+				VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+
+			VK_CHECK(vkBeginCommandBuffer(
+				imguiCommandBuffer,
+				&imGuiCommandBufferBeginInfo));
+
+			vkCmdSetViewport(
+				imguiCommandBuffer,
+				0U,
+				1U,
+				&viewport);
+
+			vkCmdSetScissor(
+				imguiCommandBuffer,
+				0U,
+				1U,
+				&scissor);
+
+			ImDrawData* const drawData{ ImGui::GetDrawData() };
+			ImGui_ImplVulkan_RenderDrawData(
+				drawData,
+				imguiCommandBuffer,
+				VK_NULL_HANDLE);
+
+			VK_CHECK(vkEndCommandBuffer(
+				imguiCommandBuffer));
+
+			vkCmdExecuteCommands(
+				swapchainDrawCommandBuffer,
+				1U,
+				&imguiCommandBuffer);
+
+			vkCmdEndRenderPass(
+				swapchainDrawCommandBuffer);
+
+			VK_CHECK(vkEndCommandBuffer(
+				swapchainDrawCommandBuffer));
+			});
+
+		//ImGui::SetCurrentContext(nullptr);
 	}
 
 	void GUIRenderer::SetTheme(const EUITheme theme)
@@ -343,160 +506,7 @@ namespace Cinnamon {
 			} break;
 		}
 	}
-
-	bool GUIRenderer::Shutdown()
-	{
-		VK_CHECK(vkDeviceWaitIdle(
-			GraphicsContext::GetDevice()));
-		
-		vkDestroyDescriptorPool(
-			GraphicsContext::GetDevice(),
-			s_DescriptorPool,
-			GraphicsContext::GetAllocator());
-
-		vkDestroyCommandPool(
-			GraphicsContext::GetDevice(),
-			s_CommandPool,
-			GraphicsContext::GetAllocator());
-
-		ImGui_ImplVulkan_Shutdown();
-		LinuxBackendShutdown();
-		//ImGui_ImplWin32_Shutdown();
-		ImGui::DestroyContext();
-
-		return true;
-	}
-
-	void GUIRenderer::BeginFrame()
-	{
-		//ImGui_ImplWin32_NewFrame();
-		LinuxBackendNewFrame();
-		ImGui_ImplVulkan_NewFrame();
-
-		ImGui::NewFrame();
-	}
-
-	void GUIRenderer::EndFrame()
-	{
-		ImGui::Render();
-		if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-		{
-			//ImGui::UpdatePlatformWindows();
-			//ImGui::RenderPlatformWindowsDefault();
-		}
-
-		Swapchain* swapchain = GraphicsContext::GetSwapchain();
-		swapchain->RecordCommands([swapchain]() {
-			const uint32_t frameIndex{ swapchain->GetImageIndex() };
-			const VkExtent2D extent{ swapchain->GetExtent() };
-			const VkCommandBuffer swapchainDrawCommandBuffer{ swapchain->GetCurrentCommandBuffer() };
-			const VkFramebuffer swapchainDrawFramebuffer{ swapchain->GetCurrentFramebuffer() };
-			const VkRenderPass swapchainDrawRenderPass{ swapchain->GetRenderPass() };
-
-			constexpr std::array<VkClearValue, 1> clearValues{
-				{ { 0.15f, 0.15f, 0.15f, 1.0f } }
-			};
-
-			constexpr VkCommandBufferBeginInfo drawCommandBufferBeginInfo{
-				.sType{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO },
-				.pNext{ nullptr },
-				.flags{ 0U },
-				.pInheritanceInfo{ nullptr },
-			};
-
-			const VkRenderPassBeginInfo renderPassBeginInfo{
-				.sType{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO },
-				.pNext{ nullptr },
-				.renderPass{ swapchainDrawRenderPass },
-				.framebuffer{ swapchainDrawFramebuffer },
-				.renderArea{ 
-					.offset{ 0, 0 },
-					.extent{ extent },
-				},
-				.clearValueCount{ 1U },
-				.pClearValues{ &clearValues[0] },
-			};
-
-			const VkCommandBufferInheritanceInfo commandBufferInheritanceInfo{
-				.sType{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO },
-				.pNext{ nullptr },
-				.renderPass{ swapchainDrawRenderPass },
-				.subpass{ 0U },
-				.framebuffer{ swapchainDrawFramebuffer },
-				.occlusionQueryEnable{ VK_FALSE },
-				.queryFlags{ 0U },
-				.pipelineStatistics{ 0U },
-			};
-
-			const VkCommandBufferBeginInfo imGuiCommandBufferBeginInfo{
-				.sType{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO },
-				.pNext{ nullptr },
-				.flags{ VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT },
-				.pInheritanceInfo{ &commandBufferInheritanceInfo },
-			};
-
-			const VkViewport viewport{
-				.x{ 0.0f },
-				.y{ 0.0f },
-				.width{ static_cast<float>(extent.width) },
-				.height{ static_cast<float>(extent.height) },
-				.minDepth{ 0.0f },
-				.maxDepth{ 1.0f },
-			};
-
-			const VkRect2D scissor{
-				.offset{ 0, 0 },
-				.extent{ extent },
-			};
-
-			const VkCommandBuffer imguiCommandBuffer{ s_CommandBuffers[frameIndex] };
-			VK_CHECK(vkBeginCommandBuffer(
-				swapchainDrawCommandBuffer,
-				&drawCommandBufferBeginInfo));
-
-			vkCmdBeginRenderPass(
-				swapchainDrawCommandBuffer,
-				&renderPassBeginInfo,
-				VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-
-			VK_CHECK(vkBeginCommandBuffer(
-				imguiCommandBuffer,
-				&imGuiCommandBufferBeginInfo));
-
-			vkCmdSetViewport(
-				imguiCommandBuffer,
-				0U,
-				1U,
-				&viewport);
-
-			vkCmdSetScissor(
-				imguiCommandBuffer,
-				0U,
-				1U,
-				&scissor);
-
-			ImDrawData* const drawData{ ImGui::GetDrawData() };
-			ImGui_ImplVulkan_RenderDrawData(
-				drawData,
-				imguiCommandBuffer, 
-				VK_NULL_HANDLE);
-
-			VK_CHECK(vkEndCommandBuffer(
-				imguiCommandBuffer));
-
-			vkCmdExecuteCommands(
-				swapchainDrawCommandBuffer,
-				1U,
-				&imguiCommandBuffer);
-
-			vkCmdEndRenderPass(
-				swapchainDrawCommandBuffer);
-
-			VK_CHECK(vkEndCommandBuffer(
-				swapchainDrawCommandBuffer));
-		});
-	}
-
+	
 	float GUIRenderer::GetFontSize()
 	{
 		return 17.0f;
