@@ -23,7 +23,7 @@ namespace Cinnamon {
 		ApplicationTick, ApplicationRender,
 		WindowClosed, WindowResized, WindowMinimized, WindowMaximized, WindowSurfaceUpdated,
 		KeyPressed, KeyHeld, KeyReleased,
-		MousePressed, MouseHeld, MouseReleased,
+		MousePressed, MouseHeld, MouseReleased, MouseMoved, MouseScrolled
 	};
 
 	enum class EEventCategory

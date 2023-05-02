@@ -60,7 +60,7 @@ namespace Cinnamon {
 		bool m_Minimized;
 
 		STL::Unique<LayerStack> m_LayerStack;
-		STL::Unique<Window> m_Window;
+		STL::Unique<Window> m_MainWindow;
 		STL::Unique<Renderer> m_Renderer;
 		STL::Unique<GUIRenderer> m_GUIRenderer;
 	public:

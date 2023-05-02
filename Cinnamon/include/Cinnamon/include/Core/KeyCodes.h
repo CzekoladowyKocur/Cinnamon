@@ -91,8 +91,8 @@ namespace Cinnamon {
 		DEFINE_KEY(Y, 0x59),
 		DEFINE_KEY(Z, 0x5A),
 
-		DEFINE_KEY(LeftWindows, 0x5B),
-		DEFINE_KEY(RightWindows, 0x5C),
+		DEFINE_KEY(LeftHome, 0x5B),
+		DEFINE_KEY(RightHome, 0x5C),
 		DEFINE_KEY(Applications, 0x5D),
 
 		DEFINE_KEY(Sleep, 0x5F),
@@ -299,7 +299,7 @@ namespace Cinnamon {
 		KeysEnd,
 	};
 
-	inline const char* KeyToString(const Key keyCode)
+	constexpr const char* KeyToString(const Key keyCode) noexcept
 	{
 		switch (keyCode)
 		{
@@ -455,7 +455,7 @@ namespace Cinnamon {
 		}
 	}
 
-	CIN_FORCE_INLINE KeyStateEnumType operator&(const EKeyState lhs, const EKeyState rhs) noexcept
+	constexpr KeyStateEnumType operator&(const EKeyState lhs, const EKeyState rhs) noexcept
 	{
 		return static_cast<KeyStateEnumType>(lhs) & static_cast<KeyStateEnumType>(rhs);
 	}

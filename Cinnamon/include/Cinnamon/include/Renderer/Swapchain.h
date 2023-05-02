@@ -16,9 +16,9 @@ namespace Cinnamon {
 			const STL::Unique<Surface>& surface,
 			const STL::Unique<Device>& device,
 			const uint32_t width,
-			const uint32_t height);
+			const uint32_t height) noexcept;
 
-		~Swapchain();
+		~Swapchain() noexcept;
 
 		void Create(
 			const uint32_t width,
@@ -61,6 +61,7 @@ namespace Cinnamon {
 		VkSurfaceCapabilitiesKHR m_SurfaceCapabilities;
 		VkExtent2D m_Extent;
 		VkClearValue m_ClearColor;
+		bool m_SurfaceUpdated;
 
 		STL::Vector<VkImage> m_Images;
 		STL::Vector<VkImageView> m_ImageViews;

@@ -16,14 +16,9 @@
 	}																	\
 }
 
-/* NOTE: Temp */
-extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
 namespace Cinnamon {
 	InternalScope LRESULT CALLBACK Windows32ProcessMessage(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam);
 	InternalScope void DefaultEventCallback(const Event& event);
-
-	//constexpr CHAR WIN32_API_WINDOW_CLASS_NAME[] = "CINNAMON_ENGINE_WINDOW_CLASS";
 
 	/* Declared in Window.h */
 	struct PlatformWindowState
@@ -386,8 +381,6 @@ namespace Cinnamon {
 
 	LRESULT CALLBACK Windows32ProcessMessage(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam)
 	{
-		/* NOTE: Temp */
-		ImGui_ImplWin32_WndProcHandler(hwnd, message, wParam, lParam);
 		Window* window{ reinterpret_cast<Window*>(GetWindowLongPtr(hwnd, GWLP_USERDATA)) };
 
 		switch (message)
@@ -474,6 +467,8 @@ namespace Cinnamon {
 				/* TODO: Add repeated key presses */
 				window->m_InputState->SetKeyState(static_cast<Key>(wParam), EKeyState::Released);
 
+				KeyReleasedEvent event(static_cast<KeyCode>(wParam));
+				window->SendEvent(event);
 				return 0;
 			}
 
@@ -491,46 +486,66 @@ namespace Cinnamon {
 			case WM_LBUTTONDOWN:
 			{
 				window->m_InputState->SetMouseButtonState(Mouse::LeftButton, EMouseState::Pressed);
+
+				MousePressedEvent event(static_cast<MouseCode>(Mouse::LeftButton));
+				window->SendEvent(event);
 				return 0;
 			}
 
 			case WM_MBUTTONDOWN:
 			{
 				window->m_InputState->SetMouseButtonState(Mouse::MiddleButton, EMouseState::Pressed);
+
+				MousePressedEvent event(static_cast<MouseCode>(Mouse::MiddleButton));
+				window->SendEvent(event);
 				return 0;
 			}
 
 			case WM_RBUTTONDOWN:
 			{
 				window->m_InputState->SetMouseButtonState(Mouse::RightButton, EMouseState::Pressed);
+
+				MousePressedEvent event(static_cast<MouseCode>(Mouse::RightButton));
+				window->SendEvent(event);
 				return 0;
 			}
-
 
 			case WM_LBUTTONUP:
 			{
 				window->m_InputState->SetMouseButtonState(Mouse::LeftButton, EMouseState::Released);
+
+				MouseReleasedEvent event(static_cast<MouseCode>(Mouse::LeftButton));
+				window->SendEvent(event);
 				return 0;
 			}
 
 			case WM_MBUTTONUP:
 			{
 				window->m_InputState->SetMouseButtonState(Mouse::MiddleButton, EMouseState::Released);
+
+				MouseReleasedEvent event(static_cast<MouseCode>(Mouse::MiddleButton));
+				window->SendEvent(event);
 				return 0;
 			}
 
 			case WM_RBUTTONUP:
 			{
 				window->m_InputState->SetMouseButtonState(Mouse::RightButton, EMouseState::Released);
+
+				MouseReleasedEvent event(static_cast<MouseCode>(Mouse::RightButton));
+				window->SendEvent(event);
 				return 0;
 			}
 
 			case WM_MOUSEMOVE:
 			{
-				const uint32_t xPosition = static_cast<uint32_t>(GET_X_LPARAM(lParam));
-				const uint32_t yPosition = static_cast<uint32_t>(GET_Y_LPARAM(lParam));
+				const uint32_t xPosition{ static_cast<uint32_t>(GET_X_LPARAM(lParam)) };
+				const uint32_t yPosition{ static_cast<uint32_t>(GET_Y_LPARAM(lParam)) };
 
 				window->m_InputState->SetMouseCursorPosition(xPosition, yPosition);
+				
+				MouseMovedEvent event(xPosition, yPosition);
+				window->SendEvent(event);
 				return 0;
 			}
 		}

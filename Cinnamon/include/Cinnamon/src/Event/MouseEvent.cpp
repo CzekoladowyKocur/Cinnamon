@@ -16,11 +16,21 @@ namespace Cinnamon {
 		MouseEvent(mouseCode)
 	{}
 
-
 	MouseReleasedEvent::MouseReleasedEvent(const MouseCode mouseCode) noexcept
 		:
 		MouseEvent(mouseCode)
 	{}
+
+	MouseMovedEvent::MouseMovedEvent(const uint32_t positionX, const uint32_t positionY) noexcept
+		:
+		m_PositionX(positionX),
+		m_PositionY(positionY)
+	{}
+
+	std::pair<double, double> MouseMovedEvent::GetPosition() const
+	{
+		return { m_PositionX, m_PositionY };
+	}
 
 	MouseScrolledEvent::MouseScrolledEvent(const uint16_t horizontalDelta, const uint16_t verticalDelta) noexcept
 		:

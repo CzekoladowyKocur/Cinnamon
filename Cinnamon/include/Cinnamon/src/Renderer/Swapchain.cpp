@@ -8,7 +8,7 @@ namespace Cinnamon {
 		const STL::Unique<Surface>& surface,
 		const STL::Unique<Device>& device,
 		const uint32_t width,
-		const uint32_t height)		
+		const uint32_t height) noexcept
 		:
 		m_Surface(surface),
 		m_Device(device),
@@ -21,6 +21,7 @@ namespace Cinnamon {
 		m_SurfaceCapabilities({}),
 		m_Extent({ width, height }),
 		m_ClearColor({ .color { .float32 { 0.3f, 0.1f, 0.12f, 1.0f } }, }),
+		m_SurfaceUpdated(false),
 		m_Images({}),
 		m_ImageViews({}),
 		m_Framebuffers({}),
@@ -49,7 +50,7 @@ namespace Cinnamon {
 		Create(width, height);
 	}
 
-	Swapchain::~Swapchain()
+	Swapchain::~Swapchain() noexcept
 	{
 		VK_CHECK(vkDeviceWaitIdle(
 			m_Device->GetLogicalDevice()));
@@ -404,13 +405,18 @@ namespace Cinnamon {
 		VK_CHECK(vkDeviceWaitIdle(
 			m_Device->GetLogicalDevice()));
 
-		/* If surface hasn't changed, cache handle */
-		//m_CachedSwapchain = (GraphicsContext::GetSurface() == surface) ? m_Handle : VK_NULL_HANDLE;
+		/* If surface hasn't changed, cache the handle and use it in creation */
+		m_CachedSwapchain = !m_SurfaceUpdated ? m_Handle : VK_NULL_HANDLE;
+		/* Store the old handle to delete it (always gets deleted) */
+		VkSwapchainKHR oldHandle{ m_Handle };
+		/* Unsignal surface update */
+		m_SurfaceUpdated = false;
+
 		Cleanup();
 		Create(width, height);
 		vkDestroySwapchainKHR(
 			m_Device->GetLogicalDevice(),
-			m_CachedSwapchain,
+			oldHandle,
 			GraphicsContext::GetAllocator());
 	}
 
@@ -516,6 +522,8 @@ namespace Cinnamon {
 				default:
 				{
 					m_Surface->Recreate();
+					m_SurfaceUpdated = true;
+
 					Recreate(m_Extent.width, m_Extent.height);
 					CIN_WARN("Unhandled acquire result: {0}", VKResultToString(result));
 				} break;
@@ -641,6 +649,9 @@ namespace Cinnamon {
 
 			case VK_ERROR_SURFACE_LOST_KHR:
 			{
+				m_Surface->Recreate();
+				m_SurfaceUpdated = true;
+				
 				Recreate(m_Extent.width, m_Extent.height);
 				return;
 			} break;
@@ -648,6 +659,8 @@ namespace Cinnamon {
 			default:
 			{
 				m_Surface->Recreate();
+				m_SurfaceUpdated = true;
+
 				Recreate(m_Extent.width, m_Extent.height);
 				CIN_WARN("Unhandled present result: {}", VKResultToString(result));
 			} break;

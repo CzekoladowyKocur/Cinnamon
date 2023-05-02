@@ -3,32 +3,26 @@
 
 namespace Cinnamon {
 	class Renderer;
+	class Event;
+	enum class EUITheme;
 }
 
-namespace Cinnamon {
-	enum class EUITheme
-	{
-		Dark,
-		Default = Dark,
-	};
-
+namespace Cinnamon {	
 	class GUIRenderer final
 	{
 	private:
 		NON_COPYABLE(GUIRenderer)
 	public:
-		explicit GUIRenderer(const STL::Unique<Renderer>& renderer);
-		~GUIRenderer();
+		explicit GUIRenderer(const STL::Unique<Renderer>& renderer) noexcept;
+		~GUIRenderer() noexcept;
 
 		void BeginFrame();
 		void EndFrame();
 		void SetTheme(const EUITheme theme);
-
-		[[nodiscard]] static float GetFontSize();
-		[[nodiscard]] static float GetIconFontSize();
+		void OnEvent(const Event& event);
 	private:
-		static void UploadFontAtlas();
-		static void UploadIconFontAtlas();
+		void UploadFontAtlas();
+		void UploadIconFontAtlas();
 	private:
 		const STL::Unique<Renderer>& m_Renderer;
 		struct InternalGUIRendererState* m_InternalState;

@@ -27,7 +27,7 @@ namespace Cinnamon {
 		MouseButtonsEnd,
 	};
 
-	CIN_FORCE_INLINE MouseStateEnumType operator&(const EMouseState lhs, const EMouseState rhs) noexcept
+	constexpr MouseStateEnumType operator&(const EMouseState lhs, const EMouseState rhs) noexcept
 	{
 		return static_cast<MouseStateEnumType>(lhs) & static_cast<MouseStateEnumType>(rhs);
 	}

@@ -1,11 +1,18 @@
 #ifdef CIN_PLATFORM_WINDOWS
 #include "Cinnamon/include/GUI/GUIRenderer.h"
 #include "Cinnamon/include/GUI/Icons.h"
+#include "Cinnamon/include/GUI/GUIUtilities.h"
+#include "Cinnamon/include/GUI/GUIThemes.h"
+
 #include "Cinnamon/include/Renderer/GraphicsContext.h"
 #include "Cinnamon/include/Renderer/Swapchain.h"
 #include "Cinnamon/include/Renderer/Renderer.h"
 #include "Cinnamon/include/Renderer/Device.h"
 #include "Cinnamon/include/Core/Window.h"
+#include "Cinnamon/include/Core/KeyCodes.h"
+#include "Cinnamon/include/Event/Event.h"
+#include "Cinnamon/include/Event/KeyEvent.h"
+#include "Cinnamon/include/Event/MouseEvent.h"
 
 #pragma warning(push)
 #pragma warning(disable : 26812)
@@ -17,11 +24,9 @@
 #include "ThirdParty/imgui/backends/imgui_impl_win32.h"
 
 namespace Cinnamon {
-	InternalScope EUITheme s_UITheme{ EUITheme::Default };
-
 	struct InternalGUIRendererState
 	{
-		ImGuiContext* Context{ nullptr };
+		ImGuiContext*					Context{ nullptr };
 
 		/* Vulkan context */
 		VkDescriptorPool				DescriptorPool{ VK_NULL_HANDLE };
@@ -29,7 +34,7 @@ namespace Cinnamon {
 		STL::Vector<VkCommandBuffer>	CommandBuffers{};
 	};
 
-	GUIRenderer::GUIRenderer(const STL::Unique<Renderer>& renderer)
+	GUIRenderer::GUIRenderer(const STL::Unique<Renderer>& renderer) noexcept
 		:
 		m_Renderer(renderer),
 		m_InternalState(cinew InternalGUIRendererState)
@@ -49,7 +54,7 @@ namespace Cinnamon {
 
 		CIN_UNUSED(style);
 
-		SetTheme(s_UITheme);
+		SetTheme(EUITheme::Default);
 		constexpr std::size_t descriptorPoolCommonResourceSize = 100U;
 		constexpr std::size_t descriptorPoolUncommonResourceSize = 10U;
 
@@ -183,7 +188,8 @@ namespace Cinnamon {
 			GraphicsContext::GetAllocator(),
 			&m_InternalState->CommandPool));
 
-		const VkCommandBufferAllocateInfo imGuiCommandBufferAllocateInfo{
+		const VkCommandBufferAllocateInfo imGuiCommandBufferAllocateInfo
+		{
 			.sType{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO },
 			.pNext{ nullptr },
 			.commandPool{ m_InternalState->CommandPool },
@@ -198,7 +204,7 @@ namespace Cinnamon {
 			&m_InternalState->CommandBuffers[0]));
 	}
 
-	GUIRenderer::~GUIRenderer()
+	GUIRenderer::~GUIRenderer() noexcept
 	{
 		auto& device{ m_Renderer->GetDevice() };
 
@@ -220,6 +226,41 @@ namespace Cinnamon {
 		ImGui::DestroyContext(m_InternalState->Context);
 
 		cindel m_InternalState;
+	}
+
+	void GUIRenderer::OnEvent(const Event& event)
+	{
+		ImGui::SetCurrentContext(m_InternalState->Context);
+		ImGuiIO& IO{ ImGui::GetIO() };
+
+		/* For mouse code and key code conversions */
+		using namespace GUIUtilities;
+		switch (event.GetEventType())
+		{
+			case EEventType::KeyPressed:
+			{
+				const KeyPressedEvent& keyPressedEvent{ static_cast<const KeyPressedEvent&>(event) };
+				IO.AddKeyEvent(NativeKeyCodeToImGUIKeyCode(keyPressedEvent.GetKeyCode()), true);
+			} break;
+
+			case EEventType::KeyReleased:
+			{
+				const KeyReleasedEvent& keyReleasedEvent{ static_cast<const KeyReleasedEvent&>(event) };
+				IO.AddKeyEvent(NativeKeyCodeToImGUIKeyCode(keyReleasedEvent.GetKeyCode()), false);
+			} break;
+
+			case EEventType::MousePressed:
+			{
+				const MousePressedEvent& mousePressedEvent{ static_cast<const MousePressedEvent&>(event) };
+				IO.AddMouseButtonEvent(NativeMouseCodeToImGUIMouseCode(mousePressedEvent.GetMouseCode()), true);
+			} break;
+
+			case EEventType::MouseReleased:
+			{
+				const MouseReleasedEvent& mouseReleasedEvent{ static_cast<const MouseReleasedEvent&>(event) };
+				IO.AddMouseButtonEvent(NativeMouseCodeToImGUIMouseCode(mouseReleasedEvent.GetMouseCode()), false);
+			} break;
+		}
 	}
 
 	void GUIRenderer::BeginFrame()
@@ -247,11 +288,7 @@ namespace Cinnamon {
 			const VkFramebuffer swapchainDrawFramebuffer{ swapchain->GetCurrentFramebuffer() };
 			const VkRenderPass swapchainDrawRenderPass{ swapchain->GetRenderPass() };
 
-			constexpr std::array<VkClearValue, 1> clearValues
-			{
-				{ { 0.15f, 0.15f, 0.15f, 1.0f } }
-			};
-
+			constexpr std::array<VkClearValue, 1> clearValues{ { { 0.15f, 0.15f, 0.15f, 1.0f } } };
 			constexpr VkCommandBufferBeginInfo drawCommandBufferBeginInfo
 			{
 				.sType{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO },
@@ -363,118 +400,29 @@ namespace Cinnamon {
 	void GUIRenderer::SetTheme(const EUITheme theme)
 	{
 		ImGui::SetCurrentContext(m_InternalState->Context);
-
-		auto& style{ ImGui::GetStyle() };
-		auto& colors{ ImGui::GetStyle().Colors };
-		switch (theme)
-		{
-			case EUITheme::Dark:
-			{
-				colors[ImGuiCol_Text] = ImVec4(1.000f, 1.000f, 1.000f, 1.000f);
-				colors[ImGuiCol_TextDisabled] = ImVec4(0.500f, 0.500f, 0.500f, 1.000f);
-				colors[ImGuiCol_WindowBg] = ImVec4(0.15f, 0.15f, 0.15f, 1.0f);
-				colors[ImGuiCol_ChildBg] = ImVec4(0.280f, 0.280f, 0.280f, 0.000f);
-				colors[ImGuiCol_PopupBg] = ImVec4(0.200f, 0.200f, 0.200f, 0.80f);
-				colors[ImGuiCol_Border] = ImVec4(0.266f, 0.266f, 0.266f, 1.000f);
-				colors[ImGuiCol_BorderShadow] = ImVec4(0.0f, 0.0f, 0.0f, 0.0);
-				colors[ImGuiCol_FrameBg] = ImVec4(0.106f, 0.106f, 0.106f, 1.0f);
-				colors[ImGuiCol_FrameBgHovered] = ImVec4(0.200f, 0.200f, 0.200f, 1.000f);
-				colors[ImGuiCol_FrameBgActive] = ImVec4(0.280f, 0.280f, 0.280f, 1.000f);
-				colors[ImGuiCol_TitleBg] = ImVec4(0.148f, 0.148f, 0.148f, 1.000f);
-				colors[ImGuiCol_TitleBgActive] = ImVec4(0.148f, 0.148f, 0.148f, 1.000f);
-				colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.148f, 0.148f, 0.148f, 1.000f);
-				colors[ImGuiCol_MenuBarBg] = ImVec4(0.121f, 0.121f, 0.121f, 1.000f);
-				colors[ImGuiCol_ScrollbarBg] = ImVec4(0.160f, 0.160f, 0.160f, 1.0f);
-				colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.277f, 0.277f, 0.277f, 1.000f);
-				colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.300f, 0.300f, 0.300f, 1.000f);
-				colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.277f, 0.277f, 0.277f, 1.000f);
-				colors[ImGuiCol_CheckMark] = ImVec4(1.000f, 1.000f, 1.000f, 1.000f);
-				colors[ImGuiCol_SliderGrab] = ImVec4(0.391f, 0.391f, 0.391f, 1.000f);
-				colors[ImGuiCol_SliderGrabActive] = ImVec4(0.277f, 0.277f, 0.277f, 1.000f);
-				colors[ImGuiCol_Button] = ImVec4(1.000f, 1.000f, 1.000f, 0.000f);
-				colors[ImGuiCol_ButtonHovered] = ImVec4(1.000f, 1.000f, 1.000f, 0.156f);
-				colors[ImGuiCol_ButtonActive] = ImVec4(1.000f, 1.000f, 1.000f, 0.391f);
-				colors[ImGuiCol_Header] = ImVec4(0.218f, 0.218f, 0.218f, 1.000f);
-				colors[ImGuiCol_HeaderHovered] = ImVec4(0.469f, 0.469f, 0.469f, 1.000f);
-				colors[ImGuiCol_HeaderActive] = ImVec4(0.469f, 0.469f, 0.469f, 1.000f);
-				colors[ImGuiCol_Border] = ImVec4(0.469f, 0.469f, 0.469f, 1.000f);
-				colors[ImGuiCol_Separator] = ImVec4(0.135f, 0.135f, 0.135f, 1.0f);
-				colors[ImGuiCol_SeparatorHovered] = ImVec4(0.391f, 0.391f, 0.391f, 1.000f);
-				colors[ImGuiCol_SeparatorActive] = ImVec4(0.277f, 0.277f, 0.277f, 1.000f);
-				colors[ImGuiCol_ResizeGrip] = ImVec4(1.000f, 1.000f, 1.000f, 0.250f);
-				colors[ImGuiCol_ResizeGripHovered] = ImVec4(1.000f, 1.000f, 1.000f, 0.670f);
-				colors[ImGuiCol_ResizeGripActive] = ImVec4(1.000f, 1.0f, 1.000f, 1.000f);
-				colors[ImGuiCol_Tab] = ImVec4(0.098f, 0.098f, 0.098f, 1.000f);
-				colors[ImGuiCol_TabHovered] = ImVec4(0.352f, 0.352f, 0.352f, 1.000f);
-				colors[ImGuiCol_TabActive] = ImVec4(0.195f, 0.195f, 0.195f, 1.000f);
-				colors[ImGuiCol_TabUnfocused] = ImVec4(0.098f, 0.098f, 0.098f, 1.000f);
-				colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.195f, 0.195f, 0.195f, 1.000f);
-				colors[ImGuiCol_PlotLines] = ImVec4(0.469f, 0.469f, 0.469f, 1.000f);
-				colors[ImGuiCol_PlotLinesHovered] = ImVec4(1.000f, 0.391f, 0.000f, 1.000f);
-				colors[ImGuiCol_PlotHistogram] = ImVec4(0.586f, 0.586f, 0.586f, 1.000f);
-				colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.000f, 0.391f, 1.000f, 1.000f);
-				colors[ImGuiCol_TextSelectedBg] = ImVec4(1.000f, 1.000f, 1.000f, 0.156f);
-				colors[ImGuiCol_DragDropTarget] = { 204.0f / 255.0f, 164.0f / 255.0f, 61.0f / 255.0f, 1.0f };
-				colors[ImGuiCol_DockingPreview] = { 204.0f / 255.0f, 164.0f / 255.0f, 61.0f / 255.0f, 1.0f };
-				colors[ImGuiCol_DockingEmptyBg] = { 0.15f, 0.15f, 0.15f, 1.0f };
-				colors[ImGuiCol_DockingPreview] = { 204.0f / 255.0f, 164.0f / 255.0f, 61.0f / 255.0f, 1.0f };
-				colors[ImGuiCol_NavHighlight] = { 204.0f / 255.0f, 164.0f / 255.0f, 61.0f / 255.0f, 1.0f };
-				colors[ImGuiCol_NavWindowingHighlight] = { 204.0f / 255.0f, 164.0f / 255.0f, 61.0f / 255.0f, 1.0f };
-				colors[ImGuiCol_NavWindowingDimBg] = { 204.0f / 255.0f, 164.0f / 255.0f, 61.0f / 255.0f, 1.0f };
-				colors[ImGuiCol_ModalWindowDimBg] = { 204.0f / 255.0f, 164.0f / 255.0f, 61.0f / 255.0f, 0.03f };
-
-				style.ChildRounding = 4.0f;
-				style.FrameBorderSize = 0.0f;
-				style.FrameRounding = 2.0f;
-				style.GrabMinSize = 7.0f;
-				style.PopupRounding = 2.0f;
-				style.ScrollbarRounding = 0;
-				style.ScrollbarSize = 12.0f;
-				style.TabBorderSize = 0.0f;
-				style.TabRounding = 0.0f;
-				style.WindowRounding = 0.0f;
-				style.IndentSpacing = 11.0f;
-				style.PopupBorderSize = 1.0f;
-				style.AntiAliasedLines = true;
-				style.AntiAliasedFill = true;
-				style.AntiAliasedLinesUseTex = true;
-			} break;
-
-			default:
-			{
-				CIN_ASSERT(false, "Invalid theme");
-			} break;
-		}
+		SetUITheme(ImGui::GetStyle(), theme);
 	}
 
-	float GUIRenderer::GetFontSize()
-	{
-		return 17.0f;
-	}
-
-	float GUIRenderer::GetIconFontSize()
-	{
-		return 11.0f;
-	}
-	
 	void GUIRenderer::UploadFontAtlas()
 	{
+		ImGui::SetCurrentContext(m_InternalState->Context);
 		ImGuiIO& io{ ImGui::GetIO() };
 		/* Regular font */
-		io.Fonts->AddFontFromFileTTF("Resources/fonts/opensans/OpenSans-Regular.ttf", GetFontSize());
+		io.Fonts->AddFontFromFileTTF("Resources/fonts/opensans/OpenSans-Regular.ttf", GUIUtilities::GetRegularFontSize());
 	}
 
 	void GUIRenderer::UploadIconFontAtlas()
 	{
+		ImGui::SetCurrentContext(m_InternalState->Context);
 		ImGuiIO& io{ ImGui::GetIO() };
 		/* Icon font */
 		InternalScope const ImWchar icon_ranges[]{ ICON_MIN_FA, ICON_MAX_FA, 0 };
 		ImFontConfig config;
 		config.OversampleH = config.OversampleV = 2;
 		config.MergeMode = true;
-		config.GlyphMinAdvanceX = GetIconFontSize(); // Use if you want to make the icon monospaced
+		config.GlyphMinAdvanceX = GUIUtilities::GetIconFontSize(); // Use if you want to make the icon monospaced
 
-		io.Fonts->AddFontFromFileTTF("Resources/fonts/FontAwesome/fa-solid-900.ttf", GetIconFontSize(), &config, icon_ranges);
+		io.Fonts->AddFontFromFileTTF("Resources/fonts/FontAwesome/fa-solid-900.ttf", GUIUtilities::GetIconFontSize(), &config, icon_ranges);
 	}
 }
 

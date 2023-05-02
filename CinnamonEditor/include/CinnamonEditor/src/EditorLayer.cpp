@@ -5,7 +5,6 @@
 #include "Cinnamon/include/Event/KeyEvent.h"
 #include "Cinnamon/include/Core/Window.h"
 
-using namespace Cinnamon;
 
 /* Panels */
 #include "CinnamonEditor/include/Panels/EditorPanelBase.h"
@@ -16,67 +15,10 @@ using namespace Cinnamon;
 #include "ThirdParty/imgui/imgui.h"
 #include "ThirdParty/imgui/imgui_internal.h"
 
+InternalScope void BeginDockspace();
+InternalScope void EndDockspace();
 
-class ScopedDockspace
-{
-private:
-	NON_COPYABLE(ScopedDockspace)
-public:
-	inline ScopedDockspace() noexcept
-	{
-		constexpr ImGuiWindowFlags dockSpaceWindowFlags{
-			ImGuiWindowFlags_MenuBar |
-			ImGuiWindowFlags_NoDocking |
-			ImGuiWindowFlags_NoScrollbar |
-			ImGuiWindowFlags_NoTitleBar |
-			ImGuiWindowFlags_NoCollapse |
-			ImGuiWindowFlags_NoResize |
-			ImGuiWindowFlags_NoMove |
-			ImGuiWindowFlags_NoNavFocus |
-			ImGuiWindowFlags_NoBringToFrontOnFocus |
-			ImGuiWindowFlags_NoBackground };
-
-		/* Set dockspace size to fullscreen */
-		ImGuiViewport* const mainViewport{ ImGui::GetMainViewport() };
-		ImGui::SetNextWindowPos(mainViewport->Pos);
-		ImGui::SetNextWindowSize(mainViewport->Size);
-		ImGui::SetNextWindowViewport(mainViewport->ID);
-
-		bool dockspaceOpen{ false };
-		constexpr std::string_view dockspaceID{ "Dockspace" };
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0.0f, 0.0f });
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-		ImGui::Begin(dockspaceID.data(), &dockspaceOpen, dockSpaceWindowFlags);
-		ImGui::PopStyleVar(3);
-
-		constexpr ImGuiDockNodeFlags dockspaceFlags{
-			//ImGuiDockNodeFlags_HiddenTabBar |
-			//ImGuiDockNodeFlags_NoTabBar |
-			ImGuiDockNodeFlags_NoCloseButton |
-			ImGuiDockNodeFlags_NoWindowMenuButton |
-			ImGuiDockNodeFlags_NoWindowMenuButton };
-
-		const ImGuiID ID{ ImGui::GetID(dockspaceID.data()) };
-		if (!ImGui::DockBuilderGetNode(ID))
-		{
-			ImGui::DockBuilderRemoveNode(ID); // Clear out existing layout
-			ImGui::DockBuilderAddNode(ID); // Add empty node
-			ImGui::DockBuilderSetNodeSize(ID, { ImGui::GetIO().DisplaySize.x * ImGui::GetIO().DisplayFramebufferScale.x, ImGui::GetIO().DisplaySize.y * ImGui::GetIO().DisplayFramebufferScale.y });
-		
-			ImGui::DockBuilderFinish(ID);
-		}
-
-		const ImGuiID dockID{ ImGui::GetID(dockspaceID.data()) };
-		ImGui::DockSpace(dockID, { 0.0f, 0.0f }, dockspaceFlags);
-	}
-
-	inline ~ScopedDockspace() noexcept
-	{
-		ImGui::End();
-	};
-};
-
+using namespace Cinnamon;
 void EditorLayer::OnAttach()
 {
 	m_Panels.emplace_back(cinew EditorViewportPanel);
@@ -89,7 +31,8 @@ void EditorLayer::OnUpdate(const Timestep timestep)
 	for (EditorPanelBase* panel : m_Panels)
 		panel->OnUpdate(timestep);
 	{
-		ScopedDockspace dockspace;
+		BeginDockspace();
+
 		[[unlikely]]
 		if (ImGui::BeginMenuBar())
 		{
@@ -131,6 +74,8 @@ void EditorLayer::OnUpdate(const Timestep timestep)
 		
 		for (EditorPanelBase* panel : m_Panels)
 			panel->OnGUIRender();
+
+		EndDockspace();
 	}
 
 #if (CIN_DEBUG && 0)
@@ -185,4 +130,62 @@ bool EditorLayer::OnKeyPressed(const KeyPressedEvent& event)
 {
 	CIN_UNUSED(event);
 	return false;
+}
+
+InternalScope void BeginDockspace()
+{
+	constexpr ImGuiWindowFlags dockSpaceWindowFlags
+	{
+		ImGuiWindowFlags_MenuBar				|
+		ImGuiWindowFlags_NoDocking				|
+		ImGuiWindowFlags_NoScrollbar			|
+		ImGuiWindowFlags_NoTitleBar				|
+		ImGuiWindowFlags_NoCollapse				|
+		ImGuiWindowFlags_NoResize				|
+		ImGuiWindowFlags_NoMove					|
+		ImGuiWindowFlags_NoNavFocus				|
+		ImGuiWindowFlags_NoBringToFrontOnFocus	|
+		ImGuiWindowFlags_NoBackground 
+	};
+
+	/* Set dockspace size to fullscreen */
+	ImGuiViewport* const mainViewport{ ImGui::GetMainViewport() };
+	ImGui::SetNextWindowPos(mainViewport->Pos);
+	ImGui::SetNextWindowSize(mainViewport->Size);
+	ImGui::SetNextWindowViewport(mainViewport->ID);
+
+	bool dockspaceOpen{ false };
+	constexpr std::string_view dockspaceID{ "Dockspace" };
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0.0f, 0.0f });
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+	ImGui::Begin(dockspaceID.data(), &dockspaceOpen, dockSpaceWindowFlags);
+	ImGui::PopStyleVar(3);
+
+	constexpr ImGuiDockNodeFlags dockspaceFlags
+	{
+		//ImGuiDockNodeFlags_HiddenTabBar		|
+		//ImGuiDockNodeFlags_NoTabBar			|
+		ImGuiDockNodeFlags_NoCloseButton		|
+		ImGuiDockNodeFlags_NoWindowMenuButton	|
+		ImGuiDockNodeFlags_NoWindowMenuButton 
+	};
+
+	const ImGuiID ID{ ImGui::GetID(dockspaceID.data()) };
+	if (!ImGui::DockBuilderGetNode(ID))
+	{
+		ImGui::DockBuilderRemoveNode(ID); // Clear out existing layout
+		ImGui::DockBuilderAddNode(ID); // Add empty node
+		ImGui::DockBuilderSetNodeSize(ID, { ImGui::GetIO().DisplaySize.x * ImGui::GetIO().DisplayFramebufferScale.x, ImGui::GetIO().DisplaySize.y * ImGui::GetIO().DisplayFramebufferScale.y });
+	
+		ImGui::DockBuilderFinish(ID);
+	}
+
+	const ImGuiID dockID{ ImGui::GetID(dockspaceID.data()) };
+	ImGui::DockSpace(dockID, { 0.0f, 0.0f }, dockspaceFlags);
+}
+
+InternalScope void EndDockspace()
+{
+	ImGui::End();
 }
