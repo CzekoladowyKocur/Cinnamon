@@ -222,8 +222,19 @@ namespace Cinnamon {
 		DEFINE_KEY(Y, KEY_Y),
 		DEFINE_KEY(Z, KEY_Z),
 
-		DEFINE_KEY(LeftWindows, KEY_LEFTMETA), /* Correct? */
-		DEFINE_KEY(RightWindows, KEY_RIGHTMETA), /* Correct? */
+		DEFINE_KEY(Number0, KEY_0),
+		DEFINE_KEY(Number1, KEY_1),
+		DEFINE_KEY(Number2, KEY_2),
+		DEFINE_KEY(Number3, KEY_3),
+		DEFINE_KEY(Number4, KEY_4),
+		DEFINE_KEY(Number5, KEY_5),
+		DEFINE_KEY(Number6, KEY_6),
+		DEFINE_KEY(Number7, KEY_7),
+		DEFINE_KEY(Number8, KEY_8),
+		DEFINE_KEY(Number9, KEY_9),
+
+		DEFINE_KEY(LeftHome, KEY_LEFTMETA), /* Correct? */
+		DEFINE_KEY(RightHome, KEY_RIGHTMETA), /* Correct? */
 		DEFINE_KEY(Applications, KEY_APPSELECT), /* Correct? */
 
 		DEFINE_KEY(Sleep, KEY_SLEEP),

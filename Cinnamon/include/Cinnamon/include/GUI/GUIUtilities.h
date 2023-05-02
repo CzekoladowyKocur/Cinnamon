@@ -1,6 +1,7 @@
 #pragma once
 #include "Cinnamon/include/Core/KeyCodes.h"
 #include "Cinnamon/include/Core/MouseCodes.h"
+#include "Cinnamon/include/Core/TypeDefines.h"
 #include "ThirdParty/imgui/imgui.h"
 
 namespace Cinnamon {
@@ -88,10 +89,14 @@ namespace Cinnamon {
 				case Key::NUMPAD9:		return ImGuiKey_9;
 				case Key::LeftHome:		return ImGuiKey_Home;
 				case Key::RightHome:	return ImGuiKey_Home;
-			}
+				case Key::Pause:		return ImGuiKey_Pause;
 
-			CIN_ASSERT(false);
-			return ImGuiKey_None;
+				default:
+				{
+					CIN_ASSERT(false);
+					return ImGuiKey_None;
+				}
+			}
 		}
 
 		[[nodiscard]] constexpr ImGuiMouseButton NativeMouseCodeToImGUIMouseCode(const MouseCode native) noexcept

@@ -260,6 +260,8 @@ namespace Cinnamon {
 				const MouseReleasedEvent& mouseReleasedEvent{ static_cast<const MouseReleasedEvent&>(event) };
 				IO.AddMouseButtonEvent(NativeMouseCodeToImGUIMouseCode(mouseReleasedEvent.GetMouseCode()), false);
 			} break;
+
+			default: break;
 		}
 	}
 

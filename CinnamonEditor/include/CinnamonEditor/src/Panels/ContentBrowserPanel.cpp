@@ -238,9 +238,9 @@ InternalScope constinit std::atomic<bool> s_FileTreeNeedsRescan{ true };
 ContentBrowserPanel::ContentBrowserPanel() noexcept
 	:
 	#ifdef MY_TEST_LINUX
-	m_WorkingDirectory("/home/dxm/Container"),
+	m_WorkingDirectory(""),
 	#elif defined MY_TEST_WINDOWS
-	m_WorkingDirectory("C:\\Users\\marti\\Desktop\\FINALPLIK"),
+	m_WorkingDirectory(""),
 	#else
 	m_WorkingDirectory(),
 	#endif
