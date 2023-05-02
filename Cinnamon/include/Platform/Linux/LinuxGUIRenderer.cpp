@@ -1,6 +1,6 @@
+#ifdef CIN_PLATFORM_LINUX
 #include "Cinnamon/include/Core/TypeDefines.h"
 #include "ThirdParty/imgui/imgui_internal.h"
-#ifdef CIN_PLATFORM_LINUX
 #include <linux/uinput.h>
 #include "Cinnamon/include/GUI/GUIRenderer.h"
 #include "Cinnamon/include/GUI/Icons.h"

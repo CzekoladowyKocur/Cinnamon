@@ -1,9 +1,9 @@
-#include "Cinnamon/include/Renderer/GraphicsContext.h"
-#include "Cinnamon/include/Renderer/VulkanTypes.h"
-#include "Cinnamon/include/Renderer/Surface.h"
-#include "Cinnamon/include/Renderer/Swapchain.h"
-#include "Cinnamon/include/Core/Window.h"
-#include "Platform/Platform.h"
+#include "Cinnamon/include/Renderer/GraphicsContext.hpp"
+#include "Cinnamon/include/Renderer/VulkanTypes.hpp"
+#include "Cinnamon/include/Renderer/Surface.hpp"
+#include "Cinnamon/include/Renderer/Swapchain.hpp"
+#include "Cinnamon/include/Core/Window.hpp"
+#include "Platform/Platform.hpp"
 
 namespace Cinnamon {
 	/* TODO: Change to GPU score system */

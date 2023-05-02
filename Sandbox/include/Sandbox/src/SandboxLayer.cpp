@@ -1,6 +1,6 @@
-#include "Sandbox/include/SandboxLayer.h"
-#include "Cinnamon/include/Core/Logger.h"
-#include "Cinnamon/include/Event/WindowEvent.h"
+#include "Sandbox/include/SandboxLayer.hpp"
+#include "Cinnamon/include/Core/Logger.hpp"
+#include "Cinnamon/include/Event/WindowEvent.hpp"
 
 using namespace Cinnamon;
 SandboxLayer::SandboxLayer() noexcept

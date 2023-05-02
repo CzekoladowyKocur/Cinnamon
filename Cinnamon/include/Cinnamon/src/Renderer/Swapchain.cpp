@@ -1,7 +1,7 @@
-#include "Cinnamon/include/Renderer/Swapchain.h"
-#include "Cinnamon/include/Renderer/GraphicsContext.h"
-#include "Cinnamon/include/Renderer/Surface.h"
-#include "Cinnamon/include/Renderer/Device.h"
+#include "Cinnamon/include/Renderer/Swapchain.hpp"
+#include "Cinnamon/include/Renderer/GraphicsContext.hpp"
+#include "Cinnamon/include/Renderer/Surface.hpp"
+#include "Cinnamon/include/Renderer/Device.hpp"
 
 namespace Cinnamon {
 	Swapchain::Swapchain(

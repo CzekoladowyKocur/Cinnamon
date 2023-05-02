@@ -1,7 +1,7 @@
-#include "Cinnamon/include/Renderer/Device.h"
-#include "Cinnamon/include/Renderer/Surface.h"
+#include "Cinnamon/include/Renderer/Device.hpp"
+#include "Cinnamon/include/Renderer/Surface.hpp"
 /* For physical device */
-#include "Cinnamon/include/Renderer/GraphicsContext.h"
+#include "Cinnamon/include/Renderer/GraphicsContext.hpp"
 
 namespace Cinnamon {
 	Device::Device(const STL::Unique<Surface>& surface)

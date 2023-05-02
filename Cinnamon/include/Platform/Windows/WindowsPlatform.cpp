@@ -1,5 +1,5 @@
 #ifdef CIN_PLATFORM_WINDOWS
-#include "Cinnamon/include/Core/Core.h"
+#include "Cinnamon/include/Core/Core.hpp"
 
 /* For UUIDS */
 #include <Rpcdce.h>

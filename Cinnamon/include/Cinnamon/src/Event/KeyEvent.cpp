@@ -1,5 +1,5 @@
-#include "Cinnamon/include/Event/KeyEvent.h"
-#include "Cinnamon/include/Core/KeyCodes.h"
+#include "Cinnamon/include/Event/KeyEvent.hpp"
+#include "Cinnamon/include/Core/KeyCodes.hpp"
 
 namespace Cinnamon {
 	KeyEvent::KeyEvent(const KeyCode keyCode) noexcept

@@ -1,6 +1,6 @@
-#include "Cinnamon/include/Core/Input.h"
-#include "Cinnamon/include/Core/Application.h"
-#include "Cinnamon/include/Core/Window.h"
+#include "Cinnamon/include/Core/Input.hpp"
+#include "Cinnamon/include/Core/Application.hpp"
+#include "Cinnamon/include/Core/Window.hpp"
 
 namespace Cinnamon {
 	InputState::InputState() noexcept

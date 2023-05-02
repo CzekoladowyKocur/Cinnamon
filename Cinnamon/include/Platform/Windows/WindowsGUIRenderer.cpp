@@ -1,18 +1,18 @@
 #ifdef CIN_PLATFORM_WINDOWS
-#include "Cinnamon/include/GUI/GUIRenderer.h"
-#include "Cinnamon/include/GUI/Icons.h"
-#include "Cinnamon/include/GUI/GUIUtilities.h"
-#include "Cinnamon/include/GUI/GUIThemes.h"
+#include "Cinnamon/include/GUI/GUIRenderer.hpp"
+#include "Cinnamon/include/GUI/Icons.hpp"
+#include "Cinnamon/include/GUI/GUIUtilities.hpp"
+#include "Cinnamon/include/GUI/GUIThemes.hpp"
 
-#include "Cinnamon/include/Renderer/GraphicsContext.h"
-#include "Cinnamon/include/Renderer/Swapchain.h"
-#include "Cinnamon/include/Renderer/Renderer.h"
-#include "Cinnamon/include/Renderer/Device.h"
-#include "Cinnamon/include/Core/Window.h"
-#include "Cinnamon/include/Core/KeyCodes.h"
-#include "Cinnamon/include/Event/Event.h"
-#include "Cinnamon/include/Event/KeyEvent.h"
-#include "Cinnamon/include/Event/MouseEvent.h"
+#include "Cinnamon/include/Renderer/GraphicsContext.hpp"
+#include "Cinnamon/include/Renderer/Swapchain.hpp"
+#include "Cinnamon/include/Renderer/Renderer.hpp"
+#include "Cinnamon/include/Renderer/Device.hpp"
+#include "Cinnamon/include/Core/Window.hpp"
+#include "Cinnamon/include/Core/KeyCodes.hpp"
+#include "Cinnamon/include/Event/Event.hpp"
+#include "Cinnamon/include/Event/KeyEvent.hpp"
+#include "Cinnamon/include/Event/MouseEvent.hpp"
 
 #pragma warning(push)
 #pragma warning(disable : 26812)

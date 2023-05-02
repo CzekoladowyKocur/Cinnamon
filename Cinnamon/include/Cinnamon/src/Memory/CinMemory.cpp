@@ -1,4 +1,4 @@
-#include "Cinnamon/include/Memory/CinMemory.h"
+#include "Cinnamon/include/Memory/CinMemory.hpp"
 
 namespace Cinnamon {
 	void DumpCallbackFunction(const void* allocation, const char* typeName, const std::size_t allocationSize, const char* filename, const std::size_t fileLine) noexcept

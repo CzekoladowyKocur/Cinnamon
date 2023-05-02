@@ -1,6 +1,6 @@
 #ifdef CIN_PLATFORM_WINDOWS
-#include "Cinnamon/include/Renderer/Surface.h"
-#include "Cinnamon/include/Renderer/GraphicsContext.h"
+#include "Cinnamon/include/Renderer/Surface.hpp"
+#include "Cinnamon/include/Renderer/GraphicsContext.hpp"
 
 namespace Cinnamon {
 	struct PlatformWindowState

@@ -1,5 +1,5 @@
 #ifdef CIN_PLATFORM_WINDOWS
-#include "Cinnamon/include/Core/Filesystem.h"
+#include "Cinnamon/include/Core/Filesystem.hpp"
 
 namespace Cinnamon {
 	constexpr std::size_t g_BufferSize = { 2 << 16 };

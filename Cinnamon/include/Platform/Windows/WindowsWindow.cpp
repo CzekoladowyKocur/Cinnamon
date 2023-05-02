@@ -1,10 +1,10 @@
 #ifdef CIN_PLATFORM_WINDOWS
-#include "Cinnamon/include/Core/Window.h"
-#include "Cinnamon/include/Core/Input.h"
-#include "Cinnamon/include/Event/ApplicationEvent.h"
-#include "Cinnamon/include/Event/WindowEvent.h"
-#include "Cinnamon/include/Event/KeyEvent.h"
-#include "Cinnamon/include/Event/MouseEvent.h"
+#include "Cinnamon/include/Core/Window.hpp"
+#include "Cinnamon/include/Core/Input.hpp"
+#include "Cinnamon/include/Event/ApplicationEvent.hpp"
+#include "Cinnamon/include/Event/WindowEvent.hpp"
+#include "Cinnamon/include/Event/KeyEvent.hpp"
+#include "Cinnamon/include/Event/MouseEvent.hpp"
 
 /* Assumes variable "event" of type Event& is in scope */
 #define LOG_UNHANDLED_EVENT(eventType)									\

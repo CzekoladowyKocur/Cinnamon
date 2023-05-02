@@ -1,5 +1,5 @@
-#include "Cinnamon/include/Core/TypeDefines.h"
 #ifdef CIN_PLATFORM_LINUX
+#include "Cinnamon/include/Core/TypeDefines.h"
 #include "Cinnamon/include/Core/Core.h"
 
 /* constexpr char C_FOREGROUND_BLACK[]					{ "\033[0;30m" }; */

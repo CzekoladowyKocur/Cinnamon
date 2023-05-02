@@ -1,4 +1,4 @@
-#include "Cinnamon/include/Event/MouseEvent.h"
+#include "Cinnamon/include/Event/MouseEvent.hpp"
 
 namespace Cinnamon {
 	MouseEvent::MouseEvent(const MouseCode mouseCode) noexcept

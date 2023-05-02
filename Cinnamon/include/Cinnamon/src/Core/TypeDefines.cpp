@@ -1,4 +1,4 @@
-#include "Cinnamon/include/Core/TypeDefines.h"
+#include "Cinnamon/include/Core/TypeDefines.hpp"
 
 Timestep::Timestep(const Type deltaTime) noexcept
 	:

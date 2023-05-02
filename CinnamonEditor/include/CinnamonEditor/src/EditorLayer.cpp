@@ -1,16 +1,16 @@
-#include "CinnamonEditor/include/EditorLayer.h"
-#include "Cinnamon/include/Core/Logger.h"
-#include "Cinnamon/include/Core/Input.h"
-#include "Cinnamon/include/Core/Application.h"
-#include "Cinnamon/include/Event/KeyEvent.h"
-#include "Cinnamon/include/Core/Window.h"
+#include "CinnamonEditor/include/EditorLayer.hpp"
+#include "Cinnamon/include/Core/Logger.hpp"
+#include "Cinnamon/include/Core/Input.hpp"
+#include "Cinnamon/include/Core/Application.hpp"
+#include "Cinnamon/include/Event/KeyEvent.hpp"
+#include "Cinnamon/include/Core/Window.hpp"
 
 
 /* Panels */
-#include "CinnamonEditor/include/Panels/EditorPanelBase.h"
-#include "CinnamonEditor/include/Panels/EditorViewportPanel.h"
-#include "CinnamonEditor/include/Panels/SceneHierarchyPanel.h"
-#include "CinnamonEditor/include/Panels/ContentBrowserPanel.h"
+#include "CinnamonEditor/include/Panels/EditorPanelBase.hpp"
+#include "CinnamonEditor/include/Panels/EditorViewportPanel.hpp"
+#include "CinnamonEditor/include/Panels/SceneHierarchyPanel.hpp"
+#include "CinnamonEditor/include/Panels/ContentBrowserPanel.hpp"
 
 #include "ThirdParty/imgui/imgui.h"
 #include "ThirdParty/imgui/imgui_internal.h"

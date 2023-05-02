@@ -1,7 +1,7 @@
-#include "CinnamonEditor/include/Panels/ContentBrowserPanel.h"
-#include "Cinnamon/include/Core/Filesystem.h"
-#include "Cinnamon/include/Core/TypeDefines.h"
-#include "Cinnamon/include/GUI/Icons.h"
+#include "CinnamonEditor/include/Panels/ContentBrowserPanel.hpp"
+#include "Cinnamon/include/Core/Filesystem.hpp"
+#include "Cinnamon/include/Core/TypeDefines.hpp"
+#include "Cinnamon/include/GUI/Icons.hpp"
 
 #include "ThirdParty/imgui/imgui.h"
 #include "ThirdParty/imgui/imgui_internal.h"

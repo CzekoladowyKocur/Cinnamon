@@ -1,8 +1,8 @@
-#include "Cinnamon/include/Renderer/Renderer.h"
-#include "Cinnamon/include/Renderer/Device.h"
-#include "Cinnamon/include/Renderer/Surface.h"
-#include "Cinnamon/include/Renderer/Swapchain.h"
-#include "Cinnamon/include/Core/Window.h"
+#include "Cinnamon/include/Renderer/Renderer.hpp"
+#include "Cinnamon/include/Renderer/Device.hpp"
+#include "Cinnamon/include/Renderer/Surface.hpp"
+#include "Cinnamon/include/Renderer/Swapchain.hpp"
+#include "Cinnamon/include/Core/Window.hpp"
 
 namespace Cinnamon {
 	Renderer::Renderer(const STL::Unique<Window>& windowContext)

@@ -1,4 +1,4 @@
-#include "Cinnamon/include/Core/Logger.h"
+#include "Cinnamon/include/Core/Logger.hpp"
 	
 namespace Cinnamon {
 	ELogLevel Logger::s_LogLevel{ ELogLevel::Trace };

@@ -1,6 +1,6 @@
-#include "CinnamonEditor/include/EditorApplication.h"
-#include "CinnamonEditor/include/EditorLayer.h"
-#include "Cinnamon/include/Core/Logger.h"
+#include "CinnamonEditor/include/EditorApplication.hpp"
+#include "CinnamonEditor/include/EditorLayer.hpp"
+#include "Cinnamon/include/Core/Logger.hpp"
 
 using namespace Cinnamon;
 EditorApplication::EditorApplication() noexcept
@@ -30,4 +30,4 @@ void EditorApplication::OnUserShutdown()
 }
 
 REGISTER_CINNAMON_APPLICATION(EditorApplication);
-#include "Cinnamon/include/Core/EntryPoint.h"
+#include "Cinnamon/include/Core/EntryPoint.hpp"

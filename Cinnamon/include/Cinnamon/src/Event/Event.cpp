@@ -1,4 +1,4 @@
-#include "Cinnamon/include/Event/Event.h"
+#include "Cinnamon/include/Event/Event.hpp"
 
 namespace Cinnamon {
 	EventDispatcher::EventDispatcher(const Event& event) noexcept

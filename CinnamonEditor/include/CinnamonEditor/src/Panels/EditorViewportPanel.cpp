@@ -1,4 +1,4 @@
-#include "CinnamonEditor/include/Panels/EditorViewportPanel.h"
+#include "CinnamonEditor/include/Panels/EditorViewportPanel.hpp"
 #include "ThirdParty/imgui/imgui.h"
 #include "ThirdParty/imgui/imgui_internal.h"
 

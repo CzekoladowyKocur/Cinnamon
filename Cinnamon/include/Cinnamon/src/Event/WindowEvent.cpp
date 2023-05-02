@@ -1,4 +1,4 @@
-#include "Cinnamon/include/Event/WindowEvent.h"
+#include "Cinnamon/include/Event/WindowEvent.hpp"
 
 namespace Cinnamon {
 	WindowEvent::WindowEvent(const Window* const windowHandle) noexcept

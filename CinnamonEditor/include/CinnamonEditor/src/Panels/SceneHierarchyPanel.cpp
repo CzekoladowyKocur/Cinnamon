@@ -1,4 +1,4 @@
-#include "CinnamonEditor/include/Panels/SceneHierarchyPanel.h"
+#include "CinnamonEditor/include/Panels/SceneHierarchyPanel.hpp"
 #include "ThirdParty/imgui/imgui.h"
 #include "ThirdParty/imgui/imgui_internal.h"
 

@@ -1,4 +1,4 @@
-#include "Cinnamon/include/Core/LayerStack.h"
+#include "Cinnamon/include/Core/LayerStack.hpp"
 
 namespace Cinnamon {
 	LayerStack::LayerStack() noexcept

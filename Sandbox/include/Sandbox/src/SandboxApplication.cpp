@@ -1,5 +1,5 @@
-#include "Sandbox/include/SandboxApplication.h"
-#include "Sandbox/include/SandboxLayer.h"
+#include "Sandbox/include/SandboxApplication.hpp"
+#include "Sandbox/include/SandboxLayer.hpp"
 
 using namespace Cinnamon;
 SandboxApplication::SandboxApplication() noexcept
@@ -26,4 +26,4 @@ void SandboxApplication::OnUserShutdown()
 }
 
 REGISTER_CINNAMON_APPLICATION(SandboxApplication);
-#include "Cinnamon/include/Core/EntryPoint.h"
+#include "Cinnamon/include/Core/EntryPoint.hpp"
