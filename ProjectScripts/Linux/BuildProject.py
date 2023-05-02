@@ -9,7 +9,7 @@ Setup.DownloadPackagesIfNeeded()
 # Download the SDK
 import DownloadVulkan as Vulkan
 if Vulkan.CheckSDK():
-	print("Rerun the script after vulkan has been installed! (Re-open the terminal)")
+	print("Rerun the script after vulkan has been installed! (Do not re-open the terminal)")
 	exit()
 
 # Build the project files

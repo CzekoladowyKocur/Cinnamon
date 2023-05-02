@@ -9,6 +9,7 @@ FMTInclude = "Cinnamon/include/ThirdParty/fmt/include"
 -- VolkInclude = VulkanSDK;
 -- VolkLibrary = VulkanSDK .. "/Lib/volk.lib"
 
+
 workspace ("Cinnamon")
 	architecture "x64"
 	platforms "x64"
@@ -154,6 +155,11 @@ project ("Cinnamon")
 			"wayland-client",
 			"xdg"
         }
+
+		includedirs
+		{
+			VulkanSDK .. "/source/Vulkan-Headers/include"
+		}
 
 project ("CinnamonEditor")
 	location ("CinnamonEditor/include")

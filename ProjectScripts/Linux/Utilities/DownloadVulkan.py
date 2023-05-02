@@ -19,12 +19,9 @@ def ShouldDownload():
             return False
 
 def RunSetupScript():
-    setupScriptPath = OperatingSystem.getcwd() + "/VulkanSDK/" + CINNAMON_VULKAN_VERSION + "/setup-env.sh"
-    currentPermissions = OperatingSystem.stat(setupScriptPath).st_mode
-    newPermissions = currentPermissions | 0o100
-    OperatingSystem.chmod(setupScriptPath, newPermissions)
-
-    subprocess.run(["/bin/bash", "-c", "source " + setupScriptPath], check=True)
+    sdkPath = OperatingSystem.getcwd() + "/VulkanSDK/" + CINNAMON_VULKAN_VERSION
+    print("Setting VULKAN_SDK to " + sdkPath) 
+    OperatingSystem.environ["VULKAN_SDK"] = sdkPath
 
 def DownloadSDK():
     OperatingSystem.mkdir(OperatingSystem.getcwd() + "/VulkanSDK")
@@ -39,7 +36,7 @@ def DownloadSDK():
     print("Installation was successfull")
 
 def CheckSDK():
-    if OperatingSystem.path.exists(VULKAN_DIRECTORY):
+    if OperatingSystem.path.exists(OperatingSystem.getcwd() + "/VulkanSDK"):
         RunSetupScript()
         return False
 

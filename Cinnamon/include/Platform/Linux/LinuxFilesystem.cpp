@@ -1,5 +1,5 @@
 #ifdef CIN_PLATFORM_LINUX
-#include "Cinnamon/include/Core/Filesystem.h"
+#include "Cinnamon/include/Core/Filesystem.hpp"
 #include <sys/inotify.h>
 
 namespace Cinnamon {

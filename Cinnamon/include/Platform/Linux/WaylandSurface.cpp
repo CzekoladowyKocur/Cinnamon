@@ -1,6 +1,6 @@
 #ifdef CIN_PLATFORM_LINUX
-#include "Cinnamon/include/Renderer/Surface.h"
-#include "Cinnamon/include/Renderer/GraphicsContext.h"
+#include "Cinnamon/include/Renderer/Surface.hpp"
+#include "Cinnamon/include/Renderer/GraphicsContext.hpp"
 
 #include <wayland-client.h>
 extern "C"
