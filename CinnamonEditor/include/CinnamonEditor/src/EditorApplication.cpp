@@ -1,12 +1,15 @@
 #include "CinnamonEditor/include/EditorApplication.hpp"
 #include "CinnamonEditor/include/EditorLayer.hpp"
 #include "Cinnamon/include/Core/Logger.hpp"
+#include "Cinnamon/include/Core/Window.hpp"
+#include "Cinnamon/include/Renderer/Renderer.hpp"
+#include "Cinnamon/include/GUI/GUIRenderer.hpp"
 
 using namespace Cinnamon;
 EditorApplication::EditorApplication() noexcept
 	:
 	Application("Cinnamon Editor", 800U, 600U, false),
-	m_EditorLayer(cinew EditorLayer)
+	m_EditorLayer(cinew EditorLayer(m_MainWindow, m_Renderer))
 {}
 
 EditorApplication::~EditorApplication() noexcept

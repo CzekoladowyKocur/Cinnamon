@@ -5,7 +5,7 @@ project "volk"
 	targetdir ("bin/" .. OutputDirectory .. "/%{prj.name}")
 	objdir ("bin-int/" .. OutputDirectory .. "/%{prj.name}")
 
-	includedirs (VulkanSDKInclude)
+	includedirs (VulkanIncludeDirectory)
 
 	files
 	{

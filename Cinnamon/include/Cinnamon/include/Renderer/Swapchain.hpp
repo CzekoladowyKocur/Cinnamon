@@ -2,21 +2,25 @@
 #include "Cinnamon/include/Renderer/VulkanTypes.hpp"
 
 namespace Cinnamon {
-	class Surface;
+	class Window;
 	class Device;
 }
 
 namespace Cinnamon {
+	using SwapchainCommandRecordCallback = std::function<void(
+		const VkCommandBuffer,
+		const VkFramebuffer,
+		const VkRenderPass,
+		const VkExtent2D)>;
+
 	class Swapchain final
 	{
 	private:
 		NON_COPYABLE(Swapchain)
 	public:
 		explicit Swapchain(
-			const STL::Unique<Surface>& surface,
 			const STL::Unique<Device>& device,
-			const uint32_t width,
-			const uint32_t height) noexcept;
+			const STL::Unique<Window>& window) noexcept;
 
 		~Swapchain() noexcept;
 
@@ -38,18 +42,37 @@ namespace Cinnamon {
 
 		void AcquireNextSwapchainImage();
 		void PresentSwapchainImage();
-		void RecordCommands(const std::function<void()> recordFunction);
+		void RecordCommands(const SwapchainCommandRecordCallback recordFunction);
 
-		uint32_t GetImageCount() const;
-		uint32_t GetImageIndex() const;
-		uint32_t GetFrameIndex() const;
-		VkExtent2D GetExtent() const;
-		VkRenderPass GetRenderPass() const;
-		VkCommandBuffer GetCurrentCommandBuffer() const;
-		VkFramebuffer GetCurrentFramebuffer() const;
+		[[nodiscard]] uint32_t 
+			GetImageCount() const;
+
+		[[nodiscard]] uint32_t
+			GetImageMinimalCount() const;
+
+		[[nodiscard]] uint32_t 
+			GetImageIndex() const;
+
+		[[nodiscard]] uint32_t 
+			GetFrameIndex() const;
+
+		[[nodiscard]] VkExtent2D 
+			GetExtent() const;
+
+		[[nodiscard]] VkRenderPass 
+			GetRenderPass() const;
+
+		[[nodiscard]] VkFramebuffer 
+			GetCurrentFramebuffer() const;
+
+		[[nodiscard]] VkCommandBuffer 
+			GetCommandBuffer(const uint32_t frameIndex) const;
+
+		[[nodiscard]] VkFence
+			GetWaitFence(const uint32_t frameIndex) const;
 	private:
-		const STL::Unique<Surface>&		m_Surface;
-		const STL::Unique<Device>&		m_Device;
+		const STL::Unique<Device>& m_Device;
+		VkSurfaceKHR m_Surface;
 
 		VkSwapchainKHR m_Handle;
 		VkSwapchainKHR m_CachedSwapchain;
@@ -61,6 +84,7 @@ namespace Cinnamon {
 		VkSurfaceCapabilitiesKHR m_SurfaceCapabilities;
 		VkExtent2D m_Extent;
 		VkClearValue m_ClearColor;
+		uint32_t m_MinimalImageCount;
 		bool m_SurfaceUpdated;
 
 		STL::Vector<VkImage> m_Images;
@@ -69,18 +93,18 @@ namespace Cinnamon {
 		STL::Vector<VkCommandBuffer> m_CommandBuffers;
 
 		struct {
-			std::vector<VkSemaphore> ImageAvailable;
-			std::vector<VkSemaphore> RenderingFinished;
+			STL::Vector<VkSemaphore> ImageAvailable;
+			STL::Vector<VkSemaphore> RenderingFinished;
 		} m_Semaphores;
 
 		struct {
-			std::vector<VkFence> InFlightFences;
+			STL::Vector<VkFence> InFlightFences;
 		} m_Fences;
 
 		uint32_t m_ImageIndex;
 		uint32_t m_FrameIndex;
 		uint32_t m_FramesInFlight;
 
-		std::function<void()> m_RecordFunction;
+		SwapchainCommandRecordCallback m_RecordFunction;
 	};
 }

@@ -24,6 +24,7 @@
 #include <future>
 #include <algorithm>
 #include <condition_variable>
+#include <fstream>
 
 #ifdef CIN_PLATFORM_WINDOWS
 #undef UNICODE

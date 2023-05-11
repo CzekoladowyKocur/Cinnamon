@@ -1,6 +1,12 @@
 #pragma once
 #include "Cinnamon/include/Core/Application.hpp"
 
+namespace Cinnamon {
+	class Window;
+	class Renderer;
+	class GUIRenderer;
+}
+
 class EditorApplication final : public Cinnamon::Application
 {
 private:

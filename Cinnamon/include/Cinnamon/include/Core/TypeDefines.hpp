@@ -64,7 +64,7 @@
 #else
 #define CIN_ASSERT(...)
 #define CIN_CORE_ASSERT(...)
-#define CIN_VERIFY(x) x
+#define CIN_VERIFY(x) { if(!(x)) { std::exit(EXIT_FAILURE); } }
 #endif
 #define CIN_UNIMPLEMENTED() CIN_ASSERT(false, "Unimplemeneted")
 #define CIN_UNUSED(x) (void)x

@@ -169,8 +169,6 @@ namespace Cinnamon {
 			TranslateMessage(&message);
 			DispatchMessage(&message);
 		}
-
-		InvalidateRect(m_State->Handle, NULL, TRUE);
 	}
 
 	void Window::SendEvent(Event& event)
@@ -431,8 +429,8 @@ namespace Cinnamon {
 				}
 				/* Redraw the window to make resizing smooth */
 				{
-					ApplicationRenderEvent event;
-					window->SendEvent(event);
+					//ApplicationRenderEvent event;
+					//window->SendEvent(event);
 				}
 
 				return 0;

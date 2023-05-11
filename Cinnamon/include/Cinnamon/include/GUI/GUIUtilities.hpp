@@ -90,6 +90,19 @@ namespace Cinnamon {
 				case Key::LeftHome:		return ImGuiKey_Home;
 				case Key::RightHome:	return ImGuiKey_Home;
 				case Key::Pause:		return ImGuiKey_Pause;
+				case Key::F1:			return ImGuiKey_F1;
+				case Key::F2:			return ImGuiKey_F2;
+				case Key::F3:			return ImGuiKey_F3;
+				case Key::F4:			return ImGuiKey_F4;
+				case Key::F5:			return ImGuiKey_F5;
+				case Key::F6:			return ImGuiKey_F6;
+				case Key::F8:			return ImGuiKey_F7;
+				case Key::F9:			return ImGuiKey_F8;
+				case Key::F10:			return ImGuiKey_F9;
+				case Key::F11:			return ImGuiKey_F10;
+				case Key::F12:			return ImGuiKey_F11;
+				case Key::F13:			return ImGuiKey_F12;
+				case Key::LeftAlt:		return ImGuiKey_LeftAlt;
 
 				default:
 				{

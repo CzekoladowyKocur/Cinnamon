@@ -12,73 +12,99 @@ namespace Cinnamon {
 		uint32_t ExtendedStyleFlags{ 0U };
 	};
 
-	Surface::Surface(const STL::Unique<Window>& windowContext) noexcept
-		:
-		m_WindowState(windowContext->GetState()),
-		m_UseVSync(windowContext->GetProperties().UseVSync),
-		m_DesiredPresentMode(m_UseVSync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR),
-		m_Handle(VK_NULL_HANDLE)
+	namespace Platform
 	{
-		CIN_ASSERT(m_WindowState, "Window state is invalid");
+		/* Surface -> [Window context, desired present mode] */
+		InternalScope STL::UMap<VkSurfaceKHR, std::pair<const PlatformWindowState*, VkPresentModeKHR>> s_SurfaceMap;
 
-		const VkWin32SurfaceCreateInfoKHR win32SurfaceCreateInfo
+		VkSurfaceKHR CreateWindowSurface(const STL::Unique<Window>& window)
 		{
-			.sType{ VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR },
-			.pNext{ nullptr },
-			.flags{ 0U },
-			.hinstance{ m_WindowState->Instance },
-			.hwnd{ m_WindowState->Handle },
-		};
+			CIN_ASSERT(window);
+			const PlatformWindowState* const windowState{ window->GetState() };
+			
+			const VkWin32SurfaceCreateInfoKHR win32SurfaceCreateInfo
+			{
+				.sType{ VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR },
+				.pNext{ nullptr },
+				.flags{ 0U },
+				.hinstance{ windowState->Instance },
+				.hwnd{ windowState->Handle },
+			};
 
-		VK_CHECK(vkCreateWin32SurfaceKHR(
-			GraphicsContext::GetInstance(),
-			&win32SurfaceCreateInfo,
-			GraphicsContext::GetAllocator(),
-			&m_Handle));
-	}
+			VkSurfaceKHR surface{ VK_NULL_HANDLE };
+			VK_CHECK(vkCreateWin32SurfaceKHR(
+				GraphicsContext::GetInstance(),
+				&win32SurfaceCreateInfo,
+				GraphicsContext::GetAllocator(),
+				&surface));
 
-	void Surface::Recreate()
-	{
-		CIN_ASSERT(m_Handle);
-		vkDestroySurfaceKHR(
-			GraphicsContext::GetInstance(),
-			m_Handle,
-			GraphicsContext::GetAllocator());
+			const WindowProperties& windowProperties{ window->GetProperties() };
+			CIN_ASSERT(!s_SurfaceMap.contains(surface));
+			s_SurfaceMap[surface] = std::make_pair(windowState, windowProperties.UseVSync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR);
 
-		CIN_ASSERT(m_WindowState, "Window state is invalid");
-		const VkWin32SurfaceCreateInfoKHR win32SurfaceCreateInfo
+			return surface;
+		}
+
+		VkSurfaceKHR RetrieveWindowSurface(const STL::Unique<Window>& window)
 		{
-			.sType{ VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR },
-			.pNext{ nullptr },
-			.flags{ 0U },
-			.hinstance{ m_WindowState->Instance },
-			.hwnd{ m_WindowState->Handle },
-		};
+			/* Check if surface was already created by the device */
+			for (const auto& [surface, surfaceState] : s_SurfaceMap)
+			{
+				const auto& [windowState, desiredPresentMode] { surfaceState};
 
-		VK_CHECK(vkCreateWin32SurfaceKHR(
-			GraphicsContext::GetInstance(),
-			&win32SurfaceCreateInfo,
-			GraphicsContext::GetAllocator(),
-			&m_Handle));
-	}
+				if (window->GetState() == windowState)
+					return surface;
+			}
 
-	Surface::~Surface() noexcept
-	{
-		vkDestroySurfaceKHR(
-			GraphicsContext::GetInstance(),
-			m_Handle,
-			GraphicsContext::GetAllocator());
-	}
+			return CreateWindowSurface(window);
+		}
 
-	VkPresentModeKHR Surface::GetDesiredPresentMode() const
-	{
-		return m_DesiredPresentMode;
-	}
+		VkSurfaceKHR RecreateWindowSurface(const VkSurfaceKHR surface)
+		{
+			CIN_ASSERT(s_SurfaceMap.contains(surface));
+			
+			vkDestroySurfaceKHR(
+				GraphicsContext::GetInstance(),
+				surface,
+				GraphicsContext::GetAllocator());
 
-	VkSurfaceKHR Surface::GetHandle() const
-	{
-		CIN_ASSERT(m_Handle, "Invalid surface handle");
-		return m_Handle;
+			const PlatformWindowState* const windowState{ s_SurfaceMap[surface].first };
+			const VkWin32SurfaceCreateInfoKHR win32SurfaceCreateInfo
+			{
+				.sType{ VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR },
+				.pNext{ nullptr },
+				.flags{ 0U },
+				.hinstance{ windowState->Instance },
+				.hwnd{ windowState->Handle },
+			};
+
+			VkSurfaceKHR newSurface{ VK_NULL_HANDLE };
+			VK_CHECK(vkCreateWin32SurfaceKHR(
+				GraphicsContext::GetInstance(),
+				&win32SurfaceCreateInfo,
+				GraphicsContext::GetAllocator(),
+				&newSurface));
+
+			return newSurface;
+		}
+
+		VkPresentModeKHR GetDesiredSurfacePresentMode(const VkSurfaceKHR surface)
+		{
+			CIN_ASSERT(s_SurfaceMap.contains(surface));
+			return s_SurfaceMap[surface].second;
+		}
+
+		void DestroySurface(const VkSurfaceKHR surface)
+		{
+			CIN_ASSERT(s_SurfaceMap.contains(surface));
+
+			vkDestroySurfaceKHR(
+				GraphicsContext::GetInstance(),
+				surface,
+				GraphicsContext::GetAllocator());
+
+			s_SurfaceMap.erase(surface);
+		}
 	}
 }
 #endif

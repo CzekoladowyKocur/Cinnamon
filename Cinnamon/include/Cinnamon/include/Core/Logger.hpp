@@ -4,6 +4,13 @@
 /* Disable fmt warnings */
 #ifdef CIN_PLATFORM_WINDOWS
 #pragma warning(push, 0)
+#pragma warning(disable : 26451)
+#pragma warning(disable : 26495)
+#pragma warning(disable : 26450)
+#pragma warning(disable : 26498)
+#pragma warning(disable : 26437)
+#pragma warning(disable : 6291)
+#pragma warning(disable : 26800)
 #elif defined CIN_PLATFORM_LINUX
 #pragma GCC diagnostic push /* GCC isn't happy about deprecated declarations inside fmt */
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"

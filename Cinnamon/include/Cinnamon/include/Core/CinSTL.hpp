@@ -1,6 +1,8 @@
 #pragma once
 #include "Cinnamon/include/Core/Core.hpp"
 
+using Byte = std::byte;
+
 namespace Cinnamon {
 	namespace STL {
 		template<typename T>

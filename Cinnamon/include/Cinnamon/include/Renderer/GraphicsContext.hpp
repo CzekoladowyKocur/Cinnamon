@@ -7,11 +7,11 @@ struct VkInstance_T;
 struct VkPhysicalDevice_T;
 
 namespace Cinnamon {
-	namespace GraphicsContext 
-	{
+	namespace GraphicsContext {
 		Errr Initialize();
 		void Shutdown();
-
+		
+		uint32_t				GetAPIVersion();
 		VkInstance_T*			GetInstance();
 		VkPhysicalDevice_T*		GetPhysicalDevice();
 		VkAllocationCallbacks*	GetAllocator();

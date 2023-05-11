@@ -1,34 +1,110 @@
 #include "Sandbox/include/SandboxLayer.hpp"
 #include "Cinnamon/include/Core/Logger.hpp"
 #include "Cinnamon/include/Event/WindowEvent.hpp"
+#include "Cinnamon/include/Renderer/Swapchain.hpp"
+#include "Cinnamon/include/Renderer/VertexBuffer.hpp"
+#include "Cinnamon/include/GUI/GUI.hpp"
+
+#include "ThirdParty/imgui/imgui.h"
 
 using namespace Cinnamon;
-SandboxLayer::SandboxLayer() noexcept
-{
-	CIN_WARN("Spawning 4 windows. . .");
+SandboxLayer::SandboxLayer(STL::Unique<Window>& window, STL::Unique<Renderer>& renderer) noexcept
+	:
+	m_Window(window),
+	m_Renderer(renderer),
+	m_Allocator(cinew VulkanAllocator(m_Renderer->GetDevice())),
+	m_Framebuffer(STL::MakeUnique<Framebuffer>(m_Allocator, FramebufferSpecification{ m_Window->GetWidth(), m_Window->GetHeight(), 1U, EImageFormat::R8G8B8A8 })),
+	m_RenderCommandBuffer(STL::MakeUnique<RenderCommandBuffer>(m_Renderer->GetDevice(), m_Renderer->GetSwapchain()->GetImageCount()))
 
-	for (size_t i{ 0U }; i < 4U; ++i)
+{
+	m_Window->SetEventCallback([](const Event& /*event*/) 
+	{});
+
+	m_Renderer->SetClearColor(0.3f, 0.3f, 1.0f, 1.0f);
+
+	VertexBufferLayout layout
+	(
+		STL::InitializerList<VertexBufferElement>
+		{
+			VertexBufferElement
+			{
+				EShaderDataType::Float3
+			}
+		}
+	);
+
+	m_QuadVertexBuffer = (STL::MakeUnique<VertexBuffer>(m_Allocator, sizeof(float) * 3U * 4U, layout));
+	m_QuadIndexBuffer = (STL::MakeUnique<IndexBuffer>(m_Allocator, sizeof(uint32_t) * 6U));
+	m_QuadShader = (STL::MakeUnique<Shader>(m_Allocator, "Resources/shaders/SimpleShader.shader", false));
+	m_Pipeline = (STL::MakeUnique<Pipeline>(m_Renderer->GetDevice(), m_Framebuffer, m_QuadShader, 
+		m_QuadVertexBuffer->GetLayout(), EPrimitiveTopology::Triangles));
+
+	float vertices[3 * 4]
 	{
-		const STL::String windowName{ STL::String("Window ") + std::to_string(i) };
-		m_Windows.push_back(STL::MakeUnique<Window>(WindowProperties{ windowName.c_str(), 400, 200, EWindowMode::Windowed, false }));
-		m_Renderers.push_back(STL::MakeUnique<Renderer>(m_Windows[i]));
-		m_Renderers.back()->SetClearColor(1.0f / float(i + 1U), 0.3f, 0.3f, 1.0f);
-	}
+		0.5f,  0.5f, 0.0f,  
+		0.5f, -0.5f, 0.0f,  
+	   -0.5f, -0.5f, 0.0f,  
+	   -0.5f,  0.5f, 0.0f
+	};
+	
+	m_QuadVertexBuffer->SetData(vertices, sizeof(vertices));
+	
+	uint32_t indices[6]
+	{
+		0, 1, 3,
+		1, 2, 3
+	};
+	
+	m_QuadIndexBuffer->SetData(indices, sizeof(indices));
 }
 
 SandboxLayer::~SandboxLayer() noexcept
 {}
 
 void SandboxLayer::OnAttach()
-{}
+{
+}
 
 void SandboxLayer::OnUpdate(const Timestep /*timestep*/)
 {
-	for (size_t i{ 0U }; i < m_Renderers.size(); ++i)
+	//m_Window->PollEvents();
+	const uint32_t frameIndex{ m_Renderer->GetFrameIndex() };
+	//
+	//m_Renderer->BeginFrame();
+	m_RenderCommandBuffer->Begin(frameIndex);
+	
+	m_Renderer->BeginRenderPass(m_RenderCommandBuffer, m_Framebuffer);
+	
+	m_Renderer->RenderGeometry
+	(
+		m_RenderCommandBuffer,
+		m_QuadVertexBuffer,
+		m_QuadIndexBuffer,
+		m_Pipeline,
+		6U
+	);
+	
+	m_Renderer->EndRenderPass(m_RenderCommandBuffer);
+	
+	m_RenderCommandBuffer->End(frameIndex);
+	m_RenderCommandBuffer->Submit(frameIndex);
+	m_RenderCommandBuffer->Wait(frameIndex);
+	
+	ImGui::Begin("Test");
+	static uint32_t widthCached{ (uint32_t)ImGui::GetContentRegionAvail().x };
+	static uint32_t heightCached{ (uint32_t)ImGui::GetContentRegionAvail().y };
+
+	if (widthCached != (uint32_t)ImGui::GetContentRegionAvail().x || heightCached != (uint32_t)ImGui::GetContentRegionAvail().y)
 	{
-		m_Renderers[i]->BeginFrame();
-		m_Renderers[i]->EndFrame();
+		m_Framebuffer->Invalidate((uint32_t)ImGui::GetContentRegionAvail().x, (uint32_t)ImGui::GetContentRegionAvail().y);
+		widthCached={ (uint32_t)ImGui::GetContentRegionAvail().x };
+		heightCached= { (uint32_t)ImGui::GetContentRegionAvail().y };
 	}
+	GUI::Image(*m_Renderer, m_Framebuffer->GetColorAttachmentView(), ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y);
+
+	//ImGui::Image(m_Framebuffer->GetColorAttachmentView(), {ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y});
+	ImGui::End();
+	//m_Renderer->EndFrame();
 }
 
 void SandboxLayer::OnDetach()

@@ -1,13 +1,47 @@
 -- Main project setup file --
 OutputDirectory = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
-VulkanSDK = os.getenv("VULKAN_SDK");
-VulkanLibrary = VulkanSDK .. "/Lib/vulkan-1.lib"
-VulkanSDKInclude = VulkanSDK .. "/include"
 FMTInclude = "Cinnamon/include/ThirdParty/fmt/include"
 
--- Use volk as a static lib from SDK? (Can't use debug symbols)
--- VolkInclude = VulkanSDK;
--- VolkLibrary = VulkanSDK .. "/Lib/volk.lib"
+-- Vulkan (TODO: Make it os-independent)
+VulkanSDK = os.getenv("VULKAN_SDK");
+VulkanLibrary = VulkanSDK .. "/Lib/vulkan-1.lib"
+
+VulkanIncludeDirectory = ""
+VulkanLibraryDirectory = ""
+VulkanBinaryDirectory = ""
+
+Libraries = {}
+DynamicLibraries = {}
+
+if os.target() == "windows"
+then
+	print("Building project for windows")
+	print("Vulkan SDK located at:", VulkanSDK);
+
+	VulkanIncludeDirectory = (VulkanSDK .. "/" .. "include")
+	VulkanLibraryDirectory = (VulkanSDK .. "/" .. "Lib")
+	VulkanBinaryDirectory = (VulkanSDK .. "/" .. "Bin")
+
+	print("Selected vulkan include directory:", VulkanIncludeDirectory)
+	print("Selected vulkan library directory:", VulkanLibraryDirectory)
+	print("Selected vulkan binary directory:", VulkanBinaryDirectory)
+
+	Libraries["Debug-ShaderC"]						= (VulkanLibraryDirectory .. "/" .. "shaderc_sharedd.lib")
+	Libraries["Debug-Optimized-ShaderC"]			= (VulkanLibraryDirectory .. "/" .. "shaderc_sharedd.lib")
+	Libraries["Release-ShaderC"]					= (VulkanLibraryDirectory .. "/" .. "shaderc_shared.lib")
+	Libraries["Distribution-ShaderC"]				= (VulkanLibraryDirectory .. "/" .. "shaderc_shared.lib")
+
+	DynamicLibraries["Debug-ShaderC"]				= (VulkanBinaryDirectory .. "/" .. "shaderc_sharedd.dll")
+	DynamicLibraries["Debug-Optimized-ShaderC"]		= (VulkanBinaryDirectory .. "/" .. "shaderc_sharedd.dll")
+	DynamicLibraries["Release-ShaderC"]				= (VulkanBinaryDirectory .. "/" .. "shaderc_shared.dll")
+	DynamicLibraries["Distribution-ShaderC"]		= (VulkanBinaryDirectory .. "/" .. "shaderc_shared.dll")
+else
+	print("Unsupported platform!")
+end
+
+-- Use volk as a static lib from SDK? (Can't use debug symbols easily)
+-- TODO: Get it from sdk instead
+VmaInclude = "Cinnamon/include/ThirdParty/VulkanMemoryAllocator/include"
 
 
 workspace ("Cinnamon")
@@ -106,6 +140,7 @@ workspace ("Cinnamon")
 group "ThirdParty"
 include "Cinnamon/include/ThirdParty/xdg"
 include "Cinnamon/include/ThirdParty/volk"
+include "Cinnamon/include/ThirdParty/VulkanMemoryAllocator"
 include "Cinnamon/include/ThirdParty/fmt"
 include "Cinnamon/include/ThirdParty/imgui"
 group ""
@@ -139,15 +174,41 @@ project ("Cinnamon")
 	includedirs
 	{
 		"%{prj.name}/include",
-		VulkanSDKInclude,
+		VulkanIncludeDirectory,
 		FMTInclude,
+		VmaInclude
 	}
 	
 	links
 	{
 		"volk",
 		"imgui",
+		"VulkanMemoryAllocator",
 	}
+
+	filter "configurations:Debug"
+		links
+		{
+			Libraries["Debug-ShaderC"],
+		}
+
+	filter "configurations:Debug-Optimized"
+		links
+		{
+			Libraries["Debug-Optimized-ShaderC"],
+		}
+
+	filter "configurations:Release"
+		links
+		{
+			Libraries["Release-ShaderC"],
+		}
+
+	filter "configurations:Distribution"
+		links
+		{
+			Libraries["Distribution-ShaderC"],
+		}
 
 	filter "system:linux"
 		links
@@ -188,6 +249,8 @@ project ("CinnamonEditor")
 		"%{prj.name}/include",
 		"%{wks.location}/Cinnamon/include",
 		FMTInclude,
+		VulkanIncludeDirectory,
+		VmaInclude,
 	}
 
 	links
@@ -239,15 +302,18 @@ project ("Sandbox")
 	{
 		"%{prj.name}/include",
 		"%{wks.location}/Cinnamon/include",
+		VulkanIncludeDirectory,
 		FMTInclude,
+		VmaInclude
 	}
 
 	links
 	{
 		"Cinnamon",
 		"imgui",
+		"VulkanMemoryAllocator",
 	}
-		
+
 	postbuildcommands 
 	{
 		"{COPY} %{wks.location}/CinnamonEditor/include/Resources %{cfg.targetdir}/Resources",

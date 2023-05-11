@@ -1,19 +1,21 @@
 #pragma once
 #include "Cinnamon/include/Core/Core.hpp"
 
-namespace Cinnamon {
+namespace Cinnamon {	
 	class Renderer;
+	class Window;
 	class Event;
 	enum class EUITheme;
-}
 
-namespace Cinnamon {	
 	class GUIRenderer final
 	{
 	private:
 		NON_COPYABLE(GUIRenderer)
 	public:
-		explicit GUIRenderer(const STL::Unique<Renderer>& renderer) noexcept;
+		explicit GUIRenderer(
+			const STL::Unique<Window>& window,
+			const STL::Unique<Renderer>& renderer) noexcept;
+		
 		~GUIRenderer() noexcept;
 
 		void BeginFrame();

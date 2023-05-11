@@ -19,9 +19,21 @@ InternalScope void BeginDockspace();
 InternalScope void EndDockspace();
 
 using namespace Cinnamon;
+EditorLayer::EditorLayer(
+	const STL::Unique<Window>& window,
+	const STL::Unique<Renderer>& renderer) noexcept
+	:
+	m_Window(window),
+	m_Renderer(renderer)
+{}
+
+EditorLayer::~EditorLayer() noexcept
+{}
+
 void EditorLayer::OnAttach()
 {
-	m_Panels.emplace_back(cinew EditorViewportPanel);
+	const auto [windowWidth, windowHeight] { m_Window->GetSize() };
+	m_Panels.emplace_back(cinew EditorViewportPanel(m_Renderer, windowWidth, windowHeight));
 	m_Panels.emplace_back(cinew SceneHierarchyPanel);
 	m_Panels.emplace_back(cinew ContentBrowserPanel);
 }
@@ -30,83 +42,51 @@ void EditorLayer::OnUpdate(const Timestep timestep)
 {
 	for (EditorPanelBase* panel : m_Panels)
 		panel->OnUpdate(timestep);
+	
+	BeginDockspace();
+	[[unlikely]]
+	if (ImGui::BeginMenuBar())
 	{
-		BeginDockspace();
-
 		[[unlikely]]
-		if (ImGui::BeginMenuBar())
+		if (ImGui::BeginMenu("File"))
 		{
+			/* Project files */
 			[[unlikely]]
-			if (ImGui::BeginMenu("File"))
+			if (ImGui::MenuItem("New Project"))
 			{
-				/* Project files */
-				[[unlikely]]
-				if (ImGui::MenuItem("New Project"))
-				{
-					CIN_INFO("Opening new project");
-				}
-
-				[[unlikely]]
-				if (ImGui::MenuItem("Open Project"))
-				{
-					CIN_INFO("Opening project");
-				}
-
-				[[unlikely]]
-				if (ImGui::MenuItem("Save Project"))
-				{
-					CIN_INFO("Saving project");
-				}
-
-				ImGui::SeparatorEx(ImGuiSeparatorFlags_Horizontal);
-				[[unlikely]]
-				if (ImGui::MenuItem("Quit"))
-				{
-					CIN_INFO("Quitting. . .");
-					Cinnamon::Application::Close();
-				}
-
-				ImGui::EndMenu();
+				CIN_INFO("Opening new project");
 			}
 
-			ImGui::EndMenuBar();
+			[[unlikely]]
+			if (ImGui::MenuItem("Open Project"))
+			{
+				CIN_INFO("Opening project");
+			}
+
+			[[unlikely]]
+			if (ImGui::MenuItem("Save Project"))
+			{
+				CIN_INFO("Saving project");
+			}
+
+			ImGui::SeparatorEx(ImGuiSeparatorFlags_Horizontal);
+			[[unlikely]]
+			if (ImGui::MenuItem("Quit"))
+			{
+				CIN_INFO("Quitting. . .");
+				Cinnamon::Application::Close();
+			}
+
+			ImGui::EndMenu();
 		}
-		
-		for (EditorPanelBase* panel : m_Panels)
-			panel->OnGUIRender();
 
-		EndDockspace();
+		ImGui::EndMenuBar();
 	}
-
-#if (CIN_DEBUG && 0)
-	FunctionVariable struct {
-		uint32_t x{ 0U }, y{ 0U };
-	} f_CachedMousePosition;
-
-	const auto [currentMousePositionX, currentMousePositionY] { Cinnamon::Input::GetMousePosition() };
-	if (currentMousePositionX != f_CachedMousePosition.x || currentMousePositionY != f_CachedMousePosition.y)
-	{
-		CIN_TRACE("Mouse moved [new x, new y]: {0}, {1}", currentMousePositionX, currentMousePositionY);
-		f_CachedMousePosition.x = currentMousePositionX;
-		f_CachedMousePosition.y = currentMousePositionY;
-	}
-
-	if (Cinnamon::Input::IsMouseButtonPressed(Cinnamon::Mouse::LeftButton))
-		CIN_TRACE("Pressed left mouse button");
-	else if (Cinnamon::Input::IsMouseButtonPressed(Cinnamon::Mouse::MiddleButton))
-		CIN_TRACE("Pressed middle mouse button");
-	else if(Cinnamon::Input::IsMouseButtonPressed(Cinnamon::Mouse::RightButton))
-		CIN_TRACE("Pressed right mouse button");
-
-	for (uint32_t i{ 0U }; i < static_cast<uint32_t>(Cinnamon::Key::KeysEnd); ++i)
-		if (Cinnamon::Input::IsKeyPressed(static_cast<Cinnamon::Key>(i)))
-			CIN_TRACE("Pressed key: {}", Cinnamon::KeyToString(static_cast<Cinnamon::Key>(i)));
 	
-	//CIN_WARN("Editor layer update timestep: {}", timestep);
-	CIN_UNUSED(timestep);
-#else
-	CIN_UNUSED(timestep);
-#endif
+	for (EditorPanelBase* panel : m_Panels)
+		panel->OnGUIRender();
+
+	EndDockspace();
 }
 
 void EditorLayer::OnDetach()
@@ -124,6 +104,9 @@ void EditorLayer::OnEvent(const Event& event)
 {
 	const EventDispatcher dispatcher(event);
 	dispatcher.Dispatch<KeyPressedEvent>(std::bind(&EditorLayer::OnKeyPressed, this, std::placeholders::_1));
+
+	for (EditorPanelBase* const panel : m_Panels)
+		panel->OnEvent(event);
 }
 
 bool EditorLayer::OnKeyPressed(const KeyPressedEvent& event)

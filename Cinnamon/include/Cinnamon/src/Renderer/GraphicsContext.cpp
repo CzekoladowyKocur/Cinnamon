@@ -1,5 +1,4 @@
 #include "Cinnamon/include/Renderer/GraphicsContext.hpp"
-#include "Cinnamon/include/Renderer/VulkanTypes.hpp"
 #include "Cinnamon/include/Renderer/Surface.hpp"
 #include "Cinnamon/include/Renderer/Swapchain.hpp"
 #include "Cinnamon/include/Core/Window.hpp"
@@ -59,14 +58,39 @@ namespace Cinnamon {
 
 		return VK_FALSE;
 	}
+
+	InternalScope VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugReportCallback(
+		VkDebugReportFlagsEXT flags,
+		VkDebugReportObjectTypeEXT objectType,
+		size_t object,
+		size_t location,
+		int32_t messageCode,
+		const char* layerPrefix,
+		const char* message,
+		void* userData)
+	{
+		CIN_UNUSED(flags);
+		CIN_UNUSED(objectType);
+		CIN_UNUSED(object);
+		CIN_UNUSED(location);
+		CIN_UNUSED(messageCode);
+		CIN_UNUSED(userData);
+		if(flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT)
+			CIN_WARN("Vulkan debug report callback [{}]: {}", layerPrefix, message);
+
+		return VK_FALSE;
+	}
 #endif
 	struct
 	{
 		VkInstance					Instance{ VK_NULL_HANDLE };
 		VkPhysicalDevice			PhysicalDevice{ VK_NULL_HANDLE };
-		/* Debug */
-		VkDebugUtilsMessengerEXT	DebugUtilitiesMessenger{ VK_NULL_HANDLE };
 		VkAllocationCallbacks*		Allocator{ VK_NULL_HANDLE };
+		/* Debug */
+#ifdef CIN_DEBUG
+		VkDebugUtilsMessengerEXT	DebugUtilitiesMessenger{ VK_NULL_HANDLE };
+		VkDebugReportCallbackEXT	DebugReportCallback{ VK_NULL_HANDLE };
+#endif
 	} constinit InternalScope s_GraphicsContext;
 
 	namespace GraphicsContext
@@ -153,7 +177,7 @@ namespace Cinnamon {
 					}
 				}
 
-				constexpr VkApplicationInfo applicationInfo
+				const VkApplicationInfo applicationInfo
 				{
 					.sType{ VK_STRUCTURE_TYPE_APPLICATION_INFO },
 					.pNext{ nullptr },
@@ -161,7 +185,7 @@ namespace Cinnamon {
 					.applicationVersion{ VK_MAKE_VERSION(0, 0, 1) },
 					.pEngineName{ "Cinnamon" },
 					.engineVersion{ VK_MAKE_VERSION(0, 0, 1) },
-					.apiVersion{ VK_MAKE_API_VERSION(0, 1, 3, 0) },
+					.apiVersion{ GetAPIVersion() },
 				};
 
 				const VkInstanceCreateInfo instanceCreateInfo
@@ -215,6 +239,32 @@ namespace Cinnamon {
 					&debugUtilitiesMessengerCreateInfo,
 					s_GraphicsContext.Allocator,
 					&s_GraphicsContext.DebugUtilitiesMessenger));
+
+				constexpr VkDebugReportCallbackCreateInfoEXT debugUtilsMessengerCreateInfo
+				{
+					.sType{ VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT },
+					.pNext{ nullptr },
+					.flags
+					{
+						VK_DEBUG_REPORT_WARNING_BIT_EXT |
+						VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |
+						VK_DEBUG_REPORT_ERROR_BIT_EXT |
+						VK_DEBUG_REPORT_DEBUG_BIT_EXT
+					},
+					.pfnCallback{ VulkanDebugReportCallback },
+					.pUserData{ nullptr }
+				};
+				
+				const PFN_vkCreateDebugReportCallbackEXT _vkCreateDebugReportCallback{ reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(vkGetInstanceProcAddr(
+						s_GraphicsContext.Instance,
+						"vkCreateDebugReportCallbackEXT")) };
+
+				CIN_ASSERT(_vkCreateDebugReportCallback);
+				VK_CHECK(_vkCreateDebugReportCallback(
+					s_GraphicsContext.Instance, 
+					&debugUtilsMessengerCreateInfo, 
+					nullptr, 
+					&s_GraphicsContext.DebugReportCallback));
 #endif
 				uint32_t physicalDeviceCount{ 0 };
 				VK_CHECK(vkEnumeratePhysicalDevices(s_GraphicsContext.Instance, &physicalDeviceCount, nullptr));
@@ -258,6 +308,14 @@ namespace Cinnamon {
 				s_GraphicsContext.Instance,
 				s_GraphicsContext.DebugUtilitiesMessenger,
 				s_GraphicsContext.Allocator);
+
+			const PFN_vkDestroyDebugReportCallbackEXT _vkDestroyDebugReportCallbackEXT{ reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>(vkGetInstanceProcAddr(s_GraphicsContext.Instance, "vkDestroyDebugReportCallbackEXT")) };
+			CIN_ASSERT(_vkDestroyDebugUtilsMessengerEXT != nullptr);
+
+			_vkDestroyDebugReportCallbackEXT(
+				s_GraphicsContext.Instance,
+				s_GraphicsContext.DebugReportCallback,
+				s_GraphicsContext.Allocator);
 #endif
 			vkDestroyInstance(
 				s_GraphicsContext.Instance,
@@ -269,6 +327,11 @@ namespace Cinnamon {
 #else
 			CIN_WARN("Vulkan library was left unloaded");
 #endif
+		}
+
+		uint32_t GetAPIVersion()
+		{
+			return VK_API_VERSION_1_3;
 		}
 
 		VkInstance GetInstance()

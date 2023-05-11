@@ -5,12 +5,10 @@
 
 namespace Cinnamon {
 	Swapchain::Swapchain(
-		const STL::Unique<Surface>& surface,
 		const STL::Unique<Device>& device,
-		const uint32_t width,
-		const uint32_t height) noexcept
+		const STL::Unique<Window>& window) noexcept
 		:
-		m_Surface(surface),
+		m_Surface(Platform::RetrieveWindowSurface(window)),
 		m_Device(device),
 		m_Handle(VK_NULL_HANDLE),
 		m_CachedSwapchain(VK_NULL_HANDLE),
@@ -19,9 +17,10 @@ namespace Cinnamon {
 		m_SurfaceFormat({ VK_FORMAT_UNDEFINED, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR }),
 		m_PresentMode(VK_PRESENT_MODE_FIFO_KHR), /* The only one guaranteed by specification */
 		m_SurfaceCapabilities({}),
-		m_Extent({ width, height }),
+		m_Extent({ 0U, 0U }),
 		m_ClearColor({ .color { .float32 { 0.3f, 0.1f, 0.12f, 1.0f } }, }),
 		m_SurfaceUpdated(false),
+		m_MinimalImageCount(0U),
 		m_Images({}),
 		m_ImageViews({}),
 		m_Framebuffers({}),
@@ -47,6 +46,7 @@ namespace Cinnamon {
 			GraphicsContext::GetAllocator(),
 			&m_CommandPool));
 
+		const auto [width, height] { window->GetSize() };
 		Create(width, height);
 	}
 
@@ -65,6 +65,8 @@ namespace Cinnamon {
 			m_Device->GetLogicalDevice(),
 			m_Handle,
 			GraphicsContext::GetAllocator());
+
+		Platform::DestroySurface(m_Surface);
 	}
 
 	void Swapchain::Create(const uint32_t width, const uint32_t height)
@@ -80,7 +82,7 @@ namespace Cinnamon {
 			uint32_t availableSurfaceFormatCount{ 0U };
 			VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(
 				m_Device->GetPhysicalDevice(),
-				m_Surface->GetHandle(),
+				m_Surface,
 				&availableSurfaceFormatCount,
 				nullptr));
 
@@ -88,7 +90,7 @@ namespace Cinnamon {
 			STL::Vector<VkSurfaceFormatKHR> availableSurfaceFormats(availableSurfaceFormatCount);
 			VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(
 				m_Device->GetPhysicalDevice(),
-				m_Surface->GetHandle(),
+				m_Surface,
 				&availableSurfaceFormatCount,
 				&availableSurfaceFormats[0U]));
 
@@ -110,7 +112,7 @@ namespace Cinnamon {
 			uint32_t availablePresentModeCount{ 0U };
 			VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(
 				m_Device->GetPhysicalDevice(),
-				m_Surface->GetHandle(),
+				m_Surface,
 				&availablePresentModeCount,
 				nullptr));
 
@@ -119,15 +121,16 @@ namespace Cinnamon {
 
 			VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(
 				m_Device->GetPhysicalDevice(),
-				m_Surface->GetHandle(),
+				m_Surface,
 				&availablePresentModeCount,
 				&availablePresentModes[0]));
 
 			bool found{ false };
+			const VkPresentModeKHR desiredPresentMode{ Platform::GetDesiredSurfacePresentMode(m_Surface) };
 			for (const VkPresentModeKHR availablePresentMode : availablePresentModes)
-				if (availablePresentMode == m_Surface->GetDesiredPresentMode())
+				if (availablePresentMode == desiredPresentMode)
 				{
-					m_PresentMode = m_Surface->GetDesiredPresentMode();
+					m_PresentMode = desiredPresentMode;
 					found = true;
 					break;
 				}
@@ -140,7 +143,7 @@ namespace Cinnamon {
 		{
 			VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
 				m_Device->GetPhysicalDevice(),
-				m_Surface->GetHandle(),
+				m_Surface,
 				&m_SurfaceCapabilities));
 		}
 
@@ -163,6 +166,7 @@ namespace Cinnamon {
 			}
 		}
 
+		m_MinimalImageCount = m_SurfaceCapabilities.minImageCount;
 		uint32_t imageCount{ m_SurfaceCapabilities.minImageCount + 1U };
 		if (m_SurfaceCapabilities.maxImageCount > 0U && imageCount > m_SurfaceCapabilities.maxImageCount)
 			imageCount = m_SurfaceCapabilities.maxImageCount;
@@ -182,7 +186,7 @@ namespace Cinnamon {
 			.sType{ VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR },
 			.pNext{ nullptr },
 			.flags{ 0U },
-			.surface{ m_Surface->GetHandle() },
+			.surface{ m_Surface },
 			.minImageCount{ imageCount },
 			.imageFormat{ m_SurfaceFormat.format },
 			.imageColorSpace{ m_SurfaceFormat.colorSpace },
@@ -206,7 +210,8 @@ namespace Cinnamon {
 			&m_Handle));
 
 		/* Main color attachment */
-		const VkAttachmentDescription colorAttachmentDescription{
+		const VkAttachmentDescription colorAttachmentDescription
+		{
 			.flags{ 0U },
 			.format{ m_SurfaceFormat.format },
 			.samples{ VK_SAMPLE_COUNT_1_BIT },
@@ -218,12 +223,14 @@ namespace Cinnamon {
 			.finalLayout{ VK_IMAGE_LAYOUT_PRESENT_SRC_KHR }, /* Transfer the layout to swapchain presentable format*/
 		};
 
-		constexpr VkAttachmentReference colorAttachmentReference{
+		constexpr VkAttachmentReference colorAttachmentReference
+		{
 			.attachment{ 0U },
 			.layout{ VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL } /* Specifies the layout of the attachment during subpass */
 		};
 
-		const VkSubpassDescription subpassDescription{
+		const VkSubpassDescription subpassDescription
+		{
 			.flags{ 0U },
 			.pipelineBindPoint{ VK_PIPELINE_BIND_POINT_GRAPHICS },
 			.inputAttachmentCount{ 0U },
@@ -236,7 +243,8 @@ namespace Cinnamon {
 			.pPreserveAttachments{ nullptr },
 		};
 
-		constexpr VkSubpassDependency subpassDependency{
+		constexpr VkSubpassDependency subpassDependency
+		{
 			.srcSubpass{ VK_SUBPASS_EXTERNAL }, /* Is the subpass index of the first subpass in the dependency, or VK_SUBPASS_EXTERNAL. */
 			.dstSubpass{ 0U }, /* Is the subpass index of the second subpass in the dependency, or VK_SUBPASS_EXTERNAL. */
 			.srcStageMask{ VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT },
@@ -254,7 +262,8 @@ namespace Cinnamon {
 		stages determined by the source stage mask specified by srcStageMask.
 		*/
 
-		const VkRenderPassCreateInfo renderPassCreateInfo{
+		const VkRenderPassCreateInfo renderPassCreateInfo
+		{
 			.sType{ VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO },
 			.pNext{ nullptr },
 			.flags{ 0U },
@@ -287,20 +296,23 @@ namespace Cinnamon {
 			&imageCount,
 			&m_Images[0U]));
 
-		VkImageViewCreateInfo imageViewCreateInfo{
+		VkImageViewCreateInfo imageViewCreateInfo
+		{
 			.sType{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO },
 			.pNext{ nullptr },
 			.flags{ 0U },
 			.image{ nullptr }, /* Set in loop */
 			.viewType{ VK_IMAGE_VIEW_TYPE_2D },
 			.format{ m_SurfaceFormat.format },
-			.components{
+			.components
+			{
 				.r { VK_COMPONENT_SWIZZLE_R },
 				.g { VK_COMPONENT_SWIZZLE_G },
 				.b { VK_COMPONENT_SWIZZLE_B },
 				.a { VK_COMPONENT_SWIZZLE_A },
 			},
-			.subresourceRange{
+			.subresourceRange
+			{
 				.aspectMask{ VK_IMAGE_ASPECT_COLOR_BIT },
 				.baseMipLevel{ 0U },
 				.levelCount{ 1U },
@@ -364,13 +376,15 @@ namespace Cinnamon {
 		m_Semaphores.ImageAvailable.resize(m_FramesInFlight);
 		m_Semaphores.RenderingFinished.resize(m_FramesInFlight);
 
-		constexpr VkFenceCreateInfo fenceCreateInfo{
+		constexpr VkFenceCreateInfo fenceCreateInfo
+		{
 			.sType{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO },
 			.pNext{ nullptr },
 			.flags{ VK_FENCE_CREATE_SIGNALED_BIT },
 		};
 
-		constexpr VkSemaphoreCreateInfo semaphoreCreateInfo{
+		constexpr VkSemaphoreCreateInfo semaphoreCreateInfo
+		{
 			.sType{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO },
 			.pNext{ nullptr },
 			.flags{ VK_SEMAPHORE_TYPE_BINARY },
@@ -408,7 +422,7 @@ namespace Cinnamon {
 		/* If surface hasn't changed, cache the handle and use it in creation */
 		m_CachedSwapchain = !m_SurfaceUpdated ? m_Handle : VK_NULL_HANDLE;
 		/* Store the old handle to delete it (always gets deleted) */
-		VkSwapchainKHR oldHandle{ m_Handle };
+		const VkSwapchainKHR oldHandle{ m_Handle };
 		/* Unsignal surface update */
 		m_SurfaceUpdated = false;
 
@@ -466,7 +480,11 @@ namespace Cinnamon {
 			GraphicsContext::GetAllocator());
 	}
 
-	void Swapchain::SetClearColor(const float r, const float g, const float b, const float a)
+	void Swapchain::SetClearColor(
+		const float r, 
+		const float g, 
+		const float b,
+		const float a)
 	{
 		m_ClearColor = VkClearValue{ .color {.float32 { r, g, b, a } }, };
 	}
@@ -474,7 +492,7 @@ namespace Cinnamon {
 	void Swapchain::AcquireNextSwapchainImage()
 	{
 		const VkFence imageInFlightFence{ m_Fences.InFlightFences[m_FrameIndex] };
-		const VkSemaphore presentCompleteSemaphore{ m_Semaphores.ImageAvailable[m_FrameIndex] };
+		const VkSemaphore imageAvailableSemaphore{ m_Semaphores.ImageAvailable[m_FrameIndex] };
 
 		VkResult result;
 		do 
@@ -489,7 +507,7 @@ namespace Cinnamon {
 				m_Device->GetLogicalDevice(),
 				m_Handle,
 				std::numeric_limits<std::uint64_t>::max(),
-				presentCompleteSemaphore,
+				imageAvailableSemaphore,
 				VK_NULL_HANDLE, /* Fence here instead? */
 				&m_ImageIndex);
 
@@ -521,7 +539,7 @@ namespace Cinnamon {
 
 				default:
 				{
-					m_Surface->Recreate();
+					m_Surface = Platform::RecreateWindowSurface(m_Surface);
 					m_SurfaceUpdated = true;
 
 					Recreate(m_Extent.width, m_Extent.height);
@@ -536,7 +554,7 @@ namespace Cinnamon {
 		/* Signals images in flight */
 		const VkFence imageInFlightFence{ m_Fences.InFlightFences[m_FrameIndex] };
 		/* Signals whether presenting the image has finished (image is available) */
-		const VkSemaphore presentCompleteSemaphore{ m_Semaphores.ImageAvailable[m_FrameIndex] };
+		const VkSemaphore imageAvailableSemaphore{ m_Semaphores.ImageAvailable[m_FrameIndex] };
 		/* Signals whether rendering the image has finished (image was rendered to) */
 		const VkSemaphore renderCompleteSemaphore{ m_Semaphores.RenderingFinished[m_FrameIndex] };
 		/* Current frmae command buffer */
@@ -550,11 +568,12 @@ namespace Cinnamon {
 
 		/* Color attachment output */
 		constexpr STL::Array<VkPipelineStageFlags, 1U> waitStages{ VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-		const VkSubmitInfo submitInfo{
+		const VkSubmitInfo submitInfo
+		{
 			.sType{ VK_STRUCTURE_TYPE_SUBMIT_INFO },
 			.pNext{ nullptr},
 			.waitSemaphoreCount{ 1U },
-			.pWaitSemaphores{ &presentCompleteSemaphore },
+			.pWaitSemaphores{ &imageAvailableSemaphore },
 			.pWaitDstStageMask{ &waitStages[0U] },
 			.commandBufferCount{ 1U },
 			.pCommandBuffers{ &commandBuffer },
@@ -562,27 +581,37 @@ namespace Cinnamon {
 			.pSignalSemaphores{ &renderCompleteSemaphore },
 		};
 
+		CIN_ASSERT(m_RecordFunction);
 		if (m_RecordFunction)
-			m_RecordFunction();
-		else
+		{
+			m_RecordFunction(
+				commandBuffer, 
+				m_Framebuffers[m_ImageIndex], 
+				m_RenderPass, 
+				m_Extent);
+		}
+#if 0
+		else if(false)
 		/* Record default clear command buffers */
 		{
 			const STL::Array<VkClearValue, 1U> clearValues{ m_ClearColor };
-
+		
 			constexpr VkCommandBufferBeginInfo commandBufferBeginInfo{
 				.sType{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO },
 				.pNext{ nullptr },
 				.flags{ VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT },
 				.pInheritanceInfo{ nullptr },
 			};
-
+			
 			const VkRenderPassBeginInfo renderPassBeginInfo{
 				.sType{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO },
 				.pNext{ nullptr },
 				.renderPass{ m_RenderPass },
 				.framebuffer{ m_Framebuffers[m_ImageIndex] },
-				.renderArea{
-					.offset{
+				.renderArea
+				{
+					.offset
+					{
 						.x{ 0 },
 						.y{ 0 },
 					},
@@ -591,11 +620,11 @@ namespace Cinnamon {
 				.clearValueCount{ static_cast<uint32_t>(clearValues.size()) },
 				.pClearValues{ &clearValues[0U] },
 			};
-
+			
 			VK_CHECK(vkBeginCommandBuffer(
 				commandBuffer, 
 				&commandBufferBeginInfo));
-
+			
 			vkCmdBeginRenderPass(
 				commandBuffer, 
 				&renderPassBeginInfo, 
@@ -603,18 +632,19 @@ namespace Cinnamon {
 			
 			vkCmdEndRenderPass(
 				commandBuffer);
-
+			
 			VK_CHECK(vkEndCommandBuffer(
 				commandBuffer));
 		}
-
+#endif
 		VK_CHECK(vkQueueSubmit(
 			m_Device->GetQueues().Graphics,
 			1U,
 			&submitInfo,
 			imageInFlightFence));
 
-		const VkPresentInfoKHR presentInfo{
+		const VkPresentInfoKHR presentInfo
+		{
 			.sType{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR },
 			.pNext{ nullptr },
 			.waitSemaphoreCount{ 1U },
@@ -625,11 +655,12 @@ namespace Cinnamon {
 			.pResults{ nullptr },
 		};
 
-		/* TODO: Add support for present queue */
-		const VkResult result{
+		const VkResult result
+		{
 			vkQueuePresentKHR(
 				m_Device->GetQueues().Present,
-				&presentInfo) };
+				&presentInfo) 
+		};
 
 		switch (result)
 		{
@@ -649,7 +680,7 @@ namespace Cinnamon {
 
 			case VK_ERROR_SURFACE_LOST_KHR:
 			{
-				m_Surface->Recreate();
+				m_Surface = Platform::RecreateWindowSurface(m_Surface);
 				m_SurfaceUpdated = true;
 				
 				Recreate(m_Extent.width, m_Extent.height);
@@ -658,7 +689,7 @@ namespace Cinnamon {
 
 			default:
 			{
-				m_Surface->Recreate();
+				m_Surface = Platform::RecreateWindowSurface(m_Surface);
 				m_SurfaceUpdated = true;
 
 				Recreate(m_Extent.width, m_Extent.height);
@@ -669,7 +700,7 @@ namespace Cinnamon {
 		m_FrameIndex = (m_FrameIndex + 1U) % m_FramesInFlight;
 	}
 
-	void Swapchain::RecordCommands(const std::function<void()> recordFunction)
+	void Swapchain::RecordCommands(const SwapchainCommandRecordCallback recordFunction)
 	{
 		m_RecordFunction = recordFunction;
 	}
@@ -678,6 +709,11 @@ namespace Cinnamon {
 	{
 		CIN_ASSERT(m_Images.size() > 0, "Invalid image count");
 		return static_cast<uint32_t>(m_Images.size());
+	}
+
+	uint32_t Swapchain::GetImageMinimalCount() const
+	{
+		return m_MinimalImageCount;
 	}
 
 	uint32_t Swapchain::GetImageIndex() const
@@ -700,13 +736,18 @@ namespace Cinnamon {
 		return m_RenderPass;
 	}
 
-	VkCommandBuffer Swapchain::GetCurrentCommandBuffer() const
-	{
-		return m_CommandBuffers[m_FrameIndex];
-	}
-
 	VkFramebuffer Swapchain::GetCurrentFramebuffer() const
 	{
 		return m_Framebuffers[m_ImageIndex];
+	}
+
+	VkCommandBuffer Swapchain::GetCommandBuffer(const uint32_t frameIndex) const
+	{
+		return m_CommandBuffers[frameIndex];
+	}
+
+	VkFence Swapchain::GetWaitFence(const uint32_t frameIndex) const
+	{
+		return m_Fences.InFlightFences[frameIndex];
 	}
 }

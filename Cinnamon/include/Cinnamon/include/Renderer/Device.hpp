@@ -4,18 +4,20 @@
 #include "Cinnamon/include/Core/Window.hpp"
 
 namespace Cinnamon {
-	class Surface;
+	class Window;
+	class Swapchain;
+	class VulkanAllocator;
 
 	class Device final
 	{
 	private:
 		NON_COPYABLE(Device)
 	public:
-		explicit Device(const STL::Unique<Surface>& surface);
-		~Device();
+		explicit Device(const STL::Unique<Window>& window) noexcept;
+		~Device() noexcept;
 
 		void PerformSingleSubmitGraphicsOperation(const std::function<void(VkCommandBuffer)> operation);
-
+		
 		VkPhysicalDevice GetPhysicalDevice();
 		VkDevice GetLogicalDevice();
 

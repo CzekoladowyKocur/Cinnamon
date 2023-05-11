@@ -27,14 +27,13 @@ namespace Cinnamon {
 	struct InternalGUIRendererState
 	{
 		ImGuiContext*					Context{ nullptr };
-
 		/* Vulkan context */
 		VkDescriptorPool				DescriptorPool{ VK_NULL_HANDLE };
-		VkCommandPool					CommandPool{ VK_NULL_HANDLE };
-		STL::Vector<VkCommandBuffer>	CommandBuffers{};
 	};
 
-	GUIRenderer::GUIRenderer(const STL::Unique<Renderer>& renderer) noexcept
+	GUIRenderer::GUIRenderer(
+		const STL::Unique<Window>& window,
+		const STL::Unique<Renderer>& renderer) noexcept
 		:
 		m_Renderer(renderer),
 		m_InternalState(cinew InternalGUIRendererState)
@@ -91,7 +90,8 @@ namespace Cinnamon {
 			GraphicsContext::GetAllocator(),
 			&m_InternalState->DescriptorPool));
 
-		ImGui_ImplVulkan_InitInfo vulkanInitializeInfo{
+		ImGui_ImplVulkan_InitInfo vulkanInitializeInfo
+		{
 			.Instance{ GraphicsContext::GetInstance() },
 			.PhysicalDevice{ device->GetPhysicalDevice() },
 			.Device{ device->GetLogicalDevice() },
@@ -100,7 +100,7 @@ namespace Cinnamon {
 			.PipelineCache{ VK_NULL_HANDLE },
 			.DescriptorPool{ m_InternalState->DescriptorPool },
 			.Subpass{ 0U },
-			.MinImageCount{ 3 },
+			.MinImageCount{ swapchain->GetImageMinimalCount() },
 			.ImageCount{ swapchain->GetImageCount() },
 			.MSAASamples{ VK_SAMPLE_COUNT_1_BIT },
 			.Allocator{ GraphicsContext::GetAllocator() },
@@ -130,16 +130,17 @@ namespace Cinnamon {
 #endif
 		};
 
-		CIN_VERIFY(ImGui_ImplWin32_Init(const_cast<void*>(m_Renderer->GetWindow()->GetNativeHandle())));
+		CIN_VERIFY(ImGui_ImplWin32_Init(const_cast<void*>(window->GetNativeHandle())));
 
 		CIN_VERIFY(ImGui_ImplVulkan_LoadFunctions([](const char* function_name, void* userData)
-			{
-				return vkGetInstanceProcAddr(
-					GraphicsContext::GetInstance(),
-					function_name);
-			}));
+		{
+			return vkGetInstanceProcAddr(
+				GraphicsContext::GetInstance(),
+				function_name);
+		}));
 
-		ImGui::GetPlatformIO().Platform_CreateVkSurface = [](ImGuiViewport* viewport, ImU64 vulkanInstance, const void* allocator, ImU64* outVulkanSurface) {
+		ImGui::GetPlatformIO().Platform_CreateVkSurface = [](ImGuiViewport* const viewport, const ImU64 vulkanInstance, const void* allocator, ImU64* outVulkanSurface)
+		{
 			const VkWin32SurfaceCreateInfoKHR createInfo{
 				.sType{ VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR} ,
 				.pNext{ nullptr },
@@ -164,10 +165,10 @@ namespace Cinnamon {
 		UploadFontAtlas();
 		UploadIconFontAtlas();
 
-		device->PerformSingleSubmitGraphicsOperation([](VkCommandBuffer fontCommandBuffer)
-			{
-				ImGui_ImplVulkan_CreateFontsTexture(fontCommandBuffer);
-			});
+		device->PerformSingleSubmitGraphicsOperation([](const VkCommandBuffer fontCommandBuffer)
+		{
+			ImGui_ImplVulkan_CreateFontsTexture(fontCommandBuffer);
+		});
 
 		ImGui_ImplVulkan_DestroyFontUploadObjects();
 		const VkCommandPoolCreateInfo commandPoolCreateInfo
@@ -181,27 +182,6 @@ namespace Cinnamon {
 			},
 			.queueFamilyIndex{ device->GetQueueFamilies().Graphics },
 		};
-
-		VK_CHECK(vkCreateCommandPool(
-			device->GetLogicalDevice(),
-			&commandPoolCreateInfo,
-			GraphicsContext::GetAllocator(),
-			&m_InternalState->CommandPool));
-
-		const VkCommandBufferAllocateInfo imGuiCommandBufferAllocateInfo
-		{
-			.sType{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO },
-			.pNext{ nullptr },
-			.commandPool{ m_InternalState->CommandPool },
-			.level{ VK_COMMAND_BUFFER_LEVEL_SECONDARY },
-			.commandBufferCount{ swapchain->GetImageCount() },
-		};
-
-		m_InternalState->CommandBuffers.resize(swapchain->GetImageCount());
-		VK_CHECK(vkAllocateCommandBuffers(
-			device->GetLogicalDevice(),
-			&imGuiCommandBufferAllocateInfo,
-			&m_InternalState->CommandBuffers[0]));
 	}
 
 	GUIRenderer::~GUIRenderer() noexcept
@@ -214,11 +194,6 @@ namespace Cinnamon {
 		vkDestroyDescriptorPool(
 			device->GetLogicalDevice(),
 			m_InternalState->DescriptorPool,
-			GraphicsContext::GetAllocator());
-
-		vkDestroyCommandPool(
-			device->GetLogicalDevice(),
-			m_InternalState->CommandPool,
 			GraphicsContext::GetAllocator());
 
 		ImGui_ImplVulkan_Shutdown();
@@ -281,15 +256,16 @@ namespace Cinnamon {
 			ImGui::UpdatePlatformWindows();
 			ImGui::RenderPlatformWindowsDefault();
 		}
-		
-		Swapchain* swapchain = m_Renderer->GetSwapchain().get();
-		swapchain->RecordCommands([this, swapchain]() {
-			const uint32_t frameIndex{ swapchain->GetImageIndex() };
-			const VkExtent2D extent{ swapchain->GetExtent() };
-			const VkCommandBuffer swapchainDrawCommandBuffer{ swapchain->GetCurrentCommandBuffer() };
-			const VkFramebuffer swapchainDrawFramebuffer{ swapchain->GetCurrentFramebuffer() };
-			const VkRenderPass swapchainDrawRenderPass{ swapchain->GetRenderPass() };
 
+		const auto& swapchain{ m_Renderer->GetSwapchain() };	
+		swapchain->RecordCommands([this]
+		(
+			const VkCommandBuffer commandBuffer, 
+			const VkFramebuffer frameBuffer,
+			const VkRenderPass renderPass,
+			const VkExtent2D extent
+		) 
+		{
 			constexpr std::array<VkClearValue, 1> clearValues{ { { 0.15f, 0.15f, 0.15f, 1.0f } } };
 			constexpr VkCommandBufferBeginInfo drawCommandBufferBeginInfo
 			{
@@ -303,9 +279,10 @@ namespace Cinnamon {
 			{
 				.sType{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO },
 				.pNext{ nullptr },
-				.renderPass{ swapchainDrawRenderPass },
-				.framebuffer{ swapchainDrawFramebuffer },
-				.renderArea{
+				.renderPass{ renderPass },
+				.framebuffer{ frameBuffer },
+				.renderArea
+				{
 					.offset{ 0, 0 },
 					.extent{ extent },
 				},
@@ -313,24 +290,12 @@ namespace Cinnamon {
 				.pClearValues{ &clearValues[0] },
 			};
 
-			const VkCommandBufferInheritanceInfo commandBufferInheritanceInfo
-			{
-				.sType{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO },
-				.pNext{ nullptr },
-				.renderPass{ swapchainDrawRenderPass },
-				.subpass{ 0U },
-				.framebuffer{ swapchainDrawFramebuffer },
-				.occlusionQueryEnable{ VK_FALSE },
-				.queryFlags{ 0U },
-				.pipelineStatistics{ 0U },
-			};
-
 			const VkCommandBufferBeginInfo imGuiCommandBufferBeginInfo
 			{
 				.sType{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO },
 				.pNext{ nullptr },
 				.flags{ VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT },
-				.pInheritanceInfo{ &commandBufferInheritanceInfo },
+				.pInheritanceInfo{ nullptr },
 			};
 
 			const VkViewport viewport
@@ -349,28 +314,23 @@ namespace Cinnamon {
 				.extent{ extent },
 			};
 
-			const VkCommandBuffer imguiCommandBuffer{ m_InternalState->CommandBuffers[frameIndex] };
 			VK_CHECK(vkBeginCommandBuffer(
-				swapchainDrawCommandBuffer,
+				commandBuffer,
 				&drawCommandBufferBeginInfo));
 
 			vkCmdBeginRenderPass(
-				swapchainDrawCommandBuffer,
+				commandBuffer,
 				&renderPassBeginInfo,
-				VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-
-			VK_CHECK(vkBeginCommandBuffer(
-				imguiCommandBuffer,
-				&imGuiCommandBufferBeginInfo));
+				VK_SUBPASS_CONTENTS_INLINE);
 
 			vkCmdSetViewport(
-				imguiCommandBuffer,
+				commandBuffer,
 				0U,
 				1U,
 				&viewport);
 
 			vkCmdSetScissor(
-				imguiCommandBuffer,
+				commandBuffer,
 				0U,
 				1U,
 				&scissor);
@@ -378,23 +338,15 @@ namespace Cinnamon {
 			ImDrawData* const drawData{ ImGui::GetDrawData() };
 			ImGui_ImplVulkan_RenderDrawData(
 				drawData,
-				imguiCommandBuffer,
+				commandBuffer,
 				VK_NULL_HANDLE);
 
-			VK_CHECK(vkEndCommandBuffer(
-				imguiCommandBuffer));
-
-			vkCmdExecuteCommands(
-				swapchainDrawCommandBuffer,
-				1U,
-				&imguiCommandBuffer);
-
 			vkCmdEndRenderPass(
-				swapchainDrawCommandBuffer);
+				commandBuffer);
 
 			VK_CHECK(vkEndCommandBuffer(
-				swapchainDrawCommandBuffer));
-			});
+				commandBuffer));
+		});
 
 		//ImGui::SetCurrentContext(nullptr);
 	}
@@ -428,7 +380,6 @@ namespace Cinnamon {
 	}
 }
 
-#include "ThirdParty/imgui/backends/imgui_impl_vulkan.cpp"
 #include "ThirdParty/imgui/backends/imgui_impl_win32.cpp"
 #pragma warning(pop)
 #endif

@@ -24,7 +24,7 @@ namespace Cinnamon {
 		m_LayerStack(STL::MakeUnique<LayerStack>()),
 		m_MainWindow(STL::MakeUnique<Window>(WindowProperties{ windowTitle.data(), windowWidth, windowHeight, EWindowMode::Windowed, enableVSync })),
 		m_Renderer(STL::MakeUnique<Renderer>(m_MainWindow)),
-		m_GUIRenderer(STL::MakeUnique<GUIRenderer>(m_Renderer))
+		m_GUIRenderer(STL::MakeUnique<GUIRenderer>(m_MainWindow, m_Renderer))
 	{
 		CIN_ASSERT(s_ApplicationInstance == nullptr, "Application already instantiated!");
 		CIN_TRACE("Running cinnamon build {}", Platform::GetBuildDate());
@@ -45,18 +45,14 @@ namespace Cinnamon {
 		{ 
 			const EventDispatcher dispatcher(event);
 			dispatcher.Dispatch<ApplicationRenderEvent>(std::bind(&Application::OnApplicationRender, this, std::placeholders::_1));
-			
-			if (event.IsHandled)
-				return;
-				
 			dispatcher.Dispatch<WindowResizedEvent>(std::bind(&Application::OnWindowResized, this, std::placeholders::_1));
 			dispatcher.Dispatch<WindowClosedEvent>(std::bind(&Application::OnWindowClosed, this, std::placeholders::_1));
 			dispatcher.Dispatch<KeyPressedEvent>(std::bind(&Application::OnKeyPressed, this, std::placeholders::_1));
-
+		
 			for (Layer* const layer : *m_LayerStack)
 				[[likely]] if(not event.IsHandled)
 					layer->OnEvent(event);
-
+		
 			m_GUIRenderer->OnEvent(event);
 		});
 
@@ -77,10 +73,10 @@ namespace Cinnamon {
 		while (m_Running)
 		{
 			m_MainWindow->PollEvents();
-			//OnApplicationRender({});
 			//const double currentTime{ Platform::GetAbsoluteTime() };
 			//const Timestep timestep{ static_cast<Timestep::Type>(currentTime - lastFrameTime) };
 			//lastFrameTime = currentTime;
+			OnApplicationRender({});
 		}
 
 		return Error::Success;
@@ -138,29 +134,29 @@ namespace Cinnamon {
 			m_Renderer->BeginFrame();
 			{
 				m_GUIRenderer->BeginFrame();
-
+			
 				for (Layer* const layer : *m_LayerStack)
 					layer->OnUpdate(timestep);
-
+			
 				m_GUIRenderer->EndFrame();
 			}
 			m_Renderer->EndFrame();
 		}
 
 		CIN_UNUSED(event);
-		return true;
+		return false;
 	}
 
 	bool Application::OnWindowResized(const WindowResizedEvent& event)
 	{
 		const auto [width, height] { event.GetResize() };
 		m_Minimized = (width == 0U) or (height == 0U);
-
+		
 		[[likely]]
 		if (not m_Minimized)
 			m_Renderer->SetViewportSize(width, height);
 		
-		return true;
+		return false;
 	}
 
 	bool Application::OnWindowClosed(const WindowClosedEvent& event)

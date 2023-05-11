@@ -2,9 +2,11 @@
 #include "Cinnamon/include/Renderer/Surface.hpp"
 /* For physical device */
 #include "Cinnamon/include/Renderer/GraphicsContext.hpp"
+#include "Cinnamon/include/Renderer/VulkanAllocator.hpp"
+
 
 namespace Cinnamon {
-	Device::Device(const STL::Unique<Surface>& surface)
+	Device::Device(const STL::Unique<Window>& window) noexcept
 		:
 		m_PhysicalDevice(GraphicsContext::GetPhysicalDevice()),
 		m_LogicalDevice(VK_NULL_HANDLE),
@@ -15,6 +17,8 @@ namespace Cinnamon {
 		m_TransferCommandPool(VK_NULL_HANDLE),
 		m_PresentCommandPool(VK_NULL_HANDLE)
 	{
+		const VkSurfaceKHR surface{ window ? Platform::CreateWindowSurface(window) : VK_NULL_HANDLE };
+
 		/* Surface is created before picking any queue families to select a dedicated present queue */
 		uint32_t queueFamilyPropertiesCount{ 0U };
 		vkGetPhysicalDeviceQueueFamilyProperties(
@@ -43,19 +47,22 @@ namespace Cinnamon {
 			if (queueCount > 0U)
 			{
 				VkBool32 presentationSupported{ VK_FALSE };
-				VK_CHECK(vkGetPhysicalDeviceSurfaceSupportKHR(
-					m_PhysicalDevice,
-					queueFamilyIndex,
-					surface->GetHandle(),
-					&presentationSupported));
-
-				if (presentationSupported)
+				if (surface)
 				{
-					if (m_QueueFamilies.Present == QueueFamilies::Absent)
+					VK_CHECK(vkGetPhysicalDeviceSurfaceSupportKHR(
+						m_PhysicalDevice,
+						queueFamilyIndex,
+						surface,
+						&presentationSupported));
+
+					if (presentationSupported)
 					{
-						CIN_TRACE("--Found present queue family with index {0} with count of {1} queues", queueFamilyIndex, queueCount);
-						m_QueueFamilies.Present = static_cast<int32_t>(queueFamilyIndex);
-						m_QueueFamilies.PresentQueueCount = queueCount;
+						if (m_QueueFamilies.Present == QueueFamilies::Absent)
+						{
+							CIN_TRACE("--Found present queue family with index {0} with count of {1} queues", queueFamilyIndex, queueCount);
+							m_QueueFamilies.Present = static_cast<int32_t>(queueFamilyIndex);
+							m_QueueFamilies.PresentQueueCount = queueCount;
+						}
 					}
 				}
 
@@ -73,7 +80,7 @@ namespace Cinnamon {
 					m_QueueFamilies.Compute = static_cast<int32_t>(queueFamilyIndex);
 					m_QueueFamilies.ComputeQueueCount = queueCount;
 
-					if (presentationSupported)
+					if (surface && presentationSupported)
 					{
 						CIN_TRACE("--Found present queue family with index {0} with count of {1} queues", queueFamilyIndex, queueCount);
 						m_QueueFamilies.Present = static_cast<int32_t>(queueFamilyIndex);
@@ -363,7 +370,7 @@ namespace Cinnamon {
 			m_TransferCommandPool = m_GraphicsCommandPool;
 	}
 
-	Device::~Device()
+	Device::~Device() noexcept
 	{
 		[[likely]]
 		if (m_LogicalDevice)
@@ -389,7 +396,6 @@ namespace Cinnamon {
 
 	void Device::PerformSingleSubmitGraphicsOperation(const std::function<void(VkCommandBuffer)> operation)
 	{
-#if 1
 		CIN_ASSERT(m_GraphicsCommandPool, "Invalid graphics command pool");
 		const VkCommandBufferAllocateInfo commandBufferAllocateInfo
 		{
@@ -430,7 +436,7 @@ namespace Cinnamon {
 			.pNext{ nullptr },
 			.waitSemaphoreCount{ 0U },
 			.pWaitSemaphores{ nullptr },
-			.pWaitDstStageMask{ 0U /* VK_PIPELINE_STAGE_GRAPHICS_BIT */},
+			.pWaitDstStageMask{ 0U },
 			.commandBufferCount{ 1U },
 			.pCommandBuffers{ &commandBuffer },
 			.signalSemaphoreCount{ 0U },
@@ -474,16 +480,17 @@ namespace Cinnamon {
 			m_LogicalDevice,
 			executionHasFinishedFence,
 			GraphicsContext::GetAllocator());
-#endif
 	}
 
 	VkPhysicalDevice Device::GetPhysicalDevice()
 	{
+		CIN_ASSERT(m_PhysicalDevice);
 		return m_PhysicalDevice;
 	}
 
 	VkDevice Device::GetLogicalDevice()
 	{
+		CIN_ASSERT(m_LogicalDevice);
 		return m_LogicalDevice;
 	}
 
