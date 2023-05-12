@@ -56,6 +56,7 @@ namespace Cinnamon {
 			m_GUIRenderer->OnEvent(event);
 		});
 
+		CIN_TRACE("Initializing user data");
 		if (!OnUserInitialize())
 		{
 			CIN_CRITICAL("Failed to initialize user data");

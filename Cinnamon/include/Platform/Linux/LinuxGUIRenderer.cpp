@@ -1,5 +1,6 @@
 #ifdef CIN_PLATFORM_LINUX
 #include "Cinnamon/include/Core/TypeDefines.hpp"
+#include "Cinnamon/include/Core/Window.hpp"
 #include "Cinnamon/include/GUI/GUIRenderer.hpp"
 #include "Cinnamon/include/GUI/Icons.hpp"
 #include "Cinnamon/include/GUI/GUIUtilities.hpp"
@@ -106,7 +107,9 @@ namespace Cinnamon {
     	}
 	}
 	
-	GUIRenderer::GUIRenderer(const STL::Unique<Renderer>& renderer)
+	GUIRenderer::GUIRenderer(
+		const STL::Unique<Window>& window,
+		const STL::Unique<Renderer>& renderer) noexcept
 		:
 		m_Renderer(renderer),
 		m_InternalState(cinew InternalGUIRendererState)
@@ -164,7 +167,8 @@ namespace Cinnamon {
 			GraphicsContext::GetAllocator(),
 			&m_InternalState->DescriptorPool));
 
-		ImGui_ImplVulkan_InitInfo vulkanInitializeInfo{
+		ImGui_ImplVulkan_InitInfo vulkanInitializeInfo
+		{
 			.Instance{ GraphicsContext::GetInstance() },
 			.PhysicalDevice{ device->GetPhysicalDevice() },
 			.Device{ device->GetLogicalDevice() },
@@ -211,7 +215,7 @@ namespace Cinnamon {
 				function_name);
 		}));
 
-		m_InternalState->Backend = LinuxBackendInitialize(const_cast<Window*>(m_Renderer->GetWindow().get()));
+		m_InternalState->Backend = LinuxBackendInitialize(const_cast<Window*>(window.get()));
 
 		CIN_VERIFY(ImGui_ImplVulkan_LoadFunctions([](const char* function_name, void* userData)
 			{
@@ -220,9 +224,6 @@ namespace Cinnamon {
 					GraphicsContext::GetInstance(),
 					function_name);	
 			}));
-
-		//ImGui::GetPlatformIO().Platform_CreateVkSurface = [](ImGuiViewport* viewport, ImU64 vulkanInstance, const void* allocator, ImU64* outVulkanSurface) {
-		//};
 
 		CIN_VERIFY(ImGui_ImplVulkan_Init(
 			&vulkanInitializeInfo,
@@ -305,19 +306,16 @@ namespace Cinnamon {
 	void GUIRenderer::EndFrame()
 	{
 		ImGui::Render();
-		Swapchain* swapchain = m_Renderer->GetSwapchain().get();
-		swapchain->RecordCommands([this, swapchain]() {
-			const uint32_t frameIndex{ swapchain->GetImageIndex() };
-			const VkExtent2D extent{ swapchain->GetExtent() };
-			const VkCommandBuffer swapchainDrawCommandBuffer{ swapchain->GetCurrentCommandBuffer() };
-			const VkFramebuffer swapchainDrawFramebuffer{ swapchain->GetCurrentFramebuffer() };
-			const VkRenderPass swapchainDrawRenderPass{ swapchain->GetRenderPass() };
-
-			constexpr std::array<VkClearValue, 1> clearValues
-			{
-				{ { 0.15f, 0.15f, 0.15f, 1.0f } }
-			};
-
+		const auto& swapchain{ m_Renderer->GetSwapchain() };	
+		swapchain->RecordCommands([this]
+		(
+			const VkCommandBuffer commandBuffer, 
+			const VkFramebuffer frameBuffer,
+			const VkRenderPass renderPass,
+			const VkExtent2D extent
+		) 
+		{
+			constexpr std::array<VkClearValue, 1> clearValues{ { { 0.15f, 0.15f, 0.15f, 1.0f } } };
 			constexpr VkCommandBufferBeginInfo drawCommandBufferBeginInfo
 			{
 				.sType{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO },
@@ -330,34 +328,15 @@ namespace Cinnamon {
 			{
 				.sType{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO },
 				.pNext{ nullptr },
-				.renderPass{ swapchainDrawRenderPass },
-				.framebuffer{ swapchainDrawFramebuffer },
-				.renderArea{
+				.renderPass{ renderPass },
+				.framebuffer{ frameBuffer },
+				.renderArea
+				{
 					.offset{ 0, 0 },
 					.extent{ extent },
 				},
 				.clearValueCount{ 1U },
 				.pClearValues{ &clearValues[0] },
-			};
-
-			const VkCommandBufferInheritanceInfo commandBufferInheritanceInfo
-			{
-				.sType{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO },
-				.pNext{ nullptr },
-				.renderPass{ swapchainDrawRenderPass },
-				.subpass{ 0U },
-				.framebuffer{ swapchainDrawFramebuffer },
-				.occlusionQueryEnable{ VK_FALSE },
-				.queryFlags{ 0U },
-				.pipelineStatistics{ 0U },
-			};
-
-			const VkCommandBufferBeginInfo imGuiCommandBufferBeginInfo
-			{
-				.sType{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO },
-				.pNext{ nullptr },
-				.flags{ VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT },
-				.pInheritanceInfo{ &commandBufferInheritanceInfo },
 			};
 
 			const VkViewport viewport
@@ -376,28 +355,23 @@ namespace Cinnamon {
 				.extent{ extent },
 			};
 
-			const VkCommandBuffer imguiCommandBuffer{ m_InternalState->CommandBuffers[frameIndex] };
 			VK_CHECK(vkBeginCommandBuffer(
-				swapchainDrawCommandBuffer,
+				commandBuffer,
 				&drawCommandBufferBeginInfo));
 
 			vkCmdBeginRenderPass(
-				swapchainDrawCommandBuffer,
+				commandBuffer,
 				&renderPassBeginInfo,
-				VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-
-			VK_CHECK(vkBeginCommandBuffer(
-				imguiCommandBuffer,
-				&imGuiCommandBufferBeginInfo));
+				VK_SUBPASS_CONTENTS_INLINE);
 
 			vkCmdSetViewport(
-				imguiCommandBuffer,
+				commandBuffer,
 				0U,
 				1U,
 				&viewport);
 
 			vkCmdSetScissor(
-				imguiCommandBuffer,
+				commandBuffer,
 				0U,
 				1U,
 				&scissor);
@@ -405,23 +379,15 @@ namespace Cinnamon {
 			ImDrawData* const drawData{ ImGui::GetDrawData() };
 			ImGui_ImplVulkan_RenderDrawData(
 				drawData,
-				imguiCommandBuffer,
+				commandBuffer,
 				VK_NULL_HANDLE);
 
-			VK_CHECK(vkEndCommandBuffer(
-				imguiCommandBuffer));
-
-			vkCmdExecuteCommands(
-				swapchainDrawCommandBuffer,
-				1U,
-				&imguiCommandBuffer);
-
 			vkCmdEndRenderPass(
-				swapchainDrawCommandBuffer);
+				commandBuffer);
 
 			VK_CHECK(vkEndCommandBuffer(
-				swapchainDrawCommandBuffer));
-			});
+				commandBuffer));
+		});
 
 		//ImGui::SetCurrentContext(nullptr);
 	}
@@ -492,5 +458,4 @@ namespace Cinnamon {
 	}
 }
 
-#include "ThirdParty/imgui/backends/imgui_impl_vulkan.cpp"
 #endif

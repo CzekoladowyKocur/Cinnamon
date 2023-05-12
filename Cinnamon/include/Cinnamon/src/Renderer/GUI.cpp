@@ -38,6 +38,8 @@ namespace Cinnamon {
 #pragma warning(disable : 4211)
 #include "ThirdParty/imgui/backends/imgui_impl_vulkan.cpp"
 #pragma warning(pop)
+#else
+#include "ThirdParty/imgui/backends/imgui_impl_vulkan.cpp"
 #endif
 
 namespace Cinnamon {

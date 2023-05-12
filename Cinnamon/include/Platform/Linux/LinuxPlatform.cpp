@@ -71,6 +71,7 @@ namespace Cinnamon {
 		{
 			return 
 			{
+				"VK_KHR_get_memory_requirements2",
 				"VK_KHR_swapchain",
 			};
 		}

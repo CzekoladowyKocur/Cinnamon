@@ -154,16 +154,18 @@ namespace Cinnamon {
 		if (m_Swapchain)
 			return;
 
+		const VkPipelineStageFlags waitStages[]{ VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT };
 		const VkSubmitInfo submitInfo
 		{
-			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-			.pNext = nullptr,
-			.waitSemaphoreCount = 0U,
-			.pWaitSemaphores = nullptr,
-			.commandBufferCount = 1U,
-			.pCommandBuffers = &m_PrimaryCommandBuffers[frameIndex],
-			.signalSemaphoreCount = 0U,
-			.pSignalSemaphores = nullptr,
+			.sType{ VK_STRUCTURE_TYPE_SUBMIT_INFO },
+			.pNext{ nullptr },
+			.waitSemaphoreCount{ 0U },
+			.pWaitSemaphores{ nullptr },
+			.pWaitDstStageMask{ waitStages },
+			.commandBufferCount{ 1U },
+			.pCommandBuffers{ &m_PrimaryCommandBuffers[frameIndex] },
+			.signalSemaphoreCount{ 0U },
+			.pSignalSemaphores{ nullptr }
 		};
 
 		VK_CHECK(vkWaitForFences(

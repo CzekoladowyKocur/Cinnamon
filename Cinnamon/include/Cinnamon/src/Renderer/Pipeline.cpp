@@ -150,15 +150,6 @@ namespace Cinnamon {
 		colorBlendStateInfo.flags = 0;
 		colorBlendStateInfo.pNext = nullptr;
 
-		VkPipelineDepthStencilStateCreateInfo depthStencilStateInfo{};
-		depthStencilStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-		depthStencilStateInfo.depthTestEnable = VK_TRUE;
-		depthStencilStateInfo.depthWriteEnable = VK_TRUE;
-		depthStencilStateInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
-		depthStencilStateInfo.back.compareOp = VK_COMPARE_OP_ALWAYS;
-		depthStencilStateInfo.flags = 0;
-		depthStencilStateInfo.pNext = nullptr;
-
 		/* Will be overriden by dynamic state */
 		VkPipelineViewportStateCreateInfo viewportState{};
 		viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;

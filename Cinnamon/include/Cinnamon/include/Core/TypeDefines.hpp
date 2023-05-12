@@ -104,6 +104,10 @@ consteval auto ResolveAtCompileTime(auto arg)
 	return arg;
 }
 
+#ifdef __unix
+#define fopen_s(pFile,filename,mode) ((*(pFile))=fopen((filename),  (mode)))
+#endif
+
 class Timestep final
 {
 public:

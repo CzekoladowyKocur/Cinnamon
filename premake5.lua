@@ -4,7 +4,7 @@ FMTInclude = "Cinnamon/include/ThirdParty/fmt/include"
 
 -- Vulkan (TODO: Make it os-independent)
 VulkanSDK = os.getenv("VULKAN_SDK");
-VulkanLibrary = VulkanSDK .. "/Lib/vulkan-1.lib"
+VulkanLibrary = ""
 
 VulkanIncludeDirectory = ""
 VulkanLibraryDirectory = ""
@@ -17,7 +17,7 @@ if os.target() == "windows"
 then
 	print("Building project for windows")
 	print("Vulkan SDK located at:", VulkanSDK);
-
+	VulkanLibrary = VulkanSDK .. "/Lib/vulkan-1.lib"
 	VulkanIncludeDirectory = (VulkanSDK .. "/" .. "include")
 	VulkanLibraryDirectory = (VulkanSDK .. "/" .. "Lib")
 	VulkanBinaryDirectory = (VulkanSDK .. "/" .. "Bin")
@@ -36,13 +36,25 @@ then
 	DynamicLibraries["Release-ShaderC"]				= (VulkanBinaryDirectory .. "/" .. "shaderc_shared.dll")
 	DynamicLibraries["Distribution-ShaderC"]		= (VulkanBinaryDirectory .. "/" .. "shaderc_shared.dll")
 else
-	print("Unsupported platform!")
+	print("Building project for linux")
+	
+	VulkanLibraryDirectory = (VulkanSDK .. "/" .. "x86_64/lib")
+	VulkanIncludeDirectory = (VulkanSDK .. "/" .. "x86_64/include")
+	ulkanBinaryDirectory = (VulkanSDK .. "/" .. "x86_64/bin")
+	
+	print("Selected vulkan include directory:", VulkanIncludeDirectory)
+	print("Selected vulkan library directory:", VulkanLibraryDirectory)
+	print("Selected vulkan binary directory:", VulkanBinaryDirectory)
+	
+	Libraries["Debug-ShaderC"]						= ("shaderc_combined")
+	Libraries["Debug-Optimized-ShaderC"]			= ("shaderc_combined")
+	Libraries["Release-ShaderC"]					= ("shaderc_combined")
+	Libraries["Distribution-ShaderC"]				= ("shaderc_combined")
 end
 
 -- Use volk as a static lib from SDK? (Can't use debug symbols easily)
 -- TODO: Get it from sdk instead
 VmaInclude = "Cinnamon/include/ThirdParty/VulkanMemoryAllocator/include"
-
 
 workspace ("Cinnamon")
 	architecture "x64"
@@ -155,6 +167,11 @@ project ("Cinnamon")
 	targetdir ("bin/" .. (OutputDirectory) .. "/%{prj.name}")
 	objdir ("bin-int/" .. (OutputDirectory) .. "/%{prj.name}")
 
+	libdirs 
+	{ 
+		VulkanLibraryDirectory, 
+	}
+
 	files 
 	{ 
 		"%{prj.name}/include/Cinnamon/**.h", 
@@ -178,12 +195,16 @@ project ("Cinnamon")
 		FMTInclude,
 		VmaInclude
 	}
+
+	libdirs
+	{
+		VulkanLibraryDirectory,
+	}
 	
 	links
 	{
 		"volk",
-		"imgui",
-		"VulkanMemoryAllocator",
+		"imgui",		
 	}
 
 	filter "configurations:Debug"
@@ -211,8 +232,15 @@ project ("Cinnamon")
 		}
 
 	filter "system:linux"
+		libdirs
+		{
+			VulkanLibraryDirectory,
+		}
+
 		links
         {
+			"VulkanMemoryAllocator",
+			"shaderc_combined",
 			"wayland-client",
 			"xdg"
         }
@@ -252,7 +280,7 @@ project ("CinnamonEditor")
 		VulkanIncludeDirectory,
 		VmaInclude,
 	}
-
+	
 	links
 	{
 		"Cinnamon",
@@ -266,8 +294,15 @@ project ("CinnamonEditor")
 	}
 
 	filter "system:linux"
+		libdirs
+		{
+			VulkanLibraryDirectory,
+		}
+
 		links
         {
+			"VulkanMemoryAllocator",
+			"shaderc_combined",
 			"wayland-client",
 			"xdg"
         }
@@ -307,11 +342,15 @@ project ("Sandbox")
 		VmaInclude
 	}
 
+	libdirs
+	{
+		VulkanLibraryDirectory,
+	}
+
 	links
 	{
 		"Cinnamon",
 		"imgui",
-		"VulkanMemoryAllocator",
 	}
 
 	postbuildcommands 
@@ -320,8 +359,15 @@ project ("Sandbox")
 	}
 
 	filter "system:linux"
+		libdirs
+		{
+			VulkanLibraryDirectory,			
+		}
+
 		links
         {
+			"VulkanMemoryAllocator",
+			"shaderc_combined",
 			"wayland-client",
 			"xdg"
         }

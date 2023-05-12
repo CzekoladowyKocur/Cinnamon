@@ -100,7 +100,11 @@ void SandboxLayer::OnUpdate(const Timestep /*timestep*/)
 		widthCached={ (uint32_t)ImGui::GetContentRegionAvail().x };
 		heightCached= { (uint32_t)ImGui::GetContentRegionAvail().y };
 	}
-	GUI::Image(*m_Renderer, m_Framebuffer->GetColorAttachmentView(), ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y);
+	GUI::Image(
+		m_Renderer,
+		reinterpret_cast<ImageViewID>(m_Framebuffer->GetColorAttachmentView()), 
+		ImGui::GetContentRegionAvail().x,
+		ImGui::GetContentRegionAvail().y);
 
 	//ImGui::Image(m_Framebuffer->GetColorAttachmentView(), {ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y});
 	ImGui::End();

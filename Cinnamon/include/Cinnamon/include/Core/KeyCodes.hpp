@@ -184,6 +184,7 @@ namespace Cinnamon {
 		DEFINE_KEY(End, KEY_END),
 		DEFINE_KEY(Home, KEY_HOME),
 		DEFINE_KEY(Left, KEY_LEFT),
+		DEFINE_KEY(LeftAlt, KEY_LEFTALT),
 		DEFINE_KEY(Up, KEY_UP),
 		DEFINE_KEY(Right, KEY_RIGHT),
 		DEFINE_KEY(Down, KEY_DOWN),

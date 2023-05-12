@@ -52,69 +52,96 @@ namespace Cinnamon {
 		PointerEvent pointerEvent;
 	};
 
-	Surface::Surface(const STL::Unique<Window>& windowContext) noexcept
-		:
-		m_WindowState(windowContext->GetState()),
-		m_UseVSync(windowContext->GetProperties().UseVSync),
-		m_DesiredPresentMode(m_UseVSync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR),
-		m_Handle(VK_NULL_HANDLE)
+	namespace Platform 
 	{
-		CIN_ASSERT(m_WindowState, "Window state is invalid");
+		/* Surface -> [Window context, desired present mode] */
+		InternalScope STL::UMap<VkSurfaceKHR, std::pair<const PlatformWindowState*, VkPresentModeKHR>> s_SurfaceMap;
 
-		VkWaylandSurfaceCreateInfoKHR waylandSurfaceCreateInfo;
-		waylandSurfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
-		waylandSurfaceCreateInfo.display = m_WindowState->wlDisplay;
-		waylandSurfaceCreateInfo.surface = m_WindowState->wlSurface;
-		waylandSurfaceCreateInfo.flags = 0;
-		waylandSurfaceCreateInfo.pNext = nullptr;
+		VkSurfaceKHR CreateWindowSurface(const STL::Unique<Window>& window)
+		{
+			CIN_ASSERT(window);
+			const PlatformWindowState* const windowState{ window->GetState() };
 
-		VK_CHECK(vkCreateWaylandSurfaceKHR(
-			GraphicsContext::GetInstance(),
-			&waylandSurfaceCreateInfo,
-			GraphicsContext::GetAllocator(),
-			&m_Handle));
-	}
+			CIN_ASSERT(windowState, "Window state is invalid");
 
-	Surface::~Surface() noexcept
-	{
-		vkDestroySurfaceKHR(
-			GraphicsContext::GetInstance(),
-			m_Handle,
-			GraphicsContext::GetAllocator());
-	}
+			VkWaylandSurfaceCreateInfoKHR waylandSurfaceCreateInfo;
+			waylandSurfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
+			waylandSurfaceCreateInfo.display = windowState->wlDisplay;
+			waylandSurfaceCreateInfo.surface = windowState->wlSurface;
+			waylandSurfaceCreateInfo.flags = 0;
+			waylandSurfaceCreateInfo.pNext = nullptr;
 
-	void Surface::Recreate()
-	{
-		vkDestroySurfaceKHR(
-			GraphicsContext::GetInstance(),
-			m_Handle,
-			GraphicsContext::GetAllocator());
+			VkSurfaceKHR surface{ VK_NULL_HANDLE };
+			VK_CHECK(vkCreateWaylandSurfaceKHR(
+				GraphicsContext::GetInstance(),
+				&waylandSurfaceCreateInfo,
+				GraphicsContext::GetAllocator(),
+				&surface));
+
+			const WindowProperties& windowProperties{ window->GetProperties() };
+			CIN_ASSERT(!s_SurfaceMap.contains(surface));
+			s_SurfaceMap[surface] = std::make_pair(windowState, windowProperties.UseVSync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR);
+			return surface;
+		}
+
+		VkSurfaceKHR RetrieveWindowSurface(const STL::Unique<Window>& window)
+		{
+			/* Check if surface was already created by the device */
+			for (const auto& [surface, surfaceState] : s_SurfaceMap)
+			{
+				const auto& [windowState, desiredPresentMode] { surfaceState};
+
+				if (window->GetState() == windowState)
+					return surface;
+			}
+
+			return CreateWindowSurface(window);
+		}
+
+		VkSurfaceKHR RecreateWindowSurface(const VkSurfaceKHR surface)
+		{
+			CIN_ASSERT(s_SurfaceMap.contains(surface));
 			
-		CIN_ASSERT(m_WindowState, "Window state is invalid");
+			vkDestroySurfaceKHR(
+				GraphicsContext::GetInstance(),
+				surface,
+				GraphicsContext::GetAllocator());
 
-		VkWaylandSurfaceCreateInfoKHR waylandSurfaceCreateInfo;
-		waylandSurfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
-		waylandSurfaceCreateInfo.display = m_WindowState->wlDisplay;
-		waylandSurfaceCreateInfo.surface = m_WindowState->wlSurface;
-		waylandSurfaceCreateInfo.flags = 0;
-		waylandSurfaceCreateInfo.pNext = nullptr;
+			const PlatformWindowState* const windowState{ s_SurfaceMap[surface].first };
+			VkWaylandSurfaceCreateInfoKHR waylandSurfaceCreateInfo;
+			waylandSurfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
+			waylandSurfaceCreateInfo.display = windowState->wlDisplay;
+			waylandSurfaceCreateInfo.surface = windowState->wlSurface;
+			waylandSurfaceCreateInfo.flags = 0;
+			waylandSurfaceCreateInfo.pNext = nullptr;
 
-		VK_CHECK(vkCreateWaylandSurfaceKHR(
-			GraphicsContext::GetInstance(),
-			&waylandSurfaceCreateInfo,
-			GraphicsContext::GetAllocator(),
-			&m_Handle));
+			VkSurfaceKHR newSurface{ VK_NULL_HANDLE };
+			VK_CHECK(vkCreateWaylandSurfaceKHR(
+				GraphicsContext::GetInstance(),
+				&waylandSurfaceCreateInfo,
+				GraphicsContext::GetAllocator(),
+				&newSurface));
+
+			return newSurface;
+		}
+
+		VkPresentModeKHR GetDesiredSurfacePresentMode(const VkSurfaceKHR surface)
+		{
+			CIN_ASSERT(s_SurfaceMap.contains(surface));
+			return s_SurfaceMap[surface].second;
+		}
+
+		void DestroySurface(const VkSurfaceKHR surface)
+		{
+			CIN_ASSERT(s_SurfaceMap.contains(surface));
+
+			vkDestroySurfaceKHR(
+				GraphicsContext::GetInstance(),
+				surface,
+				GraphicsContext::GetAllocator());
+
+			s_SurfaceMap.erase(surface);
+		}
 	}	
-
-	VkPresentModeKHR Surface::GetDesiredPresentMode() const
-	{
-		return m_DesiredPresentMode;
-	}
-
-	VkSurfaceKHR Surface::GetHandle() const
-	{
-		CIN_ASSERT(m_Handle, "Invalid surface handle");
-		return m_Handle;
-	}
 }
 #endif

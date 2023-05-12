@@ -8,8 +8,8 @@ namespace Cinnamon {
 		const STL::Unique<Device>& device,
 		const STL::Unique<Window>& window) noexcept
 		:
-		m_Surface(Platform::RetrieveWindowSurface(window)),
 		m_Device(device),
+		m_Surface(Platform::RetrieveWindowSurface(window)),
 		m_Handle(VK_NULL_HANDLE),
 		m_CachedSwapchain(VK_NULL_HANDLE),
 		m_RenderPass(VK_NULL_HANDLE),
@@ -19,8 +19,8 @@ namespace Cinnamon {
 		m_SurfaceCapabilities({}),
 		m_Extent({ 0U, 0U }),
 		m_ClearColor({ .color { .float32 { 0.3f, 0.1f, 0.12f, 1.0f } }, }),
-		m_SurfaceUpdated(false),
 		m_MinimalImageCount(0U),
+		m_SurfaceUpdated(false),
 		m_Images({}),
 		m_ImageViews({}),
 		m_Framebuffers({}),

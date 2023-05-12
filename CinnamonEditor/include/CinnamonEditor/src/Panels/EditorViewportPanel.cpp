@@ -18,7 +18,9 @@ EditorViewportPanel::EditorViewportPanel(
 	:
 	m_Renderer(renderer),
 	m_SceneRenderer(STL::MakeUnique<SceneRenderer>(renderer, viewportWidth, viewportHeight))
-{}
+{
+	CIN_TRACE("Constructed editor viewport panel");
+}
 
 EditorViewportPanel::~EditorViewportPanel() noexcept
 {}

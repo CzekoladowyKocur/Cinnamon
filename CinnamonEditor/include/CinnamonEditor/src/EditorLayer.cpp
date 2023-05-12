@@ -32,6 +32,8 @@ EditorLayer::~EditorLayer() noexcept
 
 void EditorLayer::OnAttach()
 {
+	CIN_TRACE("Attaching editor layer");
+
 	const auto [windowWidth, windowHeight] { m_Window->GetSize() };
 	m_Panels.emplace_back(cinew EditorViewportPanel(m_Renderer, windowWidth, windowHeight));
 	m_Panels.emplace_back(cinew SceneHierarchyPanel);

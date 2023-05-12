@@ -2,6 +2,9 @@
 #include "Cinnamon/include/Renderer/VulkanAllocator.hpp"
 #include "Cinnamon/include/Renderer/GraphicsContext.hpp"
 #include "Cinnamon/include/Renderer/Device.hpp"
+#include "shaderc/env.h"
+#include <cmath>
+
 
 #ifdef CIN_PLATFORM_WINDOWS
 #pragma warning(push)
@@ -10,7 +13,15 @@
 #include "spirv_cross/spirv_glsl.hpp"
 #pragma warning(pop)
 #else
-#include "shaderc/shaderc.hpp"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#include "shaderc/shaderc.h"
+//#include "glslang/Public/ShaderLang.h"
+//#include "glslang/MachineIndependent/localintermediate.h"
+//#include "glslang/SPIRV/GlslangToSpv.h"
+//#include "glslang/Include/ResourceLimits.h"
+//#include "spirv_cross/spirv.h"
+#pragma GCC diagnostic pop
 #endif
 
 namespace Cinnamon {
@@ -20,6 +31,20 @@ namespace Cinnamon {
 	InternalScope VkShaderStageFlagBits CinnamonShaderStageToVulkanShaderStage(const EShaderType shaderType) noexcept;
 	InternalScope shaderc_env_version CinnamonVulkanVersionToShaderCEnvironment() noexcept;
 	InternalScope shaderc_shader_kind CinnamonShaderTypeToShaderCShaderType(const EShaderType shaderType) noexcept;
+#if 0
+	InternalScope EShLanguage CinnamonShaderTypeToShaderShaderKind(const EShaderType shaderType) noexcept
+	{
+		switch (shaderType)
+		{
+			case EShaderType::Vertex:	return EShLangVertex;
+			case EShaderType::Fragment:	return EShLangFragment;
+			case EShaderType::Compute:	return EShLangCompute;
+
+			[[unlikely]]
+			default: CIN_ASSERT(false); return EShLangVertex;
+		}
+	}
+#endif
 
 	Shader::Shader(
 		const STL::Unique<VulkanAllocator>& allocator,
@@ -123,7 +148,7 @@ namespace Cinnamon {
 
 		while (std::getline(fileContents, currentLine))
 		{
-			if (currentLine.contains('#'))
+			if (currentLine.find('#') != std::string::npos)
 			{			
 				const STL::String shaderTypeTokenenized{ currentLine.substr(currentLine.find('#')) };
 				/* Check if it's an empty token */
@@ -201,8 +226,42 @@ namespace Cinnamon {
 
 		for (const auto& [shaderStage, shaderSource] : shaderSources)
 		{
+			
 			if (compile || !compiledShadersExist)
 			{
+				shaderc_compiler_t compiler{ shaderc_compiler_initialize() };
+				shaderc_compile_options_t compileOptions{ shaderc_compile_options_initialize() };
+				shaderc_compile_options_set_source_language(compileOptions, shaderc_source_language_glsl);
+				shaderc_compile_options_set_target_env(compileOptions, shaderc_target_env_vulkan, CinnamonVulkanVersionToShaderCEnvironment());
+
+				const STL::String shaderFilepathString{ shaderFilepath.string() };
+				
+				const shaderc_compilation_result_t compilationResult
+				{
+					shaderc_compile_into_spv
+					(
+						compiler,
+						shaderSource.data(),
+						shaderSource.size(),
+						CinnamonShaderTypeToShaderCShaderType(shaderStage),
+						shaderFilepathString.data(),
+						"main",
+						compileOptions
+					)
+				};
+
+				CIN_ASSERT(shaderc_result_get_compilation_status(compilationResult) == shaderc_compilation_status_success);
+
+
+				size_t size = shaderc_result_get_length(compilationResult);
+    			const char* binary = shaderc_result_get_bytes(compilationResult);
+
+				spirvBinaries[shaderStage] = STL::Vector<uint32_t>{ binary, binary + size };
+
+				shaderc_compiler_release(compiler);
+				shaderc_compile_options_release(compileOptions);
+				shaderc_result_release(compilationResult);
+				#if 0
 				shaderc::Compiler compiler;
 				shaderc::CompileOptions compileOptions;
 
@@ -226,10 +285,48 @@ namespace Cinnamon {
 
 				if (compilationResult.GetCompilationStatus() != shaderc_compilation_status_success)
 					CIN_ERROR("Shader compilation failed: {}", compilationResult.GetErrorMessage());
-
 				CIN_VERIFY(compilationResult.GetCompilationStatus() == shaderc_compilation_status_success);
 
 				spirvBinaries[shaderStage] = STL::Vector<uint32_t>(compilationResult.begin(), compilationResult.end());
+#endif
+#if 0
+				auto shaderKind{ CinnamonShaderTypeToShaderShaderKind(shaderStage) };
+				glslang::TProgram program;
+				glslang::TShader shader(shaderKind);
+				const char* shaderSourcePtr = shaderSource.c_str();
+
+				shader.setStrings(&shaderSourcePtr, 1);
+				shader.setEnvInput(glslang::EShSourceGlsl, shaderKind, glslang::EShClientVulkan, 100);
+				shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_2);
+				shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_4);
+
+
+
+				if (!shader.parse(&resources, 100, false, messages))
+				{
+    				CIN_ERROR("Shader compilation failed: {}", messages.c_str());
+				}
+
+				program.addShader(&shader);
+
+				if (!program.link(messages))
+				{
+    				CIN_ERROR("Shader linking failed: {}", messages.c_str());
+				}
+
+				spv::SpvBuildLogger logger;
+				glslang::SpvOptions spvOptions;
+				spvOptions.generateDebugInfo = false;
+				spvOptions.disableOptimizer = true;
+				spvOptions.optimizeSize = true;
+
+				std::vector<unsigned int> spirvCode;
+
+				glslang::GlslangToSpv(*program.getIntermediate(shaderKind), spirvCode, &logger, &spvOptions);
+
+				spirvBinaries[shaderStage] = spirvCode;
+#endif
+
 
 				const STL::String outputPath{ shaderFilepathStem + "." + ShaderTypeToString(shaderStage) };
 				FILE* file;
@@ -287,7 +384,7 @@ namespace Cinnamon {
 			default: CIN_ASSERT(false); return VK_SHADER_STAGE_VERTEX_BIT;
 		}
 	}
-
+#if 1
 	InternalScope shaderc_env_version CinnamonVulkanVersionToShaderCEnvironment() noexcept
 	{
 		CIN_ASSERT(GraphicsContext::GetAPIVersion() == VK_API_VERSION_1_3);
@@ -306,4 +403,5 @@ namespace Cinnamon {
 			default: CIN_ASSERT(false); return shaderc_shader_kind::shaderc_vertex_shader;
 		}
 	}
+#endif
 }

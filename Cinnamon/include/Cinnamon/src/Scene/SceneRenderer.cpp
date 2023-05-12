@@ -22,7 +22,9 @@ namespace Cinnamon {
 		m_Allocator(STL::MakeUnique<VulkanAllocator>(m_Renderer->GetDevice())),
 		m_Framebuffer(STL::MakeUnique<Framebuffer>(m_Allocator, FramebufferSpecification{ viewportWidth, viewportHeight, 1U, EImageFormat::R8G8B8A8 })),
 		m_Renderer2D(STL::MakeUnique<Renderer2D>(m_Renderer, m_Allocator, m_Framebuffer))
-	{}
+	{
+		CIN_TRACE("Constructed scene renderer");
+	}
 
 	SceneRenderer::~SceneRenderer() noexcept
 	{
