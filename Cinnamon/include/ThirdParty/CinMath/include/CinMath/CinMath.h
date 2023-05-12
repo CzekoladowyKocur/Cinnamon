@@ -131,12 +131,10 @@
 #define CIN_MATH_RESTRICT
 #endif
 
+/* Anonymous struct warning */
 #if _MSC_VER
 #pragma warning(push)
-/* Anonymous struct warning */
-#pragma warning(disable: 4201)
-/* Uninitialized state */
-#pragma warning(disable: 26495)  
+#pragma warning(disable: 4201)  
 #elif __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"

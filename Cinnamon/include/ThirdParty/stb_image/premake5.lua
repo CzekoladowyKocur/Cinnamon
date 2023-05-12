@@ -6,6 +6,8 @@ project "stb_image"
 	targetdir ("bin/" .. OutputDirectory .. "/%{prj.name}")
 	objdir ("bin-int/" .. OutputDirectory .. "/%{prj.name}")
 
+	warnings "Off"
+
 	includedirs
 	{
 		"%{prj.location}/include",

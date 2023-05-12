@@ -72,28 +72,28 @@ namespace CinMath {
 			return Vector<3, double>{ static_cast<double>(x), static_cast<double>(y), static_cast<double>(z) };
 		}
 
-		friend Vector<3, ValueType> CIN_MATH_CALL operator+(const Vector<3, ValueType>& vector) noexcept;
-		friend Vector<3, ValueType> CIN_MATH_CALL operator-(const Vector<3, ValueType>& vector) noexcept;
+		template<typename T> friend Vector<3, T> operator+(const Vector<3, T>& vector) noexcept;
+		template<typename T> friend Vector<3, T> operator-(const Vector<3, T>& vector) noexcept;
 
-		friend void CIN_MATH_CALL operator+=(Vector<3, ValueType>& lhs, const Vector<4, ValueType>& rhs) noexcept;
-		friend void CIN_MATH_CALL operator-=(Vector<3, ValueType>& lhs, const Vector<4, ValueType>& rhs) noexcept;
-		friend void CIN_MATH_CALL operator*=(Vector<3, ValueType>& lhs, const Vector<4, ValueType>& rhs) noexcept;
-		friend void CIN_MATH_CALL operator/=(Vector<3, ValueType>& lhs, const Vector<4, ValueType>& rhs) noexcept;
+		template<typename T> friend void operator+=(Vector<3, T>& lhs, const Vector<4, T>& rhs) noexcept;
+		template<typename T> friend void operator-=(Vector<3, T>& lhs, const Vector<4, T>& rhs) noexcept;
+		template<typename T> friend void operator*=(Vector<3, T>& lhs, const Vector<4, T>& rhs) noexcept;
+		template<typename T> friend void operator/=(Vector<3, T>& lhs, const Vector<4, T>& rhs) noexcept;
 
-		friend void CIN_MATH_CALL operator+=(Vector<3, ValueType>& lhs, const ValueType scalar) noexcept;
-		friend void CIN_MATH_CALL operator-=(Vector<3, ValueType>& lhs, const ValueType scalar) noexcept;
-		friend void CIN_MATH_CALL operator*=(Vector<3, ValueType>& lhs, const ValueType scalar) noexcept;
-		friend void CIN_MATH_CALL operator/=(Vector<3, ValueType>& lhs, const ValueType scalar) noexcept;
+		template<typename T> friend void operator+=(Vector<3, T>& lhs, const T scalar) noexcept;
+		template<typename T> friend void operator-=(Vector<3, T>& lhs, const T scalar) noexcept;
+		template<typename T> friend void operator*=(Vector<3, T>& lhs, const T scalar) noexcept;
+		template<typename T> friend void operator/=(Vector<3, T>& lhs, const T scalar) noexcept;
 
-		friend Vector<3, ValueType> CIN_MATH_CALL operator+(const Vector<3, ValueType>& lhs, const Vector<3, ValueType>& rhs) noexcept;
-		friend Vector<3, ValueType> CIN_MATH_CALL operator-(const Vector<3, ValueType>& lhs, const Vector<3, ValueType>& rhs) noexcept;
-		friend Vector<3, ValueType> CIN_MATH_CALL operator*(const Vector<3, ValueType>& lhs, const Vector<3, ValueType>& rhs) noexcept;
-		friend Vector<3, ValueType> CIN_MATH_CALL operator/(const Vector<3, ValueType>& lhs, const Vector<3, ValueType>& rhs) noexcept;
+		template<typename T> friend Vector<3, T> operator+(const Vector<3, T>& lhs, const Vector<3, T>& rhs) noexcept;
+		template<typename T> friend Vector<3, T> operator-(const Vector<3, T>& lhs, const Vector<3, T>& rhs) noexcept;
+		template<typename T> friend Vector<3, T> operator*(const Vector<3, T>& lhs, const Vector<3, T>& rhs) noexcept;
+		template<typename T> friend Vector<3, T> operator/(const Vector<3, T>& lhs, const Vector<3, T>& rhs) noexcept;
 
-		friend Vector<3, ValueType> CIN_MATH_CALL operator+(const Vector<3, ValueType>& lhs, const ValueType scalar) noexcept;
-		friend Vector<3, ValueType> CIN_MATH_CALL operator-(const Vector<3, ValueType>& lhs, const ValueType scalar) noexcept;
-		friend Vector<3, ValueType> CIN_MATH_CALL operator*(const Vector<3, ValueType>& lhs, const ValueType scalar) noexcept;
-		friend Vector<3, ValueType> CIN_MATH_CALL operator/(const Vector<3, ValueType>& lhs, const ValueType scalar) noexcept;
+		template<typename T> friend Vector<3, T> operator+(const Vector<3, T>& lhs, const T scalar) noexcept;
+		template<typename T> friend Vector<3, T> operator-(const Vector<3, T>& lhs, const T scalar) noexcept;
+		template<typename T> friend Vector<3, T> operator*(const Vector<3, T>& lhs, const T scalar) noexcept;
+		template<typename T> friend Vector<3, T> operator/(const Vector<3, T>& lhs, const T scalar) noexcept;
 	public:
 		union
 		{

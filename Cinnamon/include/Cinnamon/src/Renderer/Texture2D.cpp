@@ -274,8 +274,8 @@ namespace Cinnamon {
 						imageBlit.dstOffsets[0U].x = 0;
 						imageBlit.dstOffsets[0U].y = 0;
 						imageBlit.dstOffsets[0U].z = 0;
-						imageBlit.dstOffsets[1U].x = mipWidth > 1U ? mipWidth / 2U : 1U;
-						imageBlit.dstOffsets[1U].y = mipHeight > 1U ? mipHeight / 2U : 1U;
+						imageBlit.dstOffsets[1U].x = mipWidth > 1 ? mipWidth / 2 : 1;
+						imageBlit.dstOffsets[1U].y = mipHeight > 1 ? mipHeight / 2 : 1;
 						imageBlit.dstOffsets[1U].z = 1;
 
 						vkCmdBlitImage(
@@ -300,8 +300,8 @@ namespace Cinnamon {
 							0U, nullptr,
 							1U, &barrier);
 
-						mipWidth = mipWidth > 1U ? mipWidth / 2U : mipWidth;
-						mipHeight = mipHeight > 1U ? mipHeight / 2U : mipHeight;
+						mipWidth = mipWidth > 1 ? mipWidth / 2 : mipWidth;
+						mipHeight = mipHeight > 1 ? mipHeight / 2 : mipHeight;
 					}
 
 					barrier.subresourceRange.baseMipLevel = mipCount - 1U;
@@ -444,7 +444,7 @@ namespace Cinnamon {
 	{
 		switch (filterMode)
 		{
-			case ETextureSamplerFilterMode::None:		CIN_ASSERT(false, "Unknown filter mode"); static_cast<VkSamplerMipmapMode>(0);
+			case ETextureSamplerFilterMode::None:		CIN_ASSERT(false, "Unknown filter mode"); return static_cast<VkSamplerMipmapMode>(0);
 			case ETextureSamplerFilterMode::Nearest:	return VK_SAMPLER_MIPMAP_MODE_NEAREST;
 			case ETextureSamplerFilterMode::Linear:		return VK_SAMPLER_MIPMAP_MODE_LINEAR;
 

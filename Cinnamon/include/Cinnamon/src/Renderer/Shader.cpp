@@ -11,11 +11,14 @@
 #pragma warning(disable : 26439)
 #include "shaderc/shaderc.h"
 /* Use the self-compiled spirv-cross instead of the SDK one. */
+#define SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS
 #include "ThirdParty/spirv_cross/spirv_cross.hpp"
 #pragma warning(pop)
 #else
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
+#define SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS
+#include "ThirdParty/spirv_cross/spirv_cross.hpp"
 #include "shaderc/shaderc.h"
 #pragma GCC diagnostic pop
 #endif

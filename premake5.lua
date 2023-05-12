@@ -316,7 +316,9 @@ project ("CinnamonEditor")
 			"VulkanMemoryAllocator",
 			"shaderc_combined",
 			"wayland-client",
-			"xdg"
+			"xdg",
+			"stb_image",
+			"spirv_cross"
         }
 
 	filter "configurations:Distribution"
@@ -382,5 +384,7 @@ project ("Sandbox")
 			"VulkanMemoryAllocator",
 			"shaderc_combined",
 			"wayland-client",
-			"xdg"
+			"xdg",
+			"stb_image",
+			"spirv_cross"
         }

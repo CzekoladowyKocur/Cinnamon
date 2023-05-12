@@ -9,7 +9,7 @@ namespace Cinnamon {
 			CinMath::Vector3 Position;
 			CinMath::Vector2 TextureCoordinates;
 			
-			static constexpr VertexBufferLayout GetLayout() noexcept
+			static VertexBufferLayout GetLayout() noexcept
 			{
 				return VertexBufferLayout
 				{

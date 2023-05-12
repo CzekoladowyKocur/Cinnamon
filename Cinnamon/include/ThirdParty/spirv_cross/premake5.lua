@@ -7,6 +7,10 @@ project "spirv_cross"
 	targetdir ("bin/" .. OutputDirectory .. "/%{prj.name}")
 	objdir ("bin-int/" .. OutputDirectory .. "/%{prj.name}")
 
+	exceptionhandling "On"
+
+	defines { "SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS" }
+	
 	files
 	{
 		"*.cpp",

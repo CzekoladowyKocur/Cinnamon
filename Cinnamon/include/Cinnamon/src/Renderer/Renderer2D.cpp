@@ -47,7 +47,12 @@ namespace Cinnamon {
 		m_QuadIndexBufferData(nullptr),
 		m_QuadIndexBufferDataBase(nullptr),
 		m_QuadCount(0U),
-		m_BasicTexture(cinew Texture2D(m_Allocator, "Resources/textures/paper.png", TextureSpecification{ .SamplerFilterMode{ ETextureSamplerFilterMode::Linear } }))
+		m_BasicTexture(cinew Texture2D(m_Allocator, "Resources/textures/paper.png", 
+		TextureSpecification
+		{ 
+			.SamplerWrapMode{ ETextureSamplerWrapMode::Clamp },
+			.SamplerFilterMode{ ETextureSamplerFilterMode::Linear } 
+		}))
 	{
 		/* Allocate buffer space */
 		m_QuadBufferData = cinew Geometry::QuadVertex[s_MaxQuads * s_QuadVertexCount];
