@@ -31,6 +31,7 @@ then
 	Libraries["Release-ShaderC"]					= (VulkanLibraryDirectory .. "/" .. "shaderc_shared.lib")
 	Libraries["Distribution-ShaderC"]				= (VulkanLibraryDirectory .. "/" .. "shaderc_shared.lib")
 
+	
 	DynamicLibraries["Debug-ShaderC"]				= (VulkanBinaryDirectory .. "/" .. "shaderc_sharedd.dll")
 	DynamicLibraries["Debug-Optimized-ShaderC"]		= (VulkanBinaryDirectory .. "/" .. "shaderc_sharedd.dll")
 	DynamicLibraries["Release-ShaderC"]				= (VulkanBinaryDirectory .. "/" .. "shaderc_shared.dll")
@@ -55,6 +56,9 @@ end
 -- Use volk as a static lib from SDK? (Can't use debug symbols easily)
 -- TODO: Get it from sdk instead
 VmaInclude = "Cinnamon/include/ThirdParty/VulkanMemoryAllocator/include"
+CinMathInclude = "Cinnamon/include/ThirdParty/CinMath/include"
+StbImageInclude = "Cinnamon/include/ThirdParty/stb_image/include"
+SpirvCrossInclude = "Cinnamon/include/ThirdParty/spirv_cross/include"
 
 workspace ("Cinnamon")
 	architecture "x64"
@@ -155,6 +159,8 @@ include "Cinnamon/include/ThirdParty/volk"
 include "Cinnamon/include/ThirdParty/VulkanMemoryAllocator"
 include "Cinnamon/include/ThirdParty/fmt"
 include "Cinnamon/include/ThirdParty/imgui"
+include "Cinnamon/include/ThirdParty/stb_image"
+include "Cinnamon/include/ThirdParty/spirv_cross"
 group ""
 
 project ("Cinnamon")
@@ -191,9 +197,12 @@ project ("Cinnamon")
 	includedirs
 	{
 		"%{prj.name}/include",
+		CinMathInclude,
 		VulkanIncludeDirectory,
 		FMTInclude,
-		VmaInclude
+		VmaInclude,
+		StbImageInclude,
+		SpirvCrossInclude
 	}
 
 	libdirs
@@ -203,8 +212,11 @@ project ("Cinnamon")
 	
 	links
 	{
+		"VulkanMemoryAllocator",
 		"volk",
 		"imgui",		
+		"stb_image",
+		"spirv_cross",
 	}
 
 	filter "configurations:Debug"
@@ -238,8 +250,7 @@ project ("Cinnamon")
 		}
 
 		links
-        {
-			"VulkanMemoryAllocator",
+        {			
 			"shaderc_combined",
 			"wayland-client",
 			"xdg"
@@ -276,6 +287,7 @@ project ("CinnamonEditor")
 	{
 		"%{prj.name}/include",
 		"%{wks.location}/Cinnamon/include",
+		CinMathInclude,
 		FMTInclude,
 		VulkanIncludeDirectory,
 		VmaInclude,
@@ -337,6 +349,7 @@ project ("Sandbox")
 	{
 		"%{prj.name}/include",
 		"%{wks.location}/Cinnamon/include",
+		CinMathInclude,
 		VulkanIncludeDirectory,
 		FMTInclude,
 		VmaInclude

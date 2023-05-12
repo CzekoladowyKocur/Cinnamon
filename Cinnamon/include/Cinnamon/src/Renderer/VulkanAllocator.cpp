@@ -160,6 +160,9 @@ namespace Cinnamon {
 			)
 		};
 
+		if (result != VK_SUCCESS)
+			return Error::Failure;
+
 		VmaAllocationInfo allocationInfo;
 		vmaGetAllocationInfo(
 			m_Allocator,

@@ -44,7 +44,7 @@ namespace Cinnamon {
 		uint32_t Stride;
 		uint32_t ElementCount;
 
-		VertexBufferLayout(const STL::InitializerList<VertexBufferElement>& elements) noexcept
+		constexpr explicit VertexBufferLayout(const STL::InitializerList<VertexBufferElement>& elements) noexcept
 			:
 			Elements(elements),
 			Stride(0),

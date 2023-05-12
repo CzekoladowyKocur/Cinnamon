@@ -9,18 +9,14 @@
 #ifdef CIN_PLATFORM_WINDOWS
 #pragma warning(push)
 #pragma warning(disable : 26439)
-#include "shaderc/shaderc.hpp"
-#include "spirv_cross/spirv_glsl.hpp"
+#include "shaderc/shaderc.h"
+/* Use the self-compiled spirv-cross instead of the SDK one. */
+#include "ThirdParty/spirv_cross/spirv_cross.hpp"
 #pragma warning(pop)
 #else
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"
 #include "shaderc/shaderc.h"
-//#include "glslang/Public/ShaderLang.h"
-//#include "glslang/MachineIndependent/localintermediate.h"
-//#include "glslang/SPIRV/GlslangToSpv.h"
-//#include "glslang/Include/ResourceLimits.h"
-//#include "spirv_cross/spirv.h"
 #pragma GCC diagnostic pop
 #endif
 
@@ -31,20 +27,6 @@ namespace Cinnamon {
 	InternalScope VkShaderStageFlagBits CinnamonShaderStageToVulkanShaderStage(const EShaderType shaderType) noexcept;
 	InternalScope shaderc_env_version CinnamonVulkanVersionToShaderCEnvironment() noexcept;
 	InternalScope shaderc_shader_kind CinnamonShaderTypeToShaderCShaderType(const EShaderType shaderType) noexcept;
-#if 0
-	InternalScope EShLanguage CinnamonShaderTypeToShaderShaderKind(const EShaderType shaderType) noexcept
-	{
-		switch (shaderType)
-		{
-			case EShaderType::Vertex:	return EShLangVertex;
-			case EShaderType::Fragment:	return EShLangFragment;
-			case EShaderType::Compute:	return EShLangCompute;
-
-			[[unlikely]]
-			default: CIN_ASSERT(false); return EShLangVertex;
-		}
-	}
-#endif
 
 	Shader::Shader(
 		const STL::Unique<VulkanAllocator>& allocator,
@@ -53,7 +35,7 @@ namespace Cinnamon {
 		:
 		m_Allocator(allocator),
 		m_PipelineStages(),
-		m_DescriptorSetLayouts(),
+		m_ShaderDescriptorSetLayouts(),
 		m_ShaderSources(),
 		m_ShaderBinaries()
 	{
@@ -83,7 +65,7 @@ namespace Cinnamon {
 				GraphicsContext::GetAllocator(),
 				&shaderModule));
 
-			const VkPipelineShaderStageCreateInfo pipelineStage
+			VkPipelineShaderStageCreateInfo pipelineStage
 			{
 				.sType{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO },
 				.pNext{ nullptr },
@@ -109,25 +91,123 @@ namespace Cinnamon {
 				pipelineStage.module,
 				GraphicsContext::GetAllocator());
 		}
+
+		m_PipelineStages.clear();
+		for (const VkDescriptorSetLayout descriptorSetLayotut : m_ShaderDescriptorSetLayouts)
+		{
+			vkDestroyDescriptorSetLayout(
+				m_Allocator->GetDevice()->GetLogicalDevice(),
+				descriptorSetLayotut,
+				GraphicsContext::GetAllocator());
+		}
+
+		m_ShaderDescriptorSetLayouts.clear();
 	}
 
 	void Shader::Reflect()
 	{
-		//for (const auto& [stage, binary] : m_ShaderBinaries)
+		for (const auto& [stage, binary] : m_ShaderBinaries)
 		{
-			//const spirv_cross::Compiler compiler(binary);
-			//const spirv_cross::ShaderResources resources{ compiler.get_shader_resources() };
+			const spirv_cross::Compiler compiler(binary);
+			const spirv_cross::ShaderResources resources{ compiler.get_shader_resources() };
 
-			/* Iterate over all of the resources */
-			//for (const auto& ub : resources.uniform_buffers)
-			//{
-			//}
+			for (const auto& sampledImage : resources.sampled_images)
+			{
+				const std::string& sampledImageName{ sampledImage.name };
+				const uint32_t binding{ compiler.get_decoration(sampledImage.id, spv::DecorationBinding) };
+				const uint32_t descriptorSet{ compiler.get_decoration(sampledImage.id, spv::DecorationDescriptorSet) };
+			
+				CIN_WARN("Found sampled image at binding {} with name {} in descriptor set, {}", binding, sampledImageName, descriptorSet);
+				if (m_ShaderDescriptorSets.size() <= descriptorSet)
+					m_ShaderDescriptorSets.resize(descriptorSet + 1U);
+			
+				m_ShaderDescriptorSets[descriptorSet].ImageSamplers[binding] = ImageSamplerDescription
+				{
+					.Name{ sampledImageName },
+					.BindingPoint{ binding },
+					.DescriptorSet{ descriptorSet },
+					.ArraySize{ 1U }
+				};
+			}
+
+			for (size_t shaderDescriptorSetIndex{ 0U }; shaderDescriptorSetIndex < m_ShaderDescriptorSets.size(); ++shaderDescriptorSetIndex)
+			{
+				auto& shaderDescriptorSet{ m_ShaderDescriptorSets[shaderDescriptorSetIndex]};
+
+				VkDescriptorPoolSize descriptorPoolSize;
+				if (const uint32_t resourceCount = static_cast<uint32_t>(shaderDescriptorSet.ImageSamplers.size()))
+				{
+					descriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+					descriptorPoolSize.descriptorCount = resourceCount;
+
+					shaderDescriptorSet.DescriptorPoolSizes.emplace_back(std::move(descriptorPoolSize));
+				}
+
+				STL::Vector<VkDescriptorSetLayoutBinding> descriptorSetLayoutBindings;
+				for (const auto& [binding, imageSampler] : shaderDescriptorSet.ImageSamplers)
+				{
+					VkDescriptorSetLayoutBinding descriptorSetLayoutBinding{};
+					descriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+					descriptorSetLayoutBinding.binding = binding;
+					descriptorSetLayoutBinding.stageFlags = imageSampler.ShaderStage;
+					descriptorSetLayoutBinding.descriptorCount = imageSampler.ArraySize;
+					descriptorSetLayoutBinding.pImmutableSamplers = 0;
+
+					VkWriteDescriptorSet writeDescriptorSet{};
+					writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+					writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+					writeDescriptorSet.descriptorCount = imageSampler.ArraySize;
+					writeDescriptorSet.dstBinding = binding;
+
+					descriptorSetLayoutBindings.emplace_back(descriptorSetLayoutBinding);
+					shaderDescriptorSet.WriteDescriptorSets[imageSampler.Name] = std::move(writeDescriptorSet);
+				}
+
+				/* Make sure our descriptor set layout vector can hold all of the layouts */
+				if (shaderDescriptorSetIndex >= m_ShaderDescriptorSetLayouts.size())
+					m_ShaderDescriptorSetLayouts.resize(shaderDescriptorSetIndex + 1);
+
+				VkDescriptorSetLayoutCreateInfo descriptorSetLayoutInfo;
+				descriptorSetLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+				descriptorSetLayoutInfo.bindingCount = static_cast<uint32_t>(descriptorSetLayoutBindings.size());
+				descriptorSetLayoutInfo.pBindings = descriptorSetLayoutBindings.data();
+				descriptorSetLayoutInfo.flags = 0;
+				descriptorSetLayoutInfo.pNext = nullptr;
+
+				VK_CHECK(vkCreateDescriptorSetLayout(
+					m_Allocator->GetDevice()->GetLogicalDevice(),
+					&descriptorSetLayoutInfo,
+					GraphicsContext::GetAllocator(),
+					&m_ShaderDescriptorSetLayouts[shaderDescriptorSetIndex]));
+
+				++shaderDescriptorSetIndex;
+			}			
 		}
 	}
 
 	const STL::Vector<VkDescriptorSetLayout>& Shader::GetDescriptorSetLayouts() const
 	{
-		return m_DescriptorSetLayouts;
+		return m_ShaderDescriptorSetLayouts;
+	}
+
+	VkDescriptorSet Shader::AllocateDescriptorSet(const uint32_t set, const VkDescriptorPool descriptorPool)
+	{
+		const VkDescriptorSetAllocateInfo descriptorSetAllocateInfo
+		{
+			.sType{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO },
+			.pNext{ nullptr },
+			.descriptorPool{ descriptorPool },
+			.descriptorSetCount{ 1U },
+			.pSetLayouts{ &m_ShaderDescriptorSetLayouts[set] },
+		};
+
+		VkDescriptorSet descriptorSet;
+		VK_CHECK(vkAllocateDescriptorSets(
+			m_Allocator->GetDevice()->GetLogicalDevice(),
+			&descriptorSetAllocateInfo,
+			&descriptorSet));
+
+		return descriptorSet;
 	}
 
 	const STL::Vector<VkPipelineShaderStageCreateInfo>& Shader::GetPipelineStages() const
@@ -225,8 +305,7 @@ namespace Cinnamon {
 		}
 
 		for (const auto& [shaderStage, shaderSource] : shaderSources)
-		{
-			
+		{		
 			if (compile || !compiledShadersExist)
 			{
 				shaderc_compiler_t compiler{ shaderc_compiler_initialize() };
@@ -238,6 +317,7 @@ namespace Cinnamon {
 				
 				const shaderc_compilation_result_t compilationResult
 				{
+					
 					shaderc_compile_into_spv
 					(
 						compiler,
@@ -251,82 +331,18 @@ namespace Cinnamon {
 				};
 
 				CIN_ASSERT(shaderc_result_get_compilation_status(compilationResult) == shaderc_compilation_status_success);
+				
+				const void* binaryData = shaderc_result_get_bytes(compilationResult);
+				const size_t binarySize = shaderc_result_get_length(compilationResult);
 
+				const uint32_t* binaryDataAsUint32 = reinterpret_cast<const uint32_t*>(binaryData);
+				std::vector<uint32_t> bytecode(binaryDataAsUint32, binaryDataAsUint32 + (binarySize / sizeof(uint32_t)));
 
-				size_t size = shaderc_result_get_length(compilationResult);
-    			const char* binary = shaderc_result_get_bytes(compilationResult);
-
-				spirvBinaries[shaderStage] = STL::Vector<uint32_t>{ binary, binary + size };
+				spirvBinaries[shaderStage] = std::move(bytecode);
 
 				shaderc_compiler_release(compiler);
 				shaderc_compile_options_release(compileOptions);
 				shaderc_result_release(compilationResult);
-				#if 0
-				shaderc::Compiler compiler;
-				shaderc::CompileOptions compileOptions;
-
-				compileOptions.SetTargetSpirv(shaderc_spirv_version_1_6);
-				compileOptions.SetWarningsAsErrors();
-				compileOptions.SetTargetEnvironment(shaderc_target_env_vulkan, CinnamonVulkanVersionToShaderCEnvironment());
-
-				const shaderc_shader_kind shaderKind{ CinnamonShaderTypeToShaderCShaderType(shaderStage) };
-				const STL::String shaderFilepathString{ shaderFilepath.string() };
-
-				const shaderc::SpvCompilationResult compilationResult
-				{
-					compiler.CompileGlslToSpv
-					(
-						shaderSource,
-						shaderKind,
-						shaderFilepathString.data(),
-						compileOptions
-					)
-				};
-
-				if (compilationResult.GetCompilationStatus() != shaderc_compilation_status_success)
-					CIN_ERROR("Shader compilation failed: {}", compilationResult.GetErrorMessage());
-				CIN_VERIFY(compilationResult.GetCompilationStatus() == shaderc_compilation_status_success);
-
-				spirvBinaries[shaderStage] = STL::Vector<uint32_t>(compilationResult.begin(), compilationResult.end());
-#endif
-#if 0
-				auto shaderKind{ CinnamonShaderTypeToShaderShaderKind(shaderStage) };
-				glslang::TProgram program;
-				glslang::TShader shader(shaderKind);
-				const char* shaderSourcePtr = shaderSource.c_str();
-
-				shader.setStrings(&shaderSourcePtr, 1);
-				shader.setEnvInput(glslang::EShSourceGlsl, shaderKind, glslang::EShClientVulkan, 100);
-				shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_2);
-				shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_4);
-
-
-
-				if (!shader.parse(&resources, 100, false, messages))
-				{
-    				CIN_ERROR("Shader compilation failed: {}", messages.c_str());
-				}
-
-				program.addShader(&shader);
-
-				if (!program.link(messages))
-				{
-    				CIN_ERROR("Shader linking failed: {}", messages.c_str());
-				}
-
-				spv::SpvBuildLogger logger;
-				glslang::SpvOptions spvOptions;
-				spvOptions.generateDebugInfo = false;
-				spvOptions.disableOptimizer = true;
-				spvOptions.optimizeSize = true;
-
-				std::vector<unsigned int> spirvCode;
-
-				glslang::GlslangToSpv(*program.getIntermediate(shaderKind), spirvCode, &logger, &spvOptions);
-
-				spirvBinaries[shaderStage] = spirvCode;
-#endif
-
 
 				const STL::String outputPath{ shaderFilepathStem + "." + ShaderTypeToString(shaderStage) };
 				FILE* file;
@@ -384,7 +400,7 @@ namespace Cinnamon {
 			default: CIN_ASSERT(false); return VK_SHADER_STAGE_VERTEX_BIT;
 		}
 	}
-#if 1
+
 	InternalScope shaderc_env_version CinnamonVulkanVersionToShaderCEnvironment() noexcept
 	{
 		CIN_ASSERT(GraphicsContext::GetAPIVersion() == VK_API_VERSION_1_3);
@@ -403,5 +419,4 @@ namespace Cinnamon {
 			default: CIN_ASSERT(false); return shaderc_shader_kind::shaderc_vertex_shader;
 		}
 	}
-#endif
 }

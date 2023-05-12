@@ -20,6 +20,9 @@ namespace Cinnamon {
 		[[nodiscard]] VkDescriptorSet AllocateDescriptorSet(
 				VkDescriptorSetAllocateInfo& allocationInfo, 
 				const uint32_t poolIndex) const;
+
+		[[nodiscard]] VkDescriptorPool
+			GetPool(const uint32_t poolIndex) const;
 	private:
 		const STL::Unique<Device>& m_Device;
 		

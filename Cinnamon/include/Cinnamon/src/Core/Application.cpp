@@ -164,7 +164,8 @@ namespace Cinnamon {
 	{
 		CIN_UNUSED(event);
 		m_Running = false;
-
+		m_MainWindow->SetEventCallback([](const Event&) {});
+		
 		return true;
 	}
 

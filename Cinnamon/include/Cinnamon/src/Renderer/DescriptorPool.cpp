@@ -78,4 +78,9 @@ namespace Cinnamon {
 
 		return descriptorSet;
 	}
+
+	VkDescriptorPool DescriptorPool::GetPool(const uint32_t poolIndex) const
+	{
+		return m_Pools[poolIndex];
+	}
 }

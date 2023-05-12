@@ -11,6 +11,7 @@
 #include "Cinnamon/include/Renderer/IndexBuffer.hpp"
 #include "Cinnamon/include/Renderer/Swapchain.hpp"
 #include "Cinnamon/include/Renderer/Renderer2D.hpp"
+#include "Cinnamon/include/Renderer/Texture2D.hpp"
 
 namespace Cinnamon {
 	SceneRenderer::SceneRenderer(
@@ -22,9 +23,7 @@ namespace Cinnamon {
 		m_Allocator(STL::MakeUnique<VulkanAllocator>(m_Renderer->GetDevice())),
 		m_Framebuffer(STL::MakeUnique<Framebuffer>(m_Allocator, FramebufferSpecification{ viewportWidth, viewportHeight, 1U, EImageFormat::R8G8B8A8 })),
 		m_Renderer2D(STL::MakeUnique<Renderer2D>(m_Renderer, m_Allocator, m_Framebuffer))
-	{
-		CIN_TRACE("Constructed scene renderer");
-	}
+	{}
 
 	SceneRenderer::~SceneRenderer() noexcept
 	{
@@ -36,6 +35,17 @@ namespace Cinnamon {
 	void SceneRenderer::BeginFrame()
 	{
 		m_Renderer2D->BeginFrame();
+		m_Renderer2D->RenderQuad(CinMath::Matrix4::Identity());
+
+		CinMath::Matrix4 mat
+		{
+			1.0f, 0.0f, 0.0f, 0.0f,
+			0.0f, 1.0f, 0.0f, 0.0f,
+			0.0f, 0.0f, 1.0f, 0.0f,
+			0.2f, 0.2f, 0.0f, 1.0f,
+		};
+
+		m_Renderer2D->RenderQuad(mat);
 		m_Renderer2D->EndFrame();
 	}
 

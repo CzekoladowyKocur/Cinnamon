@@ -1,19 +1,18 @@
-project "VulkanMemoryAllocator"
-	location "."
+project "stb_image"
 	kind "StaticLib"
 	language "C"
+	location "."
 
 	targetdir ("bin/" .. OutputDirectory .. "/%{prj.name}")
 	objdir ("bin-int/" .. OutputDirectory .. "/%{prj.name}")
-	warnings "off"
 
-	includedirs 
+	includedirs
 	{
-		VulkanSDKInclude,
+		"%{prj.location}/include",
 	}
 
 	files
 	{
-		"%{prj.location}/include/*.h",
-		"%{prj.location}/source/*.cpp",
+		"include/stb_image/stb_image.h",
+		"src/stb_image.c",
 	}

@@ -35,7 +35,7 @@ namespace Cinnamon {
 			const VkImage image,
 			const VmaAllocation allocation);
 
-		void* MapMemory(const VmaAllocation allocation);
+		[[nodiscard]] void* MapMemory(const VmaAllocation allocation);
 		void UnmapMemory(const VmaAllocation allocation);
 	private:
 		const STL::Unique<Device>& m_Device;

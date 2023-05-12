@@ -27,8 +27,12 @@ EditorViewportPanel::~EditorViewportPanel() noexcept
 
 void EditorViewportPanel::OnUpdate(const Timestep timestep)
 {
-	m_SceneRenderer->BeginFrame();
-	m_SceneRenderer->EndFrame();
+	if (m_Renderer)
+	{
+		m_SceneRenderer->BeginFrame();
+		m_SceneRenderer->EndFrame();
+	}
+
 	CIN_UNUSED(timestep);
 }
 

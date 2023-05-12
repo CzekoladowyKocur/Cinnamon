@@ -10,6 +10,7 @@
 #include "Cinnamon/include/Renderer/Framebuffer.hpp"
 #include "Cinnamon/include/Renderer/RenderCommandBuffer.hpp"
 #include "Cinnamon/include/Renderer/DescriptorPool.hpp"
+#include "Cinnamon/include/Renderer/Texture2D.hpp"
 #include "Cinnamon/include/Core/Window.hpp"
 
 /* Temporary */
@@ -72,61 +73,93 @@ namespace Cinnamon {
 		}
 
 		constexpr std::array<VkClearValue, 1> clearValues{ { { 0.15f, 0.95f, 0.15f, 1.0f } } };
-		
-		VkRenderPassBeginInfo renderPassBeginInfo;
-		renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassBeginInfo.framebuffer = framebufferHandle;
-		renderPassBeginInfo.renderPass = renderPass;
-		renderPassBeginInfo.renderArea.extent = { framebufferWidth, framebufferHeight };
-		renderPassBeginInfo.renderArea.offset = { 0, 0 };
-		renderPassBeginInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-		renderPassBeginInfo.pClearValues = clearValues.data();
-		renderPassBeginInfo.pNext = nullptr;
+		const VkRenderPassBeginInfo renderPassBeginInfo
+		{
+			.sType{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO },
+			.pNext{ nullptr },
+			.renderPass{ renderPass },
+			.framebuffer{ framebufferHandle },
+			.renderArea
+			{
+				.offset
+				{
+					.x{ 0U },
+					.y{ 0U }
+				},
+				.extent
+				{
+					.width{ framebufferWidth },
+					.height{ framebufferHeight },
+				}
+			},
+			.clearValueCount{ static_cast<uint32_t>(clearValues.size()) },
+			.pClearValues{ clearValues.empty() ? nullptr : clearValues.data() },
+		};
 
-		VkCommandBuffer commandBuffer = renderCommandBuffer->GetCommandBuffer(frameIndex);
-		
+		const VkCommandBuffer commandBuffer{ renderCommandBuffer->GetCommandBuffer(frameIndex) };
 		vkCmdBeginRenderPass(
 			commandBuffer,
 			&renderPassBeginInfo,
 			VK_SUBPASS_CONTENTS_INLINE);
 
 		/* Framebuffer viewport */
-		VkViewport viewport;
-		viewport.width = static_cast<float>(framebufferWidth);
-		viewport.height = -(static_cast<float>(framebufferHeight));
-		viewport.x = 0.0f;
-		viewport.y = static_cast<float>(framebufferHeight);
-		viewport.maxDepth = 1.0f;
-		viewport.minDepth = 0.0f;
+		const VkViewport viewport
+		{
+			.x{ 0.0f },
+			.y{ 0.0f },
+			.width{ static_cast<float>(framebufferWidth) },
+			.height{ static_cast<float>(framebufferHeight) },
+			.minDepth{ 0U },
+			.maxDepth{ 1.0f },
+		};
 
-		VkRect2D scissor;
-		scissor.extent = { framebufferWidth, framebufferHeight };
-		scissor.offset = { 0, 0 };
+		const VkRect2D scissor
+		{
+			.offset
+			{
+				.x{ 0 },
+				.y{ 0 }
+			},
+			.extent
+			{
+				.width{ framebufferWidth },
+				.height{ framebufferHeight },
+			}
+		};
 
-		std::vector<VkClearAttachment> attachmentClears;
-		std::vector<VkClearRect> clearRectangles;
+		//std::vector<VkClearAttachment> attachmentClears;
+		//std::vector<VkClearRect> clearRectangles;
 
-		VkClearAttachment& clear = attachmentClears.emplace_back(VkClearAttachment{});
-		clear.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		clear.colorAttachment = 0;
-		clear.clearValue = clearValues[0];
+		//VkClearAttachment& clear = attachmentClears.emplace_back(VkClearAttachment{});
+		//clear.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		//clear.colorAttachment = 0;
+		//clear.clearValue = clearValues[0];
+		//
+		//auto& rect = clearRectangles.emplace_back(VkClearRect{});
+		//rect.rect.extent = { framebufferWidth, framebufferHeight };
+		//rect.rect.offset = { 0, 0 };
+		//rect.layerCount = 1;
+		//rect.baseArrayLayer = 0;
 
-		auto& rect = clearRectangles.emplace_back(VkClearRect{});
-		rect.rect.extent = { framebufferWidth, framebufferHeight };
-		rect.rect.offset = { 0, 0 };
-		rect.layerCount = 1;
-		rect.baseArrayLayer = 0;
-
-		vkCmdClearAttachments(
-			commandBuffer,
-			static_cast<uint32_t>(attachmentClears.size()),
-			attachmentClears.data(),
-			static_cast<uint32_t>(attachmentClears.size()),
-			clearRectangles.data());
+		//vkCmdClearAttachments(
+		//	commandBuffer,
+		//	static_cast<uint32_t>(attachmentClears.size()),
+		//	attachmentClears.data(),
+		//	static_cast<uint32_t>(attachmentClears.size()),
+		//	clearRectangles.data());
 
 		/* Dynamic state */
-		vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+		vkCmdSetViewport(
+			commandBuffer, 
+			0, 
+			1, 
+			&viewport);
+
+		vkCmdSetScissor(
+			commandBuffer, 
+			0, 
+			1, 
+			&scissor);
 	}
 
 	void Renderer::EndRenderPass(
@@ -146,14 +179,11 @@ namespace Cinnamon {
 		const uint32_t indexCount)
 	{
 		const uint32_t frameIndex{ m_Swapchain->GetFrameIndex() };
-		/* Native vulkan */
-		VkPipeline graphicsPipeline = pipeline->GetHandle();
-		VkCommandBuffer commandBuffer = renderCommandBuffer->GetCommandBuffer(frameIndex);
-		
-		VkBuffer vertexBufferHandle = vertexBuffer->GetHandle();
-		VkBuffer indexBufferHandle = indexBuffer->GetHandle();
-
-		VkDeviceSize offsets[1U]{ 0U };
+		const VkPipeline graphicsPipeline{ pipeline->GetHandle() };
+		const VkCommandBuffer commandBuffer{ renderCommandBuffer->GetCommandBuffer(frameIndex) };
+		const VkBuffer vertexBufferHandle{ vertexBuffer->GetHandle() };
+		const VkBuffer indexBufferHandle{ indexBuffer->GetHandle() };
+		constexpr VkDeviceSize offsets[1U]{ 0U };
 
 		vkCmdBindVertexBuffers(
 			commandBuffer,
@@ -178,6 +208,88 @@ namespace Cinnamon {
 			1U, 
 			0U, 
 			0U, 
+			0U);
+	}
+
+	void Renderer::RenderGeometry(
+		const STL::Unique<RenderCommandBuffer>& renderCommandBuffer, 
+		const STL::Unique<VertexBuffer>& vertexBuffer, 
+		const STL::Unique<IndexBuffer>& indexBuffer, 
+		const STL::Unique<Pipeline>& pipeline, 
+		const STL::Unique<Shader>& shader,
+		const Texture2D& texture, 
+		const uint32_t indexCount)
+	{
+		const uint32_t frameIndex{ m_Swapchain->GetFrameIndex() };
+		const VkPipeline graphicsPipeline{ pipeline->GetHandle() };
+		const VkCommandBuffer commandBuffer{ renderCommandBuffer->GetCommandBuffer(frameIndex) };
+		const VkBuffer vertexBufferHandle{ vertexBuffer->GetHandle() };
+		const VkBuffer indexBufferHandle{ indexBuffer->GetHandle() };
+		constexpr VkDeviceSize offsets[1U]{ 0U };
+
+		vkCmdBindVertexBuffers(
+			commandBuffer,
+			0, 1,
+			&vertexBufferHandle,
+			offsets);
+
+		vkCmdBindIndexBuffer(
+			commandBuffer,
+			indexBufferHandle,
+			offsets[0U],
+			VK_INDEX_TYPE_UINT32);
+
+		vkCmdBindPipeline(
+			commandBuffer,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			graphicsPipeline);
+
+		const VkDescriptorImageInfo imageInfo 
+		{ 
+			.sampler{ texture.GetSampler() },
+			.imageView{ texture.GetImageView() },
+			.imageLayout{ texture.GetImageLayout() }
+		};
+
+		VkDescriptorSet dst{ shader->AllocateDescriptorSet(0U, m_DescriptorPool->GetPool(frameIndex)) };
+
+		const VkWriteDescriptorSet descriptorWrite
+		{
+			.sType{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET },
+			.pNext{ nullptr },
+			.dstSet{ dst },
+			.dstBinding{ 0U },
+			.dstArrayElement{ 0U },
+			.descriptorCount{ 1U },
+			.descriptorType{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER },
+			.pImageInfo{ &imageInfo },
+			.pBufferInfo{ nullptr },
+			.pTexelBufferView{ nullptr }
+		};
+
+		vkUpdateDescriptorSets(
+			m_Device->GetLogicalDevice(), 
+			1, 
+			&descriptorWrite, 
+			0, 
+			nullptr);
+
+		vkCmdBindDescriptorSets(
+			commandBuffer, 
+			VK_PIPELINE_BIND_POINT_GRAPHICS, 
+			pipeline->GetLayout(),
+			0, 
+			1, 
+			&dst, 
+			0, 
+			nullptr);
+
+		vkCmdDrawIndexed(
+			commandBuffer,
+			static_cast<uint32_t>(indexCount),
+			1U,
+			0U,
+			0U,
 			0U);
 	}
 
