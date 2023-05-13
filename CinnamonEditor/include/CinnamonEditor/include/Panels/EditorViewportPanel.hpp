@@ -12,6 +12,8 @@ private:
 	NON_COPYABLE(EditorViewportPanel)
 public:
 	explicit EditorViewportPanel(
+		Cinnamon::Scene*& sceneContext,
+		Cinnamon::Entity& selectionContext,
 		const Cinnamon::STL::Unique<Cinnamon::Renderer>& renderer, 
 		const uint32_t viewportWidth, 
 		const uint32_t viewportHeight) noexcept;

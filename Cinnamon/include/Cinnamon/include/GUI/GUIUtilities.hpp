@@ -15,6 +15,63 @@ namespace Cinnamon {
 		{
 			return 11.0f;
 		}
+		
+		[[nodiscard]] constexpr char NativeKeyCodeToToChar(const KeyCode native) noexcept
+		{
+			switch (static_cast<Key>(native))
+			{
+				case Key::A:		return 'A';
+				case Key::B:		return 'B';
+				case Key::C:		return 'C';
+				case Key::D:		return 'D';
+				case Key::E:		return 'E';
+				case Key::F:		return 'F';
+				case Key::G:		return 'G';
+				case Key::H:		return 'H';
+				case Key::I:		return 'I';
+				case Key::J:		return 'J';
+				case Key::K:		return 'K';
+				case Key::L:		return 'L';
+				case Key::M:		return 'M';
+				case Key::N:		return 'N';
+				case Key::O:		return 'O';
+				case Key::P:		return 'P';
+				case Key::Q:		return 'Q';
+				case Key::R:		return 'R';
+				case Key::S:		return 'S';
+				case Key::T:		return 'T';
+				case Key::U:		return 'U';
+				case Key::V:		return 'V';
+				case Key::W:		return 'W';
+				case Key::X:		return 'X';
+				case Key::Y:		return 'Y';
+				case Key::Z:		return 'Z';
+				case Key::Slash:	return '/';
+				case Key::Number0:	return '0';
+				case Key::Number1:	return '1';
+				case Key::Number2:	return '2';
+				case Key::Number3:	return '3';
+				case Key::Number4:	return '4';
+				case Key::Number5:	return '5';
+				case Key::Number6:	return '6';
+				case Key::Number8:	return '7';
+				case Key::Number7:	return '8';
+				case Key::Number9:	return '9';
+				case Key::NUMPAD0:	return '0';
+				case Key::NUMPAD1:	return '1';
+				case Key::NUMPAD2:	return '2';
+				case Key::NUMPAD3:	return '3';
+				case Key::NUMPAD4:	return '4';
+				case Key::NUMPAD5:	return '5';
+				case Key::NUMPAD6:	return '6';
+				case Key::NUMPAD7:	return '7';
+				case Key::NUMPAD8:	return '8';
+				case Key::NUMPAD9:	return '9';
+				case Key::Space:	return ' ';
+
+				default:			return static_cast<char>(0);
+			}
+		}
 
 		[[nodiscard]] constexpr ImGuiKey NativeKeyCodeToImGUIKeyCode(const KeyCode native) noexcept
 		{
@@ -39,6 +96,7 @@ namespace Cinnamon {
 				case Key::LeftShift:	return ImGuiKey_LeftShift;
 				case Key::RightControl:	return ImGuiKey_RightCtrl;
 				case Key::RightShift:	return ImGuiKey_RightShift;
+				case Key::Shift:		return ImGuiKey_LeftShift;
 				case Key::Number0:		return ImGuiKey_0;
 				case Key::Number1:		return ImGuiKey_1;
 				case Key::Number2:		return ImGuiKey_2;
@@ -103,6 +161,10 @@ namespace Cinnamon {
 				case Key::F12:			return ImGuiKey_F11;
 				case Key::F13:			return ImGuiKey_F12;
 				case Key::LeftAlt:		return ImGuiKey_LeftAlt;
+				case Key::Capital:		return ImGuiKey_CapsLock;
+				case Key::Control:		return ImGuiKey_LeftCtrl;
+				case Key::Comma:		return ImGuiKey_Comma;
+				case Key::Period:		return ImGuiKey_Period;
 
 				default:
 				{

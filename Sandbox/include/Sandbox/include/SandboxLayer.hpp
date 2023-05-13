@@ -17,6 +17,8 @@ namespace Cinnamon {
 
 class SandboxLayer final : public Layer
 {
+private:
+	NON_COPYABLE(SandboxLayer)
 public:
 	SandboxLayer(STL::Unique<Window>& window, STL::Unique<Renderer>& renderer) noexcept;
 	virtual ~SandboxLayer() noexcept;

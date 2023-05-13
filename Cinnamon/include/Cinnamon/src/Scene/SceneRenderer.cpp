@@ -1,4 +1,8 @@
 #include "Cinnamon/include/Scene/SceneRenderer.hpp"
+#include "Cinnamon/include/Scene/Scene.hpp"
+#include "Cinnamon/include/Scene/Components.hpp"
+#include "Cinnamon/include/ECS/Registry.hpp"
+
 #include "Cinnamon/include/Renderer/Renderer.hpp"
 #include "Cinnamon/include/Renderer/Device.hpp"
 #include "Cinnamon/include/Renderer/RenderCommandBuffer.hpp"
@@ -19,6 +23,7 @@ namespace Cinnamon {
 		const uint32_t viewportWidth,
 		const uint32_t viewportHeight) noexcept
 		:
+		m_RenderedScene(nullptr),
 		m_Renderer(renderer),
 		m_Allocator(STL::MakeUnique<VulkanAllocator>(m_Renderer->GetDevice())),
 		m_Framebuffer(STL::MakeUnique<Framebuffer>(m_Allocator, FramebufferSpecification{ viewportWidth, viewportHeight, 1U, EImageFormat::R8G8B8A8 })),
@@ -34,23 +39,26 @@ namespace Cinnamon {
 
 	void SceneRenderer::BeginFrame()
 	{
-		m_Renderer2D->BeginFrame();
-		m_Renderer2D->RenderQuad(CinMath::Matrix4::Identity());
-
-		CinMath::Matrix4 mat
+		if (m_RenderedScene)
 		{
-			1.0f, 0.0f, 0.0f, 0.0f,
-			0.0f, 1.0f, 0.0f, 0.0f,
-			0.0f, 0.0f, 1.0f, 0.0f,
-			0.2f, 0.2f, 0.0f, 1.0f,
-		};
-
-		m_Renderer2D->RenderQuad(mat);
-		m_Renderer2D->EndFrame();
+			m_Renderer2D->BeginFrame();
+			for (const ECS::EntityID entityID : ECS::View<TransformComponent>(m_RenderedScene->GetRegistry()))
+			{
+				const auto& transform{ m_RenderedScene->GetRegistry()->Get<TransformComponent>(entityID) };
+				
+				m_Renderer2D->RenderQuad(transform.Calculate());
+			}
+			m_Renderer2D->EndFrame();
+		}
 	}
 
 	void SceneRenderer::EndFrame()
 	{}
+
+	void SceneRenderer::SetRenderedScene(const Scene* const scene)
+	{
+		m_RenderedScene = scene;
+	}
 
 	void SceneRenderer::SetViewportSize(const uint32_t viewportWidth, const uint32_t viewportHeight)
 	{

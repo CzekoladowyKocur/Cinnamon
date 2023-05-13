@@ -5,15 +5,18 @@
 #include "Cinnamon/include/Event/KeyEvent.hpp"
 #include "Cinnamon/include/Core/Window.hpp"
 
-
 /* Panels */
 #include "CinnamonEditor/include/Panels/EditorPanelBase.hpp"
 #include "CinnamonEditor/include/Panels/EditorViewportPanel.hpp"
 #include "CinnamonEditor/include/Panels/SceneHierarchyPanel.hpp"
 #include "CinnamonEditor/include/Panels/ContentBrowserPanel.hpp"
+#include "CinnamonEditor/include/Panels/EntityPropertiesPanel.hpp"
 
 #include "ThirdParty/imgui/imgui.h"
 #include "ThirdParty/imgui/imgui_internal.h"
+
+#include "Cinnamon/include/Scene/Scene.hpp"
+#include "Cinnamon/include/Scene/Entity.hpp"
 
 InternalScope void BeginDockspace();
 InternalScope void EndDockspace();
@@ -24,20 +27,34 @@ EditorLayer::EditorLayer(
 	const STL::Unique<Renderer>& renderer) noexcept
 	:
 	m_Window(window),
-	m_Renderer(renderer)
+	m_Renderer(renderer),
+	m_SceneContext(nullptr),
+	m_Panels()
 {}
 
 EditorLayer::~EditorLayer() noexcept
-{}
+{
+	[[likely]]
+	if (m_SceneContext)
+		cindel m_SceneContext;
+
+	m_SceneContext = nullptr;
+}
 
 void EditorLayer::OnAttach()
 {
 	CIN_TRACE("Attaching editor layer");
 
-	const auto [windowWidth, windowHeight] { m_Window->GetSize() };
-	m_Panels.emplace_back(cinew EditorViewportPanel(m_Renderer, windowWidth, windowHeight));
-	m_Panels.emplace_back(cinew SceneHierarchyPanel);
-	m_Panels.emplace_back(cinew ContentBrowserPanel);
+	const auto [windowWidth, windowHeight]{ m_Window->GetSize() };
+	m_Panels.emplace_back(cinew EditorViewportPanel(m_SceneContext, m_SelectionContext, m_Renderer, windowWidth, windowHeight));
+	m_Panels.emplace_back(cinew SceneHierarchyPanel(m_SceneContext, m_SelectionContext));
+	m_Panels.emplace_back(cinew ContentBrowserPanel(m_SceneContext, m_SelectionContext));
+	m_Panels.emplace_back(cinew EntityPropertiesPanel(m_SceneContext, m_SelectionContext));
+
+	m_SceneContext = cinew Scene();
+	(void)m_SceneContext->CreateEntity("Entity 1");
+	(void)m_SceneContext->CreateEntity("Entity 2");
+	(void)m_SceneContext->CreateEntity("Entity 3");
 }
 
 void EditorLayer::OnUpdate(const Timestep timestep)
@@ -45,6 +62,7 @@ void EditorLayer::OnUpdate(const Timestep timestep)
 	for (EditorPanelBase* panel : m_Panels)
 		panel->OnUpdate(timestep);
 	
+	ImGui::ShowDemoWindow();
 	BeginDockspace();
 	[[unlikely]]
 	if (ImGui::BeginMenuBar())

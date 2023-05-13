@@ -10,12 +10,14 @@
 #include "ThirdParty/imgui/imgui_internal.h"
 
 using namespace Cinnamon;
-
 EditorViewportPanel::EditorViewportPanel(
+	Scene*& sceneContext,
+	Entity& selectionContext,
 	const STL::Unique<Renderer>& renderer, 
 	const uint32_t viewportWidth,
 	const uint32_t viewportHeight) noexcept
 	:
+	EditorPanelBase(sceneContext, selectionContext),
 	m_Renderer(renderer),
 	m_SceneRenderer(STL::MakeUnique<SceneRenderer>(renderer, viewportWidth, viewportHeight))
 {
@@ -27,6 +29,8 @@ EditorViewportPanel::~EditorViewportPanel() noexcept
 
 void EditorViewportPanel::OnUpdate(const Timestep timestep)
 {
+	m_SceneRenderer->SetRenderedScene(m_SceneContext);
+	
 	if (m_Renderer)
 	{
 		m_SceneRenderer->BeginFrame();

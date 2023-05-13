@@ -4,6 +4,8 @@
 namespace Cinnamon {
 	class LayerStack final
 	{
+	private:
+		NON_COPYABLE(LayerStack)
 	public:
 		LayerStack() noexcept;
 		~LayerStack() noexcept;

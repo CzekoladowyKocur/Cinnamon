@@ -19,6 +19,9 @@
 #pragma warning(disable : 4616)
 #pragma warning(disable : 4100)
 #pragma warning(disable : 4211)
+#pragma warning(disable : 6011)
+#pragma warning(disable : 33010)
+#pragma warning(disable : 28182)
 #include "ThirdParty/imgui/imgui.h"
 #include "ThirdParty/imgui/backends/imgui_impl_vulkan.h"
 #include "ThirdParty/imgui/backends/imgui_impl_win32.h"
@@ -216,6 +219,13 @@ namespace Cinnamon {
 			{
 				const KeyPressedEvent& keyPressedEvent{ static_cast<const KeyPressedEvent&>(event) };
 				IO.AddKeyEvent(NativeKeyCodeToImGUIKeyCode(keyPressedEvent.GetKeyCode()), true);
+				
+				const char inputCharacter{ NativeKeyCodeToToChar(keyPressedEvent.GetKeyCode()) };
+
+				if (ImGui::IsKeyDown(ImGuiKey_RightShift) || ImGui::IsKeyDown(ImGuiKey_LeftShift) || (GetKeyState(VK_CAPITAL) & 0x0001))
+					IO.AddInputCharacter(inputCharacter);
+				else
+					IO.AddInputCharacter(static_cast<char>(std::tolower(static_cast<char>(inputCharacter))));
 			} break;
 
 			case EEventType::KeyReleased:

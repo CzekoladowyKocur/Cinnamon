@@ -8,7 +8,7 @@ class ContentBrowserPanel final : public EditorPanelBase
 private:
 	NON_COPYABLE(ContentBrowserPanel)
 public:
-	explicit ContentBrowserPanel() noexcept;
+	explicit ContentBrowserPanel(Cinnamon::Scene*& sceneContext, Cinnamon::Entity& selectionContext) noexcept;
 	virtual ~ContentBrowserPanel() noexcept;
 
 	virtual void OnUpdate(const Timestep timestep) override final;

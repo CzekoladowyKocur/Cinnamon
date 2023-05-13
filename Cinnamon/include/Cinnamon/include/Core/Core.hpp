@@ -20,11 +20,13 @@
 #include <type_traits>
 #include <queue>
 #include <filesystem>
+#include <unordered_set>
 #include <set>
 #include <future>
 #include <algorithm>
 #include <condition_variable>
 #include <fstream>
+#include <bitset>
 
 #ifdef CIN_PLATFORM_WINDOWS
 #undef UNICODE

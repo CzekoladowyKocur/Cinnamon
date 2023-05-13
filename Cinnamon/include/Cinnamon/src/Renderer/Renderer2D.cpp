@@ -40,7 +40,7 @@ namespace Cinnamon {
 		m_RenderCommandBuffer(STL::MakeUnique<RenderCommandBuffer>(m_Renderer->GetDevice(), m_Renderer->GetSwapchain()->GetImageCount())),
 		m_QuadVertexBuffer(STL::MakeUnique<VertexBuffer>(m_Allocator, sizeof(Geometry::QuadVertex)* s_MaxQuads, Geometry::QuadVertex::GetLayout())),
 		m_QuadIndexBuffer(STL::MakeUnique<IndexBuffer>(m_Allocator, s_MaxQuads * sizeof(uint32_t) * 6U)),
-		m_QuadShader(STL::MakeUnique<Shader>(m_Allocator, "Resources/shaders/SimpleShader.shader", true)),
+		m_QuadShader(STL::MakeUnique<Shader>(m_Allocator, "Resources/shaders/SimpleShader.shader", false)),
 		m_QuadPipeline(STL::MakeUnique<Pipeline>(m_Renderer->GetDevice(), m_TargetFramebuffer, m_QuadShader, Geometry::QuadVertex::GetLayout(), EPrimitiveTopology::Triangles)),
 		m_QuadBufferData(nullptr),
 		m_QuadBufferDataBase(nullptr),

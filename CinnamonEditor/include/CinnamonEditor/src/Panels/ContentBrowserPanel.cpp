@@ -234,16 +234,10 @@ private:
 };
 
 InternalScope constinit std::atomic<bool> s_FileTreeNeedsRescan{ true };
-#define MY_TEST_LINUX
-ContentBrowserPanel::ContentBrowserPanel() noexcept
+ContentBrowserPanel::ContentBrowserPanel(Scene*& sceneContext, Entity& selectionContext) noexcept
 	:
-	#ifdef MY_TEST_LINUX
-	m_WorkingDirectory(""),
-	#elif defined MY_TEST_WINDOWS
-	m_WorkingDirectory(""),
-	#else
+	EditorPanelBase(sceneContext, selectionContext),
 	m_WorkingDirectory(),
-	#endif
 	m_FileWatcher(nullptr),
 	m_FileTree(nullptr)
 {
