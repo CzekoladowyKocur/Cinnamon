@@ -96,7 +96,6 @@ namespace Cinnamon {
 				case Key::LeftShift:	return ImGuiKey_LeftShift;
 				case Key::RightControl:	return ImGuiKey_RightCtrl;
 				case Key::RightShift:	return ImGuiKey_RightShift;
-				case Key::Shift:		return ImGuiKey_LeftShift;
 				case Key::Number0:		return ImGuiKey_0;
 				case Key::Number1:		return ImGuiKey_1;
 				case Key::Number2:		return ImGuiKey_2;
@@ -162,10 +161,12 @@ namespace Cinnamon {
 				case Key::F13:			return ImGuiKey_F12;
 				case Key::LeftAlt:		return ImGuiKey_LeftAlt;
 				case Key::Capital:		return ImGuiKey_CapsLock;
-				case Key::Control:		return ImGuiKey_LeftCtrl;
 				case Key::Comma:		return ImGuiKey_Comma;
 				case Key::Period:		return ImGuiKey_Period;
-
+				#ifdef CIN_PLATFORM_WINDOWS
+				case Key::Control:		return ImGuiKey_LeftCtrl;
+				case Key::Shift:		return ImGuiKey_LeftShift;
+				#endif
 				default:
 				{
 					CIN_ASSERT(false);

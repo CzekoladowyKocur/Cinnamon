@@ -2,6 +2,6 @@
 
 namespace Cinnamon {
 	namespace ECS {
-		extern ComponentID e_ComponentCounter{ 0 };
+		ComponentID e_ComponentCounter{ 0 };
 	}
 }

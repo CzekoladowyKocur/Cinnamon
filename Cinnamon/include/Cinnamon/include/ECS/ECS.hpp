@@ -21,7 +21,7 @@ namespace Cinnamon {
 		constexpr EntityID Null{ 0xffff'ffff'ffff'ffff };
 
 		template<typename Component>
-		[[nodiscard]] const ComponentID GetComponentID() noexcept(true)
+		[[nodiscard]] ComponentID GetComponentID() noexcept(true)
 		{
 			extern ComponentID e_ComponentCounter;
 			static ComponentID s_ComponentID{ e_ComponentCounter++ };

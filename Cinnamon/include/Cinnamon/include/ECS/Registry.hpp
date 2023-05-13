@@ -363,7 +363,7 @@ namespace Cinnamon {
 					Index(index)
 				{}
 		
-				inline const EntityID operator*() const noexcept(true)
+				inline EntityID operator*() const noexcept(true)
 				{
 					CIN_ASSERT(IsEntityValid(ViewedRegistry->m_Entities[Index].ID));
 					return ViewedRegistry->m_Entities[Index].ID;
