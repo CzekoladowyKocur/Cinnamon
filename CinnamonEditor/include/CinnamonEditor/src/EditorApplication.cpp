@@ -11,6 +11,7 @@
 #include "Cinnamon/include/Renderer/Renderer.hpp"
 #include "Cinnamon/include/Asset/AssetManager.hpp"
 #include "Cinnamon/include/GUI/GUIRenderer.hpp"
+#include <stdexcept>
 
 InternalScope constexpr const char* s_LocalEditorSettingsFilePath{ "EditorSettings.ini" };
 
@@ -103,7 +104,7 @@ EditorSettings EditorApplication::LoadLocalEditorSettings()
 	try
 	{
 		if (not std::filesystem::exists(s_LocalEditorSettingsFilePath))
-			throw std::exception("Local editor settings file doesn't exist");
+			throw std::runtime_error("Local editor settings file doesn't exist");
 
 		std::ifstream editorSettingsFile(s_LocalEditorSettingsFilePath, std::ios::binary);
 		if (!editorSettingsFile.is_open())

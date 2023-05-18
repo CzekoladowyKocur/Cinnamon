@@ -224,10 +224,10 @@ private:
 			{
 				constexpr ImGuiTreeNodeFlags rootFlags
 				{
-					ImGuiTreeNodeFlags_SpanAvailWidth |
-					ImGuiTreeNodeFlags_OpenOnArrow |
-					ImGuiTreeNodeFlags_DefaultOpen |
-					0U
+					ImGuiTreeNodeFlags_SpanAvailWidth 	|
+					ImGuiTreeNodeFlags_OpenOnArrow 		|
+					ImGuiTreeNodeFlags_DefaultOpen 		|
+					ImGuiTreeNodeFlags_None
 				};
 
 				const ImGuiTreeNodeFlags flags{ rootFlags | (currentNode.Children.empty() ? ImGuiTreeNodeFlags_Leaf : ImGuiTreeNodeFlags_None) };
@@ -245,15 +245,14 @@ private:
 			{
 				constexpr ImGuiTreeNodeFlags directoryFlags
 				{
-					ImGuiTreeNodeFlags_SpanAvailWidth |
-					ImGuiTreeNodeFlags_OpenOnArrow |
-					0U
+					ImGuiTreeNodeFlags_SpanAvailWidth 	|
+					ImGuiTreeNodeFlags_OpenOnArrow 		|
+					ImGuiTreeNodeFlags_None
 				};
 
-				const ImGuiTreeNodeFlags flags{ directoryFlags | (currentNode.Children.empty() ? ImGuiTreeNodeFlags_Leaf : 0U) };
+				const ImGuiTreeNodeFlags flags{ directoryFlags | (currentNode.Children.empty() ? ImGuiTreeNodeFlags_Leaf : ImGuiTreeNodeFlags_None) };
 				if (ImGui::TreeNodeEx(currentNode.ID(), currentNode.Parent ? flags : flags | ImGuiTreeNodeFlags_DefaultOpen, currentNode))
 				{
-					[[unlikely]]
 					if (ImGui::IsItemHovered() && ImGui::IsItemClicked(ImGuiMouseButton_Right))
 						m_FilePopupCallbackFunction(currentNode.RealPath, true);
 
@@ -274,10 +273,10 @@ private:
 			{
 				constexpr ImGuiTreeNodeFlags regularFileFlags
 				{
-					ImGuiTreeNodeFlags_SpanAvailWidth |
-					ImGuiTreeNodeFlags_OpenOnArrow |
-					ImGuiTreeNodeFlags_Leaf |
-					0U
+					ImGuiTreeNodeFlags_SpanAvailWidth 	|
+					ImGuiTreeNodeFlags_OpenOnArrow 		|
+					ImGuiTreeNodeFlags_Leaf 			|
+					ImGuiTreeNodeFlags_None
 				};
 
 				if (ImGui::TreeNodeEx(currentNode.ID(), regularFileFlags, currentNode))
@@ -300,7 +299,6 @@ private:
 			[[unlikely]]
 			default:
 			{
-				[[unlikely]]
 				if (ImGui::TreeNodeEx(currentNode.ID(), 0U, currentNode))
 					ImGui::TreePop();
 

@@ -1,6 +1,8 @@
 #include "Sandbox/include/SandboxLayer.hpp"
 #include "Cinnamon/include/Core/Logger.hpp"
+#include "Cinnamon/include/Core/TypeDefines.hpp"
 #include "Cinnamon/include/Event/WindowEvent.hpp"
+#include "Cinnamon/include/Renderer/Framebuffer.hpp"
 #include "Cinnamon/include/Renderer/Swapchain.hpp"
 #include "Cinnamon/include/Renderer/VertexBuffer.hpp"
 #include "Cinnamon/include/Renderer/Material.hpp"
@@ -14,10 +16,12 @@ SandboxLayer::SandboxLayer(STL::Unique<Window>& window, STL::Unique<Renderer>& r
 	m_Window(window),
 	m_Renderer(renderer),
 	m_Allocator(cinew VulkanAllocator(m_Renderer->GetDevice())),
-	m_Framebuffer(STL::MakeUnique<Framebuffer>(m_Allocator, FramebufferSpecification{ m_Window->GetWidth(), m_Window->GetHeight(), 1U, EImageFormat::R8G8B8A8 }, m_Renderer->GetSwapchain())),
+	m_Framebuffer(nullptr),
 	m_RenderCommandBuffer(STL::MakeUnique<RenderCommandBuffer>(m_Renderer->GetDevice(), m_Renderer->GetSwapchain()))
 {
 #if 1
+	CIN_ASSERT(m_Framebuffer);
+	
 	m_Window->SetEventCallback([](const Event& /*event*/) 
 	{});
 

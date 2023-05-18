@@ -18,7 +18,7 @@
 
 #include "ThirdParty/imgui/imgui.h"
 #include "ThirdParty/imgui/imgui_internal.h"
-#include "ThirdParty/imguizmo/ImGuizmo.h"
+#include "ThirdParty/ImGuizmo/ImGuizmo.h"
 
 using namespace Cinnamon;
 EditorViewportPanel::EditorViewportPanel(
@@ -145,6 +145,9 @@ bool EditorViewportPanel::OnKeyPressed(const KeyPressedEvent& event)
 			{
 				m_GizmoOperation = EGizmoOperation::Scale;
 			} break;
+
+			default:
+				break;
 		}
 	}
 

@@ -1,6 +1,8 @@
+#include <optional>
 #ifdef CIN_PLATFORM_LINUX
 #include "Cinnamon/include/Core/TypeDefines.hpp"
 #include "Cinnamon/include/Core/Core.hpp"
+#include <fmt/format.h>
 
 /* constexpr char C_FOREGROUND_BLACK[]				{ "\033[0;30m" }; */
 constexpr char C_FOREGROUND_RED[]					{ "\033[0;31m" };
@@ -24,6 +26,29 @@ constexpr char C_FOREGROUND_DEFAULT[]				{ "\033[0;0m"  };
 
 namespace Cinnamon {
 	namespace Platform {
+		InternalScope STL::String RunCommand(const char* command)
+		{
+		    FILE* pipe = popen(command, "r");
+		    if (!pipe)
+		    {
+		        return "";
+		    }
+
+		    char buffer[256U];
+		    STL::String result;
+
+		    while (!feof(pipe))
+		    {
+		        if (fgets(buffer, 256, pipe) != nullptr)
+		        {
+		            result += buffer;
+		        }
+		    }
+
+		    pclose(pipe);
+		    return result;
+		}
+
 		Errr Initialize()
 		{
         	return Error::Success;
@@ -100,6 +125,53 @@ namespace Cinnamon {
 		{
 			return CIN_TIMESTAMP;
 		}		
+
+		STL::Optional<STL::Filepath> SelectDirectory()
+		{
+			FunctionVariable constexpr const char* command{ "zenity --file-selection --directory --title=\"Select a directory\"" };
+    		STL::String selectedFile{ RunCommand(command) };
+    		selectedFile.erase(selectedFile.find_last_not_of("\n") + 1);
+
+    		if (!selectedFile.empty())
+				return selectedFile;
+
+			return std::nullopt;
+		}
+
+		STL::Optional<STL::Filepath> SelectFile([[maybe_unused]]const STL::StringView filter)
+		{
+			/* TODO: Add filter support */
+			CIN_UNUSED(filter);
+			FunctionVariable constexpr const char* command{ "zenity --file-selection --title=\"Select a file\"" };
+    		STL::String selectedFile{ RunCommand(command) };
+    		selectedFile.erase(selectedFile.find_last_not_of("\n") + 1);
+
+    		if (!selectedFile.empty())
+				return selectedFile;
+
+			return std::nullopt;
+		}
+
+		STL::Optional<STL::Filepath> SaveFileAs([[maybe_unused]] const STL::StringView filter)
+		{
+			/* TODO: Add filter support */
+			CIN_UNUSED(filter);
+			FunctionVariable constexpr const char* command{ "zenity --file-selection --save --title=\"Save a file\" " };
+    		STL::String selectedFile{ RunCommand(command) };
+    		selectedFile.erase(selectedFile.find_last_not_of("\n") + 1);
+
+    		if (!selectedFile.empty())
+				return selectedFile;
+
+			return std::nullopt;
+		}
+
+		bool OpenInExplorer([[maybe_unused]] const STL::StringView path)
+		{
+			CIN_UNIMPLEMENTED();
+			CIN_UNUSED(path);
+			return false;
+		}
 	}
 }
 #endif

@@ -27,6 +27,7 @@
 #include <condition_variable>
 #include <fstream>
 #include <bitset>
+#include <optional>
 
 #ifdef CIN_PLATFORM_WINDOWS
 #undef UNICODE

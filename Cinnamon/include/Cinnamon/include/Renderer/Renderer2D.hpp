@@ -23,7 +23,7 @@ namespace Cinnamon {
 		struct Batch
 		{
 			STL::Unique<VertexBuffer>	QuadVertexBuffer;
-			STL::Unique<Material>		Material;
+			STL::Unique<Material>		QuadMaterial;
 
 			Geometry::QuadVertex*		QuadBufferData;
 			Geometry::QuadVertex*		QuadBufferDataBase;
@@ -72,7 +72,6 @@ namespace Cinnamon {
 		STL::Unique<RenderCommandBuffer>		m_RenderCommandBuffer;
 		STL::Unique<IndexBuffer>				m_QuadIndexBuffer;
 		STL::Unique<Shader>						m_QuadShader;
-		STL::Unique<Material>					m_QuadMaterial;
 		STL::Unique<Pipeline>					m_QuadPipeline;
 		STL::Vector<STL::Unique<UniformBuffer>>	m_UniformBuffers;
 				
@@ -83,20 +82,18 @@ namespace Cinnamon {
 
 		struct
 		{
-			VertexBufferLayout			Layout;
-			STL::Unique<Shader>			Shader;
-			STL::Unique<Pipeline>		Pipeline;
-			STL::Unique<Material>		Material;
+			/* Deferred prepass */
+			VertexBufferLayout			PrepassLayout;
+			STL::Unique<Shader>			PrepassShader;
+			STL::Unique<Pipeline>		PrepassPipeline;
+			STL::Unique<Material>		PrepassMaterial;
+			STL::Unique<Framebuffer>	PrepassOffscreenFramebuffer;
 
-			STL::Unique<Framebuffer>	OffscreenFramebuffer;
-		} m_DeferredPrepass;
-
-		struct
-		{
-			STL::Unique<Shader>			Shader;
-			STL::Unique<Pipeline>		Pipeline;
-			STL::Unique<Material>		Material;
-		} m_DeferredPass;
+			/* Deferred pass */
+			STL::Unique<Shader>			PassShader;
+			STL::Unique<Pipeline>		PassPipeline;
+			STL::Unique<Material>		PassMaterial;
+		} m_Deferred;
 
 		struct
 		{

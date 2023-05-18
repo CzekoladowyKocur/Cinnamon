@@ -47,27 +47,24 @@ namespace Cinnamon {
 		m_RenderCommandBuffer(STL::MakeUnique<RenderCommandBuffer>(m_Renderer->GetDevice(), m_Renderer->GetSwapchain()->GetImageCount())),
 		m_QuadIndexBuffer(STL::MakeUnique<IndexBuffer>(m_Allocator, s_MaxQuads * sizeof(uint32_t) * 6U)),
 		m_QuadShader(STL::MakeUnique<Shader>(m_Allocator, "Resources/shaders/SimpleShader.shader", false)),
-		m_QuadMaterial(STL::MakeUnique<Material>(m_QuadShader)),
 		m_QuadPipeline(STL::MakeUnique<Pipeline>(m_Renderer->GetDevice(), m_TargetFramebuffer, m_QuadShader, Geometry::QuadVertex::GetLayout(), EPrimitiveTopology::Triangles)),
 		m_UniformBuffers(),
 		m_BatchIndex(0U),
-		m_DeferredPrepass
+		m_Deferred
 		{
-			.Layout					{ Geometry::QuadVertex::GetLayout() },
-			.Shader					{ nullptr },
-			.Pipeline				{ nullptr },
-			.Material				{ nullptr },
-			.OffscreenFramebuffer	{ nullptr }
-		},
-		m_DeferredPass
-		{
-			.Shader					{ nullptr },
-			.Pipeline				{ nullptr },
-			.Material				{ nullptr },
+			.PrepassLayout					{ Geometry::QuadVertex::GetLayout() },
+			.PrepassShader					{ nullptr },
+			.PrepassPipeline				{ nullptr },
+			.PrepassMaterial				{ nullptr },
+			.PrepassOffscreenFramebuffer	{ nullptr },
+			.PassShader						{ nullptr },
+			.PassPipeline					{ nullptr },
+			.PassMaterial					{ nullptr },
 		},
 		m_LightBuffer
 		{
 			.LightCount				{ 0 },
+			.Padding				{ 0, 0, 0 },
 			.LightBuffer			{ },
 			.LightBufferBase		{ nullptr },
 		}
@@ -108,7 +105,7 @@ namespace Cinnamon {
 		for (Batch& batch : m_Batches)
 		{
 			batch.QuadVertexBuffer		= STL::MakeUnique<VertexBuffer>(m_Allocator, sizeof(Geometry::QuadVertex) * s_MaxQuads, Geometry::QuadVertex::GetLayout());
-			batch.Material				= STL::MakeUnique<Material>(m_DeferredPrepass.Shader);
+			batch.QuadMaterial			= STL::MakeUnique<Material>(m_Deferred.PrepassShader);
 			
 			batch.QuadBufferData		= cinew Geometry::QuadVertex[s_MaxQuads * s_QuadVertexCount];
 			batch.QuadBufferDataBase	= &batch.QuadBufferData[0U];
@@ -143,7 +140,7 @@ namespace Cinnamon {
 		if (not m_FlushCount)
 			return;
 		
-		const CinMath::Vector3 alignas(16) ambient{ 0.12f, 0.12f, 0.12f };
+		const CinMath::Vector3 ambient{ 0.15f, 0.15f, 0.15f };
 		const uint32_t frameIndex{ m_Renderer->GetFrameIndex() };
 
 		Byte* mappedData{ m_LightUniformBuffers[frameIndex]->MapData() };
@@ -159,26 +156,26 @@ namespace Cinnamon {
 				
 		const VkDescriptorImageInfo positionSamplerDescriptor
 		{
-			.sampler{ m_DeferredPrepass.OffscreenFramebuffer->GetSampler() },
-			.imageView{ m_DeferredPrepass.OffscreenFramebuffer->GetColorAttachmentView(0U) },
+			.sampler{ m_Deferred.PrepassOffscreenFramebuffer->GetSampler() },
+			.imageView{ m_Deferred.PrepassOffscreenFramebuffer->GetColorAttachmentView(0U) },
 			.imageLayout{ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }
 		};
 
-		m_DeferredPass.Material->SetTexture("u_PositionSampler", positionSamplerDescriptor);
+		m_Deferred.PassMaterial->SetTexture("u_PositionSampler", positionSamplerDescriptor);
 		const VkDescriptorImageInfo albedoSamplerDescriptor
 		{
-			.sampler{ m_DeferredPrepass.OffscreenFramebuffer->GetSampler() },
-			.imageView{ m_DeferredPrepass.OffscreenFramebuffer->GetColorAttachmentView(1U) },
+			.sampler{ m_Deferred.PrepassOffscreenFramebuffer->GetSampler() },
+			.imageView{ m_Deferred.PrepassOffscreenFramebuffer->GetColorAttachmentView(1U) },
 			.imageLayout{ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }
 		};
 
-		m_DeferredPass.Material->SetTexture("u_AlbedoSampler", albedoSamplerDescriptor);
+		m_Deferred.PassMaterial->SetTexture("u_AlbedoSampler", albedoSamplerDescriptor);
 
 		m_Renderer->RenderFullscreenQuad(
 			renderCommandBuffer,
 			m_LightUniformBuffers[frameIndex],
-			m_DeferredPass.Pipeline,
-			m_DeferredPass.Material);
+			m_Deferred.PassPipeline,
+			m_Deferred.PassMaterial);
 
 		m_Renderer->EndRenderPass(renderCommandBuffer);
 		renderCommandBuffer->End(frameIndex);
@@ -188,7 +185,7 @@ namespace Cinnamon {
 
 	void Renderer2D::SetViewportSize(const uint32_t width, const uint32_t height)
 	{
-		m_DeferredPrepass.OffscreenFramebuffer->Invalidate(width, height);
+		m_Deferred.PrepassOffscreenFramebuffer->Invalidate(width, height);
 	}
 
 	void Renderer2D::RenderQuad(const CinMath::Matrix4& transform, const CinMath::Vector4& color, const float tilingFactor, Texture2D* texture)
@@ -245,52 +242,52 @@ namespace Cinnamon {
 			}
 		};
 
-		m_DeferredPrepass.OffscreenFramebuffer = STL::MakeUnique<Framebuffer>
+		m_Deferred.PrepassOffscreenFramebuffer = STL::MakeUnique<Framebuffer>
 		(
 			m_Renderer->GetAllocator(), 
 			std::move(deferredPrepassSpecification)
 		);
 
-		m_DeferredPrepass.Shader = STL::MakeUnique<Shader>
+		m_Deferred.PrepassShader = STL::MakeUnique<Shader>
 		(
 			m_Renderer->GetAllocator(), 
 			"Resources/shaders/DeferredPrepass.shader", 
 			false
 		);
 
-		m_DeferredPrepass.Pipeline = STL::MakeUnique<Pipeline>
+		m_Deferred.PrepassPipeline = STL::MakeUnique<Pipeline>
 		(
 			m_Renderer->GetDevice(),
-			m_DeferredPrepass.OffscreenFramebuffer,
-			m_DeferredPrepass.Shader,
-			m_DeferredPrepass.Layout,
+			m_Deferred.PrepassOffscreenFramebuffer,
+			m_Deferred.PrepassShader,
+			m_Deferred.PrepassLayout,
 			EPrimitiveTopology::Triangles
 		);
 
-		m_DeferredPrepass.Material = STL::MakeUnique<Material>(m_DeferredPrepass.Shader);
+		m_Deferred.PrepassMaterial = STL::MakeUnique<Material>(m_Deferred.PrepassShader);
 	}
 
 	void Renderer2D::BuildDeferredPass()
 	{
 		VertexBufferLayout layout{};
 
-		m_DeferredPass.Shader = STL::MakeUnique<Shader>
+		m_Deferred.PassShader = STL::MakeUnique<Shader>
 		(
 			m_Renderer->GetAllocator(), 
 			"Resources/shaders/Deferred.shader", 
 			false
 		);
 
-		m_DeferredPass.Pipeline = STL::MakeUnique<Pipeline>
+		m_Deferred.PassPipeline = STL::MakeUnique<Pipeline>
 		(
 			m_Renderer->GetDevice(),
 			m_TargetFramebuffer,
-			m_DeferredPass.Shader,
+			m_Deferred.PassShader,
 			layout,
 			EPrimitiveTopology::Triangles
 		);
 
-		m_DeferredPass.Material = STL::MakeUnique<Material>(m_DeferredPass.Shader);
+		m_Deferred.PassMaterial = STL::MakeUnique<Material>(m_Deferred.PassShader);
 	}
 
 	void Renderer2D::Flush()
@@ -300,7 +297,7 @@ namespace Cinnamon {
 		
 		const uint32_t frameIndex{ m_Renderer->GetFrameIndex() };
 		m_RenderCommandBuffer->Begin(frameIndex);
-		m_Renderer->BeginRenderPass(m_RenderCommandBuffer, m_DeferredPrepass.OffscreenFramebuffer);
+		m_Renderer->BeginRenderPass(m_RenderCommandBuffer, m_Deferred.PrepassOffscreenFramebuffer);
 
 		for (size_t i{ 0U }; i < m_BatchIndex; ++i)
 		{
@@ -316,8 +313,8 @@ namespace Cinnamon {
 				m_UniformBuffers[frameIndex],
 				currentBatch.QuadVertexBuffer,
 				m_QuadIndexBuffer,
-				m_DeferredPrepass.Pipeline,
-				currentBatch.Material,
+				m_Deferred.PrepassPipeline,
+				currentBatch.QuadMaterial,
 				currentBatch.QuadCount * 6U
 			);
 		
@@ -345,7 +342,7 @@ namespace Cinnamon {
 		if (m_BatchIndex == s_MaxQuads - 1U)
 			return -1;
 
-		m_Batches[m_BatchIndex].Material->SetTexture("u_Texture", texture);
+		m_Batches[m_BatchIndex].QuadMaterial->SetTexture("u_Texture", texture);
 		return m_BatchIndex++;
 	}
 }

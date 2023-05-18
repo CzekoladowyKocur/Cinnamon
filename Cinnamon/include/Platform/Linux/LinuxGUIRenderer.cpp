@@ -106,6 +106,9 @@ namespace Cinnamon {
     	    //ImGui_ImplWin32_UpdateMouseCursor();
     	}
 	}
+
+	/* TODO: temporary */
+	GUIRenderer* s_GUIRenderer{ nullptr };
 	
 	GUIRenderer::GUIRenderer(
 		const STL::Unique<Window>& window,
@@ -116,6 +119,7 @@ namespace Cinnamon {
 	{
 		CIN_ASSERT(renderer);
 		IMGUI_CHECKVERSION();
+		s_GUIRenderer = this;
 
 		if (not (m_InternalState->Context = ImGui::CreateContext()))
 			CIN_PANIC_EXIT();
@@ -398,6 +402,39 @@ namespace Cinnamon {
 		SetUITheme(ImGui::GetStyle(), theme);
 	}
 
+	auto toasciiXD(const Key key)
+	{
+		switch(key)
+		{
+			case Key::A: return 'A';
+			case Key::B: return 'B';
+			case Key::C: return 'C';
+			case Key::D: return 'D';
+			case Key::E: return 'E';
+			case Key::F: return 'F';
+			case Key::G: return 'G';
+			case Key::H: return 'H';
+			case Key::I: return 'I';
+			case Key::J: return 'J';
+			case Key::K: return 'K';
+			case Key::L: return 'L';
+			case Key::M: return 'M';
+			case Key::N: return 'N';
+			case Key::O: return 'O';
+			case Key::P: return 'P';
+			case Key::R: return 'R';
+			case Key::S: return 'S';
+			case Key::T: return 'T';
+			case Key::U: return 'U';
+			case Key::W: return 'W';
+			case Key::X: return 'X';
+			case Key::Y: return 'Y';
+			case Key::Z: return 'Z';
+
+			default: return '\0';
+		}
+	}
+
 	void GUIRenderer::OnEvent(const Event& event)
 	{
 		ImGui::SetCurrentContext(m_InternalState->Context);
@@ -411,6 +448,8 @@ namespace Cinnamon {
 			{
 				const KeyPressedEvent& keyPressedEvent{ static_cast<const KeyPressedEvent&>(event) };
 				IO.AddKeyEvent(NativeKeyCodeToImGUIKeyCode(keyPressedEvent.GetKeyCode()), true);
+				
+				IO.AddInputCharacter(toasciiXD(keyPressedEvent.GetKey()));
 			} break;
 
 			case EEventType::KeyReleased:
@@ -431,8 +470,21 @@ namespace Cinnamon {
 				IO.AddMouseButtonEvent(NativeMouseCodeToImGUIMouseCode(mouseReleasedEvent.GetMouseCode()), false);
 			} break;
 
+			case EEventType::MouseMoved:
+			{
+				const MouseMovedEvent& mouseMovedEvent{ static_cast<const MouseMovedEvent&>(event) };
+				
+				const auto[xPosition, yPosition] { mouseMovedEvent.GetPosition() };
+				IO.AddMousePosEvent(xPosition, yPosition);
+			} break;
+
 			default: break;
 		}
+	}
+
+	const STL::Unique<Renderer>& GUIRenderer::GetRenderer() const
+	{
+		return m_Renderer;
 	}
 	
 	void GUIRenderer::UploadFontAtlas()

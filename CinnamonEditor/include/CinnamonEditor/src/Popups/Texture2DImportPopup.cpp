@@ -6,8 +6,8 @@ Texture2DImportPopup::Texture2DImportPopup(const STL::Filepath& importPath) noex
 	:
 	ModalPopup("Import texture", 500.0f, 300.0f, EModalPopupFlags::Center),
 	m_ImportPath(importPath),
-	m_CancelCallback(nullptr),
-	m_ImportCallback(nullptr)
+	m_ImportCallback(nullptr),
+	m_CancelCallback(nullptr)
 {}
 
 Texture2DImportPopup::~Texture2DImportPopup() noexcept

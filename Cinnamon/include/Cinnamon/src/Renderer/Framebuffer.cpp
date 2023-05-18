@@ -334,7 +334,7 @@ namespace Cinnamon {
 		m_Attachments.clear();
 	}
 
-	const bool Framebuffer::IsClearedOnLoad() const
+	bool Framebuffer::IsClearedOnLoad() const
 	{
 		if (m_Swapchain)
 			return true;

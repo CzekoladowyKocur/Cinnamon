@@ -114,8 +114,8 @@ namespace Cinnamon {
 			const STL::Unique<Shader>& shader);
 	private:
 		STL::Unique<Device>				m_Device;
-		STL::Unique<Swapchain>			m_Swapchain;
 		STL::Unique<VulkanAllocator>	m_Allocator;
+		STL::Unique<Swapchain>			m_Swapchain;
 		STL::Unique<DescriptorPool>		m_DescriptorPool;
 	};
 }

@@ -330,11 +330,11 @@ namespace Cinnamon {
 #endif
 			if (PlatformForceLinking)
 			{
-				vkBindImageMemory2(reinterpret_cast<VkDevice>(VK_NULL_HANDLE), 0U, nullptr);
-				vkBindBufferMemory2(reinterpret_cast<VkDevice>(VK_NULL_HANDLE), 0U, nullptr);
-				vkGetBufferMemoryRequirements2(reinterpret_cast<VkDevice>(VK_NULL_HANDLE), nullptr, nullptr);
-				vkGetPhysicalDeviceMemoryProperties2(reinterpret_cast<VkPhysicalDevice>(VK_NULL_HANDLE), nullptr);
-				vkGetImageMemoryRequirements2(reinterpret_cast<VkDevice>(VK_NULL_HANDLE), nullptr, nullptr);
+				vkBindImageMemory2(static_cast<VkDevice>(VK_NULL_HANDLE), 0U, nullptr);
+				vkBindBufferMemory2(static_cast<VkDevice>(VK_NULL_HANDLE), 0U, nullptr);
+				vkGetBufferMemoryRequirements2(static_cast<VkDevice>(VK_NULL_HANDLE), nullptr, nullptr);
+				vkGetPhysicalDeviceMemoryProperties2(static_cast<VkPhysicalDevice>(VK_NULL_HANDLE), nullptr);
+				vkGetImageMemoryRequirements2(static_cast<VkDevice>(VK_NULL_HANDLE), nullptr, nullptr);
 			}
 		}
 

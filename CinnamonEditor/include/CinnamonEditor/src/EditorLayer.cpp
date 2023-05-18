@@ -46,7 +46,7 @@ EditorLayer::EditorLayer(
 	const STL::Filepath& lastProjectPath{ m_EditorSettings.LastProjectPath };
 	if (not lastProjectPath.empty() and std::filesystem::exists(lastProjectPath))
 	{
-		if (m_Project = cinew Project())
+		m_Project = cinew Project();
 		{
 			try
 			{
@@ -62,7 +62,7 @@ EditorLayer::EditorLayer(
 			const STL::Filepath& startScenePath{ m_Project->GetStartScenePath() };
 			if (not startScenePath.empty() and std::filesystem::exists(startScenePath))
 			{
-				if (m_SceneContext = cinew Scene())
+				m_SceneContext = cinew Scene();
 				{
 					if (not (SceneSerializer(m_SceneContext, m_AssetManager) << startScenePath))
 						CIN_WARN("Failed loading start scene {}", startScenePath.string());
@@ -252,6 +252,9 @@ bool EditorLayer::OnKeyPressed(const KeyPressedEvent& event)
 				else
 					SaveScene();
 			} break;
+
+			default:
+				break;
 		}
 	}
 	
@@ -302,7 +305,7 @@ void EditorLayer::NewScene()
 void EditorLayer::OpenScene()
 {	
 	m_SelectionContext = Entity();
-	if (const STL::Optional<STL::Filepath> filepath{ Platform::SaveFileAs(s_CinnamonSceneExtensionFilter) })
+	if (const STL::Optional<STL::Filepath> filepath{ Platform::SelectFile(s_CinnamonSceneExtensionFilter) })
 	{
 		if (m_SceneContext)
 			cindel m_SceneContext;

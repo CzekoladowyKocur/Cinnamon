@@ -51,6 +51,5 @@ void main()
 		finalColor += diffuseColor * albedo.w;
 	}
 
-	const vec4 ambient = vec4(0.0, 0.0, 0.0, 1.0);
 	Color = vec4(LightBuffer.AmbientLight + finalColor, 1.0);
 }

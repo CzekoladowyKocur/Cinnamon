@@ -55,7 +55,7 @@ namespace Cinnamon {
 		void Invalidate(const uint32_t width, const uint32_t height);
 		void Cleanup();
 
-		[[nodiscard]] const bool
+		[[nodiscard]] bool
 			IsClearedOnLoad() const;
 
 		[[nodiscard]] uint32_t

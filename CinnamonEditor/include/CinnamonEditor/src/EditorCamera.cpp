@@ -6,9 +6,9 @@
 using namespace Cinnamon;
 EditorCamera::EditorCamera(const float aspectRatio) noexcept
 	:
-	m_AspectRatio(aspectRatio),
 	m_ViewMatrix(1.0f),
 	m_ProjectionMatrix(1.0f),
+	m_AspectRatio(aspectRatio),
 	m_OrthographicProjection
 	{
 		.Scale{ 5.0f },

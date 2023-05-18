@@ -10,7 +10,8 @@ ModalPopup::ModalPopup(
 	m_Title(title),
 	m_Width(width),
 	m_Height(height),
-	m_Flags(flags)
+	m_Flags(flags),
+	m_IsActive(true)
 {}
 
 ModalPopup::~ModalPopup() noexcept

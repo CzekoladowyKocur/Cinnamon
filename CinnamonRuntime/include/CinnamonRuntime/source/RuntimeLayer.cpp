@@ -61,6 +61,9 @@ void RuntimeLayer::OnEvent(const Event& event)
 				m_SceneCamera->SetAspectRatio(static_cast<float>(width) / height);
 			}
 		}
+
+		default:
+			break;
 	}
 
 	CIN_UNUSED(event);

@@ -161,7 +161,7 @@ include "Cinnamon/include/ThirdParty/volk"
 include "Cinnamon/include/ThirdParty/VulkanMemoryAllocator"
 include "Cinnamon/include/ThirdParty/fmt"
 include "Cinnamon/include/ThirdParty/imgui"
-include "Cinnamon/include/ThirdParty/imguizmo"
+include "Cinnamon/include/ThirdParty/ImGuizmo"
 include "Cinnamon/include/ThirdParty/stb_image"
 include "Cinnamon/include/ThirdParty/spirv_cross"
 include "Cinnamon/include/ThirdParty/yaml-cpp"
@@ -325,7 +325,9 @@ project ("CinnamonEditor")
 			"wayland-client",
 			"xdg",
 			"stb_image",
-			"spirv_cross"
+			"spirv_cross",
+			"yaml-cpp",
+			"imguizmo"
         }
 
 	filter "configurations:Distribution"
@@ -393,7 +395,9 @@ project ("Sandbox")
 			"wayland-client",
 			"xdg",
 			"stb_image",
-			"spirv_cross"
+			"spirv_cross",
+			"yaml-cpp",
+			"imguizmo"
         }
 
 project ("CinnamonRuntime")
@@ -454,5 +458,7 @@ project ("CinnamonRuntime")
 			"wayland-client",
 			"xdg",
 			"stb_image",
-			"spirv_cross"
+			"spirv_cross",
+			"yaml-cpp",
+			"imguizmo"
         }

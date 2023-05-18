@@ -13,6 +13,12 @@
 #pragma warning(disable : 4275)
 #include "yaml-cpp/yaml.h"
 #pragma warning(pop)
+#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wreturn-type"
+#define throw (void) /* really? */
+#include "yaml-cpp/yaml.h"
+#pragma GCC diagnostic pop
 #endif
 
 namespace YAML {
