@@ -3,23 +3,49 @@
 #include "Cinnamon/include/Renderer/Framebuffer.hpp"
 #include "Cinnamon/include/Renderer/Device.hpp"
 #include "Cinnamon/include/Scene/SceneRenderer.hpp"
+#include "Cinnamon/include/Scene/Entity.hpp"
+#include "Cinnamon/include/Scene/Components.hpp"
+#include "Cinnamon/include/Scene/SceneSerializer.hpp"
+#include "Cinnamon/include/Asset/AssetManager.hpp"
+
 #include "Cinnamon/include/GUI/GUI.hpp"
+#include "Cinnamon/include/GUI/Icons.hpp"
 #include "Cinnamon/include/Event/WindowEvent.hpp"
+#include "Cinnamon/include/Event/KeyEvent.hpp"
+#include "Cinnamon/include/Event/MouseEvent.hpp"
+#include "Cinnamon/include/Core/Input.hpp"
+#include "CinMath/CinMath.h"
 
 #include "ThirdParty/imgui/imgui.h"
 #include "ThirdParty/imgui/imgui_internal.h"
+#include "ThirdParty/imguizmo/ImGuizmo.h"
 
 using namespace Cinnamon;
 EditorViewportPanel::EditorViewportPanel(
+	Project*& projectContext,
 	Scene*& sceneContext,
 	Entity& selectionContext,
 	const STL::Unique<Renderer>& renderer, 
+	const STL::Unique<AssetManager>& assetManager,
 	const uint32_t viewportWidth,
 	const uint32_t viewportHeight) noexcept
 	:
-	EditorPanelBase(sceneContext, selectionContext),
+	EditorPanelBase(projectContext, sceneContext, selectionContext),
+	m_EditorCamera(static_cast<float>(viewportWidth) / viewportHeight),
+	m_GizmoOperation(EGizmoOperation::None),
 	m_Renderer(renderer),
-	m_SceneRenderer(STL::MakeUnique<SceneRenderer>(renderer, viewportWidth, viewportHeight))
+	m_AssetManager(assetManager),
+	m_SceneRenderer(STL::MakeUnique<SceneRenderer>(renderer, false, viewportWidth, viewportHeight)),
+	m_Viewport
+	{
+		.AspectRatio{ static_cast<float>(viewportWidth) / viewportHeight },
+		.Width{ static_cast<float>(viewportWidth) },
+		.Height{ static_cast<float>(viewportHeight) },
+		.Focused{ false },
+		.Hovered{ false },
+		.BoundsX{ CinMath::Vector2{ 0.0f, 0.0f } },
+		.BoundsY{ CinMath::Vector2{ 0.0f, 0.0f } },
+	}
 {
 	CIN_TRACE("Constructed editor viewport panel");
 }
@@ -33,8 +59,9 @@ void EditorViewportPanel::OnUpdate(const Timestep timestep)
 	
 	if (m_Renderer)
 	{
-		m_SceneRenderer->BeginFrame();
-		m_SceneRenderer->EndFrame();
+		m_EditorCamera.SetAspectRatio(m_Viewport.AspectRatio);
+		m_SceneRenderer->SetAspectRatio(m_Viewport.AspectRatio);
+		m_SceneRenderer->RenderScene(m_EditorCamera.GetViewProjectionMatrix());
 	}
 
 	CIN_UNUSED(timestep);
@@ -42,53 +69,185 @@ void EditorViewportPanel::OnUpdate(const Timestep timestep)
 
 void EditorViewportPanel::OnGUIRender()
 {
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4{ ImGui::GetStyle().Colors[ImGuiCol_FrameBg] });
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0.0f, 0.0f });
+	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, { 4.0f, 0.0f });
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, { 0.0f });
-	ImGui::Begin(GetPanelName());
-	ImGui::PopStyleVar(2);
-	ImGui::Text("FPS: %f\n", ImGui::GetIO().Framerate);
+	ImGui::Begin(GetPanelName(), nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
+	RenderToolbar();
 	const ImVec2 viewportPanelSize{ ImGui::GetContentRegionAvail() };
-	GUI::Image(
-		m_Renderer, 
-		reinterpret_cast<ImageViewID>(m_SceneRenderer->GetFramebuffer()->GetColorAttachmentView()), 
-		viewportPanelSize.x, 
-		viewportPanelSize.y);
+	const ImVec2 viewportMinRegion{ ImGui::GetCursorPos() };
+	const ImVec2 viewportMaxRegion{ ImGui::GetContentRegionMax() };
+	const ImVec2 viewportOffset{ ImGui::GetWindowPos() };
 
-	[[unlikely]]
-	if (ImGui::BeginDragDropTarget())
-	{
-		if (const ImGuiPayload* payload{ ImGui::AcceptDragDropPayload("Script File") })
-		{
-			CIN_WARN("Dragging a script file. . .");
-			CIN_UNUSED(payload);
-		}
+	m_Viewport.Width	= viewportPanelSize.x;
+	m_Viewport.Height	= viewportPanelSize.y;
+	
+	if(viewportPanelSize.x > 0.0f && viewportPanelSize.y > 0.0f)
+		m_Viewport.AspectRatio = viewportPanelSize.x / viewportPanelSize.y;
 
-		ImGui::EndDragDropTarget();
-	}
+	m_Viewport.Focused = ImGui::IsWindowFocused();
+	m_Viewport.Hovered = ImGui::IsWindowHovered();
+	m_Viewport.BoundsX = CinMath::Vector2{ viewportMinRegion.x + viewportOffset.x, viewportMinRegion.y + viewportOffset.y };
+	m_Viewport.BoundsY = CinMath::Vector2{ viewportMaxRegion.x + viewportOffset.x, viewportMaxRegion.y + viewportOffset.y };
 
+	RenderViewport();
+
+	ImGui::PopStyleVar(3);
+	ImGui::PopStyleColor();
 	ImGui::End();
 }
 
 void EditorViewportPanel::OnEvent(const Event& event)
 {
-	switch (event.GetEventType())
-	{
-		case EEventType::WindowResized:
-		{
-			const WindowResizedEvent& windowResizedEvent{ static_cast<const WindowResizedEvent&>(event) };
-			const auto [windowWidth, windowHeight] { windowResizedEvent.GetResize()};
-
-			m_SceneRenderer->SetViewportSize(windowWidth, windowHeight);			
-		} break;
-
-		default: break;
-	}
-
-	CIN_UNUSED(event);
+	const EventDispatcher dispatcher(event);
+	dispatcher.Dispatch<KeyPressedEvent>(std::bind(&EditorViewportPanel::OnKeyPressed, this, std::placeholders::_1));
+	dispatcher.Dispatch<MousePressedEvent>(std::bind(&EditorViewportPanel::OnMousePressed, this, std::placeholders::_1));
+	dispatcher.Dispatch<WindowResizedEvent>(std::bind(&EditorViewportPanel::OnWindowResized, this, std::placeholders::_1));
+	
+	m_EditorCamera.OnEvent(event, m_Viewport.Hovered);
 }
 
 constexpr const char* EditorViewportPanel::GetPanelName() const
 {
 	return "Editor Viewport Panel";
+}
+
+bool EditorViewportPanel::OnKeyPressed(const KeyPressedEvent& event)
+{
+	/* Gizmos */
+	if (m_SelectionContext)
+	{
+		switch (event.GetKey())
+		{
+			/* None */
+			case Key::Escape:
+			case Key::Q:
+			{
+				m_GizmoOperation = EGizmoOperation::None;
+			} break;
+
+			/* Translate */
+			case Key::W:
+			{
+				m_GizmoOperation = EGizmoOperation::Translate;
+			} break;
+
+			/* Scale */
+			case Key::E:
+			{
+				m_GizmoOperation = EGizmoOperation::Rotate;
+			} break;
+
+			/* Rotate */
+			case Key::R:
+			{
+				m_GizmoOperation = EGizmoOperation::Scale;
+			} break;
+		}
+	}
+
+	return false;
+}
+
+bool EditorViewportPanel::OnMousePressed(const Cinnamon::MousePressedEvent& event)
+{
+	CIN_UNUSED(event);
+	return false;
+}
+
+bool EditorViewportPanel::OnWindowResized(const Cinnamon::WindowResizedEvent& event)
+{
+	const auto [windowWidth, windowHeight] { event.GetResize()};
+	m_SceneRenderer->SetViewportSize(windowWidth, windowHeight);
+
+	return false;
+}
+
+void EditorViewportPanel::RenderToolbar()
+{
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.0f, 0.0f, 0.0f, 0.0f });
+
+	if (ImGui::Button(ICON_FA_MOUSE_POINTER) and m_SelectionContext)
+		m_GizmoOperation = EGizmoOperation::None;
+	
+	ImGui::SameLine();
+	if (ImGui::Button(ICON_FA_ARROWS_ALT) and m_SelectionContext)
+		m_GizmoOperation = EGizmoOperation::Translate;
+
+	ImGui::SameLine();
+	if (ImGui::Button(ICON_FA_UNDO) and m_SelectionContext)
+		m_GizmoOperation = EGizmoOperation::Rotate;
+
+	ImGui::SameLine();
+	if (ImGui::Button(ICON_FA_EXPAND) and m_SelectionContext)
+		m_GizmoOperation = EGizmoOperation::Scale;
+	
+	ImGui::PopStyleColor();
+	/* Show FPS. */
+	ImGui::SameLine();
+	ImGui::Text("FPS: %f\n", ImGui::GetIO().Framerate);
+}
+
+void EditorViewportPanel::RenderViewport()
+{
+	/* Displaying the image will move the cursor so we retrieve it early */
+	const ImVec2 screenCursorPosition = ImGui::GetCursorScreenPos();
+	/* Viewport is renderer here */
+	GUI::Image(
+		reinterpret_cast<ImageViewID>(m_SceneRenderer->GetFramebuffer()->GetColorAttachmentView(0U)),
+		m_Viewport.Width,
+		m_Viewport.Height,
+		reinterpret_cast<ImageSamplerID>(m_SceneRenderer->GetFramebuffer()->GetSampler()), true);
+
+	/* Accept scene payload */
+	if (ImGui::BeginDragDropTarget())
+	{
+		if (const ImGuiPayload* const payload{ ImGui::AcceptDragDropPayload("ScenePayload") })
+		{
+			const STL::Filepath scenePath(reinterpret_cast<const char*>(payload->Data));
+			if (m_SceneContext)
+				cindel m_SceneContext;
+
+			m_SelectionContext = Entity();
+			m_SceneContext = cinew Scene();
+			if (not (SceneSerializer(m_SceneContext, m_AssetManager) << scenePath))
+				CIN_ERROR("Failed loading a dragged scene with path {}", scenePath.string());
+		}
+
+		ImGui::EndDragDropTarget();
+	}
+	
+	if (m_SelectionContext and m_Viewport.Focused and m_GizmoOperation != EGizmoOperation::None)
+	{
+		/* Render gizmos if used */
+		ImGuizmo::SetOrthographic(true);
+		ImGuizmo::SetDrawlist();
+		ImGuizmo::SetRect(
+			screenCursorPosition.x,
+			screenCursorPosition.y,
+			m_Viewport.Width,
+			m_Viewport.Height);
+
+		TransformComponent& transformComponent{ m_SelectionContext.GetComponent<TransformComponent>() };
+		CinMath::Matrix4 transform(transformComponent.Calculate());
+
+		ImGuizmo::Manipulate(
+			m_EditorCamera.GetViewMatrix(),
+			m_EditorCamera.GetProjectionMatrix(),
+			static_cast<ImGuizmo::OPERATION>(m_GizmoOperation),
+			ImGuizmo::MODE::LOCAL,
+			transform);
+
+		if (ImGuizmo::IsUsing())
+		{
+			CinMath::Vector3 translation{ 0.0f }, rotation{ 0.0f }, scale{ 0.0f };
+			ImGuizmo::DecomposeMatrixToComponents(transform, translation, rotation, scale);
+
+			transformComponent.Translation = translation;
+			transformComponent.Rotation = rotation;
+			transformComponent.Scale = scale;
+		}
+	}
 }

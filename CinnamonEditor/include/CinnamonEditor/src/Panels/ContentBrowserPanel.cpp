@@ -1,7 +1,8 @@
 #include "CinnamonEditor/include/Panels/ContentBrowserPanel.hpp"
 #include "Cinnamon/include/Core/Filesystem.hpp"
-#include "Cinnamon/include/Core/TypeDefines.hpp"
 #include "Cinnamon/include/GUI/Icons.hpp"
+
+#include "CinnamonEditor/include/Project.hpp"
 
 #include "ThirdParty/imgui/imgui.h"
 #include "ThirdParty/imgui/imgui_internal.h"
@@ -14,6 +15,7 @@ public:
 	enum class EFileType
 	{
 		None,
+		Root,
 		Directory,
 		RegularFile,
 	};
@@ -33,7 +35,7 @@ public:
 			const STL::Filepath& realPath,
 			const FileNode* const parent) noexcept
 			:
-			FileType(GetFileType(realPath)),
+			FileType(parent ? GetFileType(realPath) : EFileType::Root),
 			RealPath(realPath.string()),
 			Filename(parentRelativePath.string()),
 			IconifiedName(IconifyFilename(Filename, FileType)),
@@ -74,43 +76,67 @@ public:
 		{
 			switch (fileType)
 			{
-				case EFileType::Directory:
-				{
-					constexpr char spacedIcon[]{ ICON_FA_FOLDER" " };
-					STL::String iconifiedName{ spacedIcon };
+			case EFileType::Root:
+			{
+				constexpr char spacedIcon[]{ ICON_FA_FOLDER_OPEN" " };
+				STL::String iconifiedName{ spacedIcon };
+
+				STL::Filepath rootPath{ filename };
+				if (rootPath.has_filename())
+					iconifiedName += rootPath.filename().string();
+				else
 					iconifiedName += filename;
 
-					return iconifiedName;
-				}
+				return iconifiedName;
+			}
 
-				case EFileType::RegularFile:
+			case EFileType::Directory:
+			{
+				constexpr char spacedIcon[]{ ICON_FA_FOLDER" " };
+				STL::String iconifiedName{ spacedIcon };
+				iconifiedName += filename;
+
+				return iconifiedName;
+			}
+
+			case EFileType::RegularFile:
+			{
+				const STL::Filepath asFilepath(filename);
+				STL::String spacedIcon;
+
+				[[likely]]
+				if (asFilepath.has_extension())
 				{
-					const STL::Filepath asFilepath(filename);
-					STL::String spacedIcon;
+					const STL::String extension{ asFilepath.extension().string() };
 
-					[[likely]]
-					if (asFilepath.has_extension())
-					{
-						const STL::String extension{ asFilepath.extension().string() };
-
-						if (extension == ".cpp")
-							spacedIcon += ICON_FA_SCROLL" ";
-						if (extension == ".png" || extension == ".jpg")
-							spacedIcon += ICON_FA_IMAGE" ";
-						if (extension == ".txt")
-							spacedIcon += ICON_FA_PAPERCLIP" ";
-						if (extension == ".cinscene")
-							spacedIcon += ICON_FA_GLOBE" ";
-					}
+					if (extension == ".cpp")
+						spacedIcon += ICON_FA_SCROLL" ";
+					else if (extension == ".png" || extension == ".jpg")
+						spacedIcon += ICON_FA_IMAGE" ";
+					else if (extension == ".txt")
+						spacedIcon += ICON_FA_PAPERCLIP" ";
+					else if (extension == ".cinscene")
+						spacedIcon += ICON_FA_GLOBE" ";
+					else if (extension == ".cinproj")
+						spacedIcon += ICON_FA_ARCHIVE" ";
+					else if (extension == ".sln")
+						spacedIcon += ICON_FA_CODE" ";
+					else if (extension == ".vcxproj")
+						spacedIcon += ICON_FA_COGS" ";
+					else if (extension == ".user")
+						spacedIcon += ICON_FA_USER_COG" ";
 					else
-						return filename;
-
-					return spacedIcon + filename;
+						spacedIcon += ICON_FA_FILE" ";
 				}
+				else
+					return filename;
 
-				[[unlikely]]
-				default:
-					break;
+				return spacedIcon + filename;
+			}
+
+			[[unlikely]]
+			default:
+				break;
 			}
 
 			return "[UNKNOWN-FILE-TYPE] " + filename;
@@ -127,10 +153,17 @@ public:
 		}
 	};
 public:
-	inline explicit FileTree(const STL::Filepath& rootPath) noexcept
+	inline explicit FileTree(
+		const STL::Filepath& rootPath,
+		const AssetDragCallbackFunction& assetDragCallback,
+		const FilePopupCallbackFunction& filePopupCallback) noexcept
 		:
-		m_RootNode(rootPath, rootPath, nullptr)
-	{}
+		m_RootNode(rootPath, rootPath, nullptr),
+		m_AssetDragCallbackFunction(assetDragCallback),
+		m_FilePopupCallbackFunction(filePopupCallback)
+	{
+		CIN_ASSERT(assetDragCallback)
+	}
 
 	inline ~FileTree() noexcept = default;
 
@@ -141,7 +174,10 @@ public:
 
 	inline void OnGUIRender()
 	{
+		ImGui::Unindent();
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 6.0f);
 		OnGUIRenderRecursive(m_RootNode);
+		ImGui::PopStyleVar();
 	}
 private:
 	inline void AddFileRecursive(const STL::Filepath& relativePath, const STL::Filepath& realPath, FileNode& currentFolder)
@@ -184,16 +220,17 @@ private:
 	{
 		switch (currentNode.FileType)
 		{
-			case FileTree::EFileType::Directory:
+			case FileTree::EFileType::Root:
 			{
-				constexpr ImGuiTreeNodeFlags directoryFlags
+				constexpr ImGuiTreeNodeFlags rootFlags
 				{
-					ImGuiTreeNodeFlags_SpanAvailWidth	|
-					ImGuiTreeNodeFlags_OpenOnArrow		|
+					ImGuiTreeNodeFlags_SpanAvailWidth |
+					ImGuiTreeNodeFlags_OpenOnArrow |
+					ImGuiTreeNodeFlags_DefaultOpen |
 					0U
 				};
 
-				const ImGuiTreeNodeFlags flags = directoryFlags | (currentNode.Children.empty() ? ImGuiTreeNodeFlags_Leaf : ImGuiTreeNodeFlags_None);
+				const ImGuiTreeNodeFlags flags{ rootFlags | (currentNode.Children.empty() ? ImGuiTreeNodeFlags_Leaf : ImGuiTreeNodeFlags_None) };
 				if (ImGui::TreeNodeEx(currentNode.ID(), currentNode.Parent ? flags : flags | ImGuiTreeNodeFlags_DefaultOpen, currentNode))
 				{
 					for (const FileNode& node : currentNode.Children)
@@ -201,21 +238,63 @@ private:
 
 					ImGui::TreePop();
 				}
+				break;
+			}
+
+			case FileTree::EFileType::Directory:
+			{
+				constexpr ImGuiTreeNodeFlags directoryFlags
+				{
+					ImGuiTreeNodeFlags_SpanAvailWidth |
+					ImGuiTreeNodeFlags_OpenOnArrow |
+					0U
+				};
+
+				const ImGuiTreeNodeFlags flags{ directoryFlags | (currentNode.Children.empty() ? ImGuiTreeNodeFlags_Leaf : 0U) };
+				if (ImGui::TreeNodeEx(currentNode.ID(), currentNode.Parent ? flags : flags | ImGuiTreeNodeFlags_DefaultOpen, currentNode))
+				{
+					[[unlikely]]
+					if (ImGui::IsItemHovered() && ImGui::IsItemClicked(ImGuiMouseButton_Right))
+						m_FilePopupCallbackFunction(currentNode.RealPath, true);
+
+					for (const FileNode& node : currentNode.Children)
+						OnGUIRenderRecursive(node);
+
+					ImGui::TreePop();
+				}
+				else
+				{
+					[[unlikely]]
+					if (ImGui::IsItemHovered() && ImGui::IsItemClicked(ImGuiMouseButton_Right))
+						m_FilePopupCallbackFunction(currentNode.RealPath, true);
+				}
 			} break;
 
 			case FileTree::EFileType::RegularFile:
 			{
 				constexpr ImGuiTreeNodeFlags regularFileFlags
 				{
-					ImGuiTreeNodeFlags_SpanAvailWidth	|
-					ImGuiTreeNodeFlags_OpenOnArrow		|
-					ImGuiTreeNodeFlags_Leaf				|
+					ImGuiTreeNodeFlags_SpanAvailWidth |
+					ImGuiTreeNodeFlags_OpenOnArrow |
+					ImGuiTreeNodeFlags_Leaf |
 					0U
 				};
 
-				[[unlikely]]
 				if (ImGui::TreeNodeEx(currentNode.ID(), regularFileFlags, currentNode))
 					ImGui::TreePop();
+
+				[[unlikely]]
+				if (ImGui::IsItemHovered() && ImGui::IsItemClicked(ImGuiMouseButton_Right))
+					m_FilePopupCallbackFunction(currentNode.RealPath, false);
+				else if (ImGui::IsItemFocused() && ImGui::IsKeyPressed(ImGuiKey_Enter, false))
+					CIN_WARN("Enter on: {}", currentNode.Filename);
+
+				[[unlikely]]
+				if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
+				{
+					m_AssetDragCallbackFunction(currentNode.RealPath);
+					ImGui::EndDragDropSource();
+				}
 			} break;
 
 			[[unlikely]]
@@ -231,56 +310,59 @@ private:
 	}
 private:
 	FileNode m_RootNode;
+	AssetDragCallbackFunction m_AssetDragCallbackFunction;
+	FilePopupCallbackFunction m_FilePopupCallbackFunction;
 };
 
 InternalScope constinit std::atomic<bool> s_FileTreeNeedsRescan{ true };
-ContentBrowserPanel::ContentBrowserPanel(Scene*& sceneContext, Entity& selectionContext) noexcept
+ContentBrowserPanel::ContentBrowserPanel(
+	Project*& projectContext,
+	Scene*& sceneContext, 
+	Entity& selectionContext) noexcept
 	:
-	EditorPanelBase(sceneContext, selectionContext),
-	m_WorkingDirectory(),
+	EditorPanelBase(projectContext, sceneContext, selectionContext),
 	m_FileWatcher(nullptr),
-	m_FileTree(nullptr)
+	m_FileTree(nullptr),
+	m_AssetDragCallbackFunction(nullptr),
+	m_FilePopupCallbackFunction(nullptr),
+	m_FilePopupSelectionCache{},
+	m_OpenFilePopup(false)
 {
-	if(!FileExists(m_WorkingDirectory))
+	m_AssetDragCallbackFunction = [](const STL::Filepath& filepath) noexcept
 	{
-		m_FileWatcher.reset();
-		m_FileTree.reset();
-		return;
-	}
+		/* Only regular files are accepted and are expected to have an extension */
+		CIN_ASSERT(filepath.has_filename() && filepath.has_extension());
+		const STL::Filepath extension{ filepath.extension() };
+		const STL::String filepathString{ filepath.string() };
 
-	m_FileTree = STL::MakeUnique<FileTree>(m_WorkingDirectory);
-	m_FileWatcher = STL::MakeUnique<FileWatcher>(STL::String(m_WorkingDirectory.string()), STL::InitializerList<STL::String>{}, [](const STL::String file, const EFileAction action) noexcept
-	{
-		CIN_UNUSED(file);
-		s_FileTreeNeedsRescan = true;
-		switch (action)
+		if (extension == ".cpp")
 		{
-			case EFileAction::Created:
-			{
-				CIN_INFO("Created file: {}", file);
-			} break;
-			case EFileAction::Modified:
-			{
-				CIN_INFO("Modified file: {}", file);
-			} break;	
-			case EFileAction::Deleted:
-			{
-				CIN_INFO("Deleted file: {}", file);
-			} break;
-			case EFileAction::RenamedOld:
-			{
-				CIN_INFO("Renamed file (old): {}", file);
-			} break;
-			
-			case EFileAction::RenamedNew:
-			{
-				CIN_INFO("Renamed file (new): {}", file);
-			} break;
-
-			default:
-				break;
+			ImGui::SetDragDropPayload("CPPScriptPayload", filepathString.data(), (filepathString.size() + 1U) * sizeof(STL::String::value_type));
+			ImGui::Text((ICON_FA_SCROLL " " + filepath.filename().string()).c_str());
 		}
-	});
+		else if (extension == ".png")
+		{
+			ImGui::SetDragDropPayload("PNGImagePayload", filepathString.data(), (filepathString.size() + 1U) * sizeof(STL::String::value_type));
+			ImGui::Text((ICON_FA_IMAGE " " + filepath.filename().string()).c_str());
+		}
+		else if (extension == ".cinscene")
+		{
+			ImGui::SetDragDropPayload("ScenePayload", filepathString.data(), (filepathString.size() + 1U) * sizeof(STL::String::value_type));
+			ImGui::Text((ICON_FA_GLOBE " " + filepath.filename().string()).c_str());
+		}
+		else
+		{
+			ImGui::Text(ICON_FA_BAN);
+			CIN_TRACE("Attempted dragging file with unsupported extension: {}", filepath.string());
+		}
+	};
+
+	m_FilePopupCallbackFunction = [this](const STL::Filepath& path, const bool isDirectory) noexcept
+	{
+		m_FilePopupSelectionCache.Path = path;
+		m_FilePopupSelectionCache.IsDirectory = isDirectory;
+		m_OpenFilePopup = true;
+	};
 }
 
 ContentBrowserPanel::~ContentBrowserPanel() noexcept
@@ -294,40 +376,25 @@ void ContentBrowserPanel::OnUpdate(const Timestep timestep)
 void ContentBrowserPanel::OnGUIRender()
 {
 	ImGui::Begin(GetPanelName());
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 2.0f, 2.0f });
 
-	[[likely]]
-	if (FileExists(m_WorkingDirectory) && IsDirectory(m_WorkingDirectory))
+	if (m_ProjectContext)
 	{
-		[[unlikely]]
-		if (s_FileTreeNeedsRescan)
-		{
-			m_FileTree.reset();
-			m_FileTree = STL::MakeUnique<FileTree>(m_WorkingDirectory);
-			
-			try
-			{
-				for (const auto& file : STL::RecursiveDirectoryIterator(m_WorkingDirectory))
-					m_FileTree->AddFile(file);
+		m_WorkingDirectory = m_ProjectContext->GetProjectDirectory();
+		OpenFilePopup();
+		ReconstructFileTreeIfNeeded();
+		RescanFileTreeIfNeeded();
 
-				s_FileTreeNeedsRescan = false;
-			}
-			catch ([[maybe_unused]] const std::exception& exception)
-			{
-				CIN_WARN("Failed scanning current working directory: {}, Error: {}", m_WorkingDirectory.string(), exception.what());
-				ImGui::Text("Failed scanning current working directory: %s", m_WorkingDirectory.string().c_str());
-				ImGui::End();
-
-				s_FileTreeNeedsRescan = true;
-				return;
-			}
-		}
-
-		ImGui::Unindent();
-		m_FileTree->OnGUIRender();
+		[[likely]]
+		if (m_FileWatcher->IsWatching())
+			m_FileTree->OnGUIRender();
+		else
+			ImGui::Text("Failed to construct file tree");
 	}
 	else
 		ImGui::Text("No project selected");
-	
+
+	ImGui::PopStyleVar();
 	ImGui::End();
 }
 
@@ -339,4 +406,144 @@ void ContentBrowserPanel::OnEvent(const Event& event)
 constexpr const char* ContentBrowserPanel::GetPanelName() const
 {
 	return "Content Browser Panel";
+}
+
+void ContentBrowserPanel::ReconstructFileTreeIfNeeded()
+{
+	FunctionVariable STL::Filepath lastWatchedPath;
+	if (m_WorkingDirectory.empty() or not FileExists(m_WorkingDirectory))
+	{
+		m_WorkingDirectory.clear();
+		m_FileWatcher.reset();
+		m_FileTree.reset();
+	}
+	else if (m_WorkingDirectory != lastWatchedPath)
+	{
+		STL::ErrorCode error;
+
+		m_FileWatcher = STL::MakeUnique<FileWatcher>(m_WorkingDirectory, 
+		[](
+			const STL::Filepath filepath, 
+			const STL::Optional<STL::Filepath> renamedNew, 
+			const EFileAction fileAction, 
+			const STL::ErrorCode ec
+		) noexcept
+		{
+			if (ec)
+				CIN_WARN("File watcher error: {}", ec.message());
+			else
+			{
+				s_FileTreeNeedsRescan = true;
+				switch (fileAction)
+				{
+					case EFileAction::Created:
+					{
+						CIN_WARN("Created {}", filepath.string());
+					} break;
+
+					case EFileAction::Deleted:
+					{
+						CIN_WARN("Deleted {}", filepath.string());
+					} break;
+
+					case EFileAction::Modified:
+					{
+						CIN_WARN("Modified {}", filepath.string());
+					} break;
+
+					case EFileAction::Renamed:
+					{
+						CIN_WARN("Renamed {} to {}", filepath.string(), renamedNew.value().string());
+					} break;
+
+					case EFileAction::Error:
+					{
+						if(!filepath.empty())
+							CIN_WARN("Err {}", filepath.string());
+					} break;
+				}
+			}
+		}, false, error);
+
+		m_FileTree = STL::MakeUnique<FileTree>(m_WorkingDirectory, m_AssetDragCallbackFunction, m_FilePopupCallbackFunction);
+		s_FileTreeNeedsRescan = true;
+
+		lastWatchedPath = m_WorkingDirectory;
+	}
+}
+
+void ContentBrowserPanel::RescanFileTreeIfNeeded()
+{
+	[[unlikely]]
+	if (s_FileTreeNeedsRescan)
+	{
+		m_FileTree = STL::MakeUnique<FileTree>(m_WorkingDirectory, m_AssetDragCallbackFunction, m_FilePopupCallbackFunction);
+
+		try
+		{
+			for (const auto& file : STL::RecursiveDirectoryIterator(m_WorkingDirectory))
+				m_FileTree->AddFile(file);
+
+			s_FileTreeNeedsRescan = false;
+		}
+		catch ([[maybe_unused]] const std::exception& exception)
+		{
+			CIN_WARN("Failed scanning current working directory: {}, Error: {}", m_WorkingDirectory.string(), exception.what());
+			ImGui::Text("Failed scanning current working directory: %s", m_WorkingDirectory.string().c_str());
+			ImGui::End();
+
+			s_FileTreeNeedsRescan = true;
+			return;
+		}
+	}
+}
+
+void ContentBrowserPanel::OpenFilePopup()
+{
+	if (m_OpenFilePopup)
+	{
+		ImGui::OpenPopup(s_FilePopupID);
+		m_OpenFilePopup = false;
+	}
+
+	if (ImGui::BeginPopup(s_FilePopupID, ImGuiWindowFlags_NoMove))
+	{
+		CIN_ASSERT(!m_FilePopupSelectionCache.Empty());
+
+		if (ImGui::Button("Open"))
+		{
+			[[unlikely]]
+			if (!Platform::OpenInExplorer(m_FilePopupSelectionCache.Path.string()))
+				CIN_WARN("Failed to open file {} in explorer", m_FilePopupSelectionCache.Path.string());
+
+			m_FilePopupSelectionCache.Clear();
+			ImGui::CloseCurrentPopup();
+		}
+
+		ImGui::EndPopup();
+	}
+	else
+		m_FilePopupSelectionCache.Clear();
+
+	const ImVec2 cachedCursorPosition{ ImGui::GetCursorPos() };
+	const ImVec2 contentRegionAvailableSize{ ImGui::GetContentRegionAvail() };
+
+	ImGui::Dummy({ contentRegionAvailableSize.x, contentRegionAvailableSize.y + ImGui::GetScrollY() });
+	if (m_FilePopupSelectionCache.Empty() && ImGui::IsItemClicked(ImGuiMouseButton_Right))
+		ImGui::OpenPopup("contentBrowserPopup");
+
+	if (ImGui::BeginPopup("contentBrowserPopup"))
+	{
+		if (ImGui::Button("Open in file explorer"))
+		{
+			if (Platform::OpenInExplorer(m_WorkingDirectory.string()))
+				ImGui::CloseCurrentPopup();
+			else
+				CIN_ERROR("Failed to open {} in file explorer", m_WorkingDirectory.string());
+		}
+
+		ImGui::EndPopup();
+	}
+
+	ImGui::SetCursorPos(cachedCursorPosition);
 }

@@ -1,0 +1,18 @@
+Scene: C:\Users\marti\Documents\ProdigyProjects\Project\IceCubesLight.cinscene
+Entities:
+  - TagComponent:
+      Tag: Coin
+    TransformComponent:
+      Translation: [0, 0.5, -0.300000012]
+    SpriteRendererComponent:
+      Texture: C:\Users\marti\Documents\ProdigyProjects\Project\coin_0.png
+      Filter: 0
+      Wrap: 1
+      Color: [1, 1, 1, 1]
+      TilingFactor: 1
+  - TagComponent:
+      Tag: Point Light
+    TransformComponent:
+      Translation: [0, 0, 0]
+    PointLightComponent:
+      Intensity: 1

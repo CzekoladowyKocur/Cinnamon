@@ -33,13 +33,17 @@ namespace Cinnamon {
 		Errr Initialize();
 		void Shutdown();
 
-		void									WriteToConsole(const char* message, const EConsoleTextColor color);
-		[[nodiscard]] double					GetAbsoluteTime();
-		[[nodiscard]] STL::String				GetBuildDate();
-		[[nodiscard]] STL::String				GenerateUUID();
-		[[nodiscard]] STL::Vector<const char*>	GetRequiredVulkanExtensions();
-		[[nodiscard]] STL::Vector<const char*>	GetRequestedVulkanLayers();
-		[[nodiscard]] STL::Vector<const char*>	GetRequiredVulkanDeviceExtensions();
-		[[nodiscard]] STL::Vector<const char*>	GetRequestedVulkanDeviceLayers();
+		void										WriteToConsole(const char* message, const EConsoleTextColor color);
+		[[nodiscard]] double						GetAbsoluteTime();
+		[[nodiscard]] STL::String					GetBuildDate();
+		[[nodiscard]] STL::String					GenerateUUID();
+		[[nodiscard]] STL::Vector<const char*>		GetRequiredVulkanExtensions();
+		[[nodiscard]] STL::Vector<const char*>		GetRequestedVulkanLayers();
+		[[nodiscard]] STL::Vector<const char*>		GetRequiredVulkanDeviceExtensions();
+		[[nodiscard]] STL::Vector<const char*>		GetRequestedVulkanDeviceLayers();
+		[[nodiscard]] STL::Optional<STL::Filepath>	SelectDirectory();
+		[[nodiscard]] STL::Optional<STL::Filepath>	SelectFile(const STL::StringView filter);
+		[[nodiscard]] STL::Optional<STL::Filepath>	SaveFileAs(const STL::StringView filter);
+		[[nodiscard]] bool							OpenInExplorer(const STL::StringView path);
 	}
 }

@@ -1,5 +1,6 @@
 #pragma once
 #include "Cinnamon/include/Core/Core.hpp"
+#include "CinMath/CinMath.h"
 
 namespace Cinnamon {
 	class Scene;
@@ -8,6 +9,12 @@ namespace Cinnamon {
 	class Framebuffer;
 	class RenderCommandBuffer;	
 	class VulkanAllocator;
+	class VertexBuffer;
+	class IndexBuffer;
+	class Pipeline;
+	class Shader;
+	class Material;
+	class Texture2D;
 
 	class SceneRenderer final
 	{
@@ -16,24 +23,33 @@ namespace Cinnamon {
 	public:
 		explicit SceneRenderer(
 			const STL::Unique<Renderer>& renderer,
+			const bool swapchainTarget,
 			const uint32_t viewportWidth,
 			const uint32_t viewportHeight) noexcept;
 
 		~SceneRenderer() noexcept;
 
-		void BeginFrame();
-		void EndFrame();
-		void SetRenderedScene(const Scene* const scene);
+		void RenderScene(const CinMath::Matrix4& camera);
+		void SetRenderedScene(Scene* const scene);
+		void SetAspectRatio(const float aspectRatio);
 		void SetViewportSize(const uint32_t viewportWidth, const uint32_t viewportHeight);
 
 		[[nodiscard]] STL::Unique<Framebuffer>& 
 			GetFramebuffer() noexcept;
 	private:
-		const Scene* m_RenderedScene;
 		const STL::Unique<Renderer>& m_Renderer;
-
-		STL::Unique<VulkanAllocator> m_Allocator;
+		const bool m_SwapchainTarget;
+	
 		STL::Unique<Framebuffer> m_Framebuffer;
 		STL::Unique<Renderer2D> m_Renderer2D;
+		STL::Unique<RenderCommandBuffer> m_RenderCommandBuffer;
+		STL::Unique<Shader>	m_FullScreenQuadShader;
+		STL::Unique<Material> m_SkyBoxMaterial;
+		STL::Unique<Pipeline> m_SkyboxPipeline;
+
+		Scene* m_RenderedScene;
+		float m_AspectRatio;
+
+		//Texture2D* m_Texture;
 	};
 }

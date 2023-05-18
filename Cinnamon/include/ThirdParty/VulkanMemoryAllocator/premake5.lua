@@ -8,6 +8,11 @@ project "VulkanMemoryAllocator"
 	objdir ("bin-int/" .. OutputDirectory .. "/%{prj.name}")
 	warnings "off"
 
+	links
+	{
+
+	}
+
 	includedirs 
 	{
 		VulkanIncludeDirectory,

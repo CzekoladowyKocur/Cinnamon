@@ -11,6 +11,7 @@ namespace Cinnamon {
 		constexpr virtual ~MouseEvent() noexcept = default;
 
 		virtual MouseCode GetMouseCode() const final;
+		virtual Mouse GetMouseButton() const final;
 	private:
 		const MouseCode m_MouseCode;
 	};
@@ -58,16 +59,16 @@ namespace Cinnamon {
 	{
 	private:
 	public:
-		MouseScrolledEvent(const uint16_t horizontalDelta, const uint16_t verticalDelta) noexcept;
+		MouseScrolledEvent(const int16_t horizontalDelta, const int16_t verticalDelta) noexcept;
 		constexpr virtual ~MouseScrolledEvent() noexcept = default;
 
-		uint16_t GetHorizontalDelta() const;
-		uint16_t GetVerticalDelta() const;
-		std::pair<uint16_t, uint16_t> GetDelta() const;
+		int16_t GetHorizontalDelta() const;
+		int16_t GetVerticalDelta() const;
+		std::pair<int16_t, int16_t> GetDelta() const;
 
 		EVENT_TYPE(MouseScrolled)
 		EVENT_CATEGORY(Mouse)
 	private:
-		const uint16_t m_HorizontalDelta, m_VerticalDelta;
+		const int16_t m_HorizontalDelta, m_VerticalDelta;
 	};
 }

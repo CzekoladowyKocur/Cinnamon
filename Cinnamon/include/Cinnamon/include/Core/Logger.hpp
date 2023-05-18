@@ -99,7 +99,7 @@ namespace Cinnamon {
 	}
 }
 
-/* TODO: Make seperate engine core and application logging macros */
+/* TODO: Make separete engine core and application logging macros */
 #ifdef CIN_DISTRIBUTION 
 #define CIN_DISABLE_LOGGING 1U
 #else
@@ -110,8 +110,8 @@ namespace Cinnamon {
 #define CIN_TRACE(message, ...)             void()
 #define CIN_INFO(message, ...)              void()
 #define CIN_WARN(message, ...)              void()
-#define CIN_ERROR(message, ...)             void()
-#define CIN_CRITICAL(message, ...)          void()
+#define CIN_ERROR(message, ...)             Cinnamon::Logger::Log<Cinnamon::ELogLevel::Error>(" [ERROR] " message "\n", ##__VA_ARGS__)
+#define CIN_CRITICAL(message, ...)          Cinnamon::Logger::Log<Cinnamon::ELogLevel::Critical>(" [CRITICAL] " message "\n", ##__VA_ARGS__)
 #else
 #define CIN_TRACE(message, ...)             Cinnamon::Logger::Log<Cinnamon::ELogLevel::Trace>(" [TRACE] " message "\n", ##__VA_ARGS__)
 #define CIN_INFO(message, ...)              Cinnamon::Logger::Log<Cinnamon::ELogLevel::Info>(" [INFO] " message "\n", ##__VA_ARGS__)

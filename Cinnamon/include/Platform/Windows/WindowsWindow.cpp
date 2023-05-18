@@ -149,7 +149,7 @@ namespace Cinnamon {
 	Window::~Window() noexcept
 	{
 		CIN_ASSERT(m_State, "Invalid internal window state");
-		/* TODO: Move to event proccessing? ... */
+		/* TODO: Move to event processing? ... */
 		if (!DestroyWindow(m_State->Handle))
 		{
 			MessageBox(NULL, "Failed to destroy window", "Error!", MB_ICONEXCLAMATION | MB_OK);
@@ -235,6 +235,7 @@ namespace Cinnamon {
 	void Window::SetName(const char* windowName)
 	{
 		m_Properties.Name = windowName;
+		SetWindowText(m_State->Handle, windowName);
 	}
 
 	void Window::SetWidth(const uint32_t windowWidth)
@@ -380,7 +381,6 @@ namespace Cinnamon {
 	LRESULT CALLBACK Windows32ProcessMessage(HWND hwnd, uint32_t message, WPARAM wParam, LPARAM lParam)
 	{
 		Window* window{ reinterpret_cast<Window*>(GetWindowLongPtr(hwnd, GWLP_USERDATA)) };
-
 		switch (message)
 		{
 			case WM_CREATE:
@@ -398,11 +398,11 @@ namespace Cinnamon {
 		
 			case WM_ACTIVATE:
 			{
-				return 0;
+				return DefWindowProcA(hwnd, message, wParam, lParam);
 			}
 
 			case WM_PAINT:
-			{
+			{				
 				ApplicationRenderEvent event;
 				window->SendEvent(event);
 				/* Notify the os we handled it */
@@ -481,6 +481,21 @@ namespace Cinnamon {
 				return 0;
 			}
 
+			case WM_CHAR:
+			{
+				BYTE keyboardState[256U];
+				if (GetKeyboardState(keyboardState))
+				{
+					unsigned short character;
+					ToAscii(static_cast<UINT>(wParam), MapVirtualKey(static_cast<UINT>(wParam), MAPVK_VK_TO_VSC), keyboardState, &character, 0);
+
+					KeyTypedEvent event(static_cast<KeyCode>(wParam));
+					window->SendEvent(event);
+				}
+
+				return 0;
+			}
+
 			case WM_LBUTTONDOWN:
 			{
 				window->m_InputState->SetMouseButtonState(Mouse::LeftButton, EMouseState::Pressed);
@@ -544,6 +559,21 @@ namespace Cinnamon {
 				
 				MouseMovedEvent event(xPosition, yPosition);
 				window->SendEvent(event);
+				return 0;
+			}
+
+			case WM_MOUSEWHEEL:
+			{
+				auto distance{ GET_WHEEL_DELTA_WPARAM(wParam) };
+				
+				/* Flatten the input to OS-independent */
+				if (distance != 0)
+				{
+					distance = distance < 0 ? -1 : 1;
+					MouseScrolledEvent event(0, distance);
+					window->SendEvent(event);
+				}
+
 				return 0;
 			}
 		}

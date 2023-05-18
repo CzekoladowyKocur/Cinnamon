@@ -6,9 +6,11 @@
 #include "Cinnamon/include/Renderer/VertexBuffer.hpp"
 #include "Cinnamon/include/Renderer/IndexBuffer.hpp"
 #include "Cinnamon/include/Renderer/Shader.hpp"
+#include "Cinnamon/include/Renderer/Material.hpp"
 #include "Cinnamon/include/Renderer/Pipeline.hpp"
 #include "Cinnamon/include/Renderer/Framebuffer.hpp"
 #include "Cinnamon/include/Renderer/RenderCommandBuffer.hpp"
+#include "Cinnamon/include/Renderer/UniformBuffer.hpp"
 #include "Cinnamon/include/Renderer/DescriptorPool.hpp"
 #include "Cinnamon/include/Renderer/Texture2D.hpp"
 #include "Cinnamon/include/Core/Window.hpp"
@@ -21,6 +23,7 @@ namespace Cinnamon {
 	Renderer::Renderer(const STL::Unique<Window>& windowContext) noexcept
 		:
 		m_Device(STL::MakeUnique<Device>(windowContext)),
+		m_Allocator(STL::MakeUnique<VulkanAllocator>(m_Device)),
 		m_Swapchain(STL::MakeUnique<Swapchain>(m_Device, windowContext)),
 		m_DescriptorPool(STL::MakeUnique<DescriptorPool>(m_Device, m_Swapchain->GetImageCount()))
 	{}
@@ -29,6 +32,7 @@ namespace Cinnamon {
 	{
 		m_DescriptorPool.reset();
 		m_Swapchain.reset();
+		m_Allocator.reset();
 		m_Device.reset();
 	}
 
@@ -48,31 +52,23 @@ namespace Cinnamon {
 		const STL::Unique<RenderCommandBuffer>& renderCommandBuffer,
 		const STL::Unique<Framebuffer>& framebuffer)
 	{
+		CIN_ASSERT(framebuffer);
 		const uint32_t frameIndex{ m_Swapchain->GetFrameIndex() };
 		
 		uint32_t framebufferWidth, framebufferHeight;
 		VkFramebuffer framebufferHandle;
 		VkRenderPass renderPass;
-		if (framebuffer)
-		{
-			const auto [width, height]{ framebuffer->GetSize() };
-			framebufferWidth = width;
-			framebufferHeight = height;
+		const auto [width, height]{ framebuffer->GetSize() };
+		framebufferWidth = width;
+		framebufferHeight = height;
 
-			framebufferHandle = framebuffer->GetHandle();
-			renderPass = framebuffer->GetRenderPass();
-		}
-		else
-		{
-			const auto [width, height] { m_Swapchain->GetExtent() };
-			framebufferWidth = width;
-			framebufferHeight = height;
-			
-			renderPass = m_Swapchain->GetRenderPass();
-			framebufferHandle = m_Swapchain->GetCurrentFramebuffer();
-		}
+		framebufferHandle = framebuffer->GetHandle();
+		renderPass = framebuffer->GetRenderPass();
 
-		constexpr std::array<VkClearValue, 1> clearValues{ { { 0.15f, 0.95f, 0.15f, 1.0f } } };
+		STL::Vector<VkClearValue> clearValues;
+		for (size_t i{ 0U }; i < framebuffer->GetColorAttachmentCount(); ++i)
+			clearValues.push_back(VkClearValue{ { framebuffer->GetColorAttachmentClearValue(i) } });
+		
 		const VkRenderPassBeginInfo renderPassBeginInfo
 		{
 			.sType{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO },
@@ -106,10 +102,10 @@ namespace Cinnamon {
 		const VkViewport viewport
 		{
 			.x{ 0.0f },
-			.y{ 0.0f },
+			.y{ static_cast<float>(framebufferHeight) },
 			.width{ static_cast<float>(framebufferWidth) },
-			.height{ static_cast<float>(framebufferHeight) },
-			.minDepth{ 0U },
+			.height{ -static_cast<float>(framebufferHeight) },
+			.minDepth{ 0.0f },
 			.maxDepth{ 1.0f },
 		};
 
@@ -126,27 +122,6 @@ namespace Cinnamon {
 				.height{ framebufferHeight },
 			}
 		};
-
-		//std::vector<VkClearAttachment> attachmentClears;
-		//std::vector<VkClearRect> clearRectangles;
-
-		//VkClearAttachment& clear = attachmentClears.emplace_back(VkClearAttachment{});
-		//clear.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		//clear.colorAttachment = 0;
-		//clear.clearValue = clearValues[0];
-		//
-		//auto& rect = clearRectangles.emplace_back(VkClearRect{});
-		//rect.rect.extent = { framebufferWidth, framebufferHeight };
-		//rect.rect.offset = { 0, 0 };
-		//rect.layerCount = 1;
-		//rect.baseArrayLayer = 0;
-
-		//vkCmdClearAttachments(
-		//	commandBuffer,
-		//	static_cast<uint32_t>(attachmentClears.size()),
-		//	attachmentClears.data(),
-		//	static_cast<uint32_t>(attachmentClears.size()),
-		//	clearRectangles.data());
 
 		/* Dynamic state */
 		vkCmdSetViewport(
@@ -169,6 +144,55 @@ namespace Cinnamon {
 
 		VkCommandBuffer vkCommandBuffer = renderCommandBuffer->GetCommandBuffer(frameIndex);
 		vkCmdEndRenderPass(vkCommandBuffer);
+	}
+
+	void Renderer::Clear(
+		const STL::Unique<RenderCommandBuffer>& renderCommandBuffer,
+		const STL::Unique<Framebuffer>& framebuffer)
+	{
+		/* If framebuffer is cleared on load, simply skip the call to clean attachments. */
+		if (not framebuffer->IsClearedOnLoad())
+		{
+			const uint32_t frameIndex{ m_Swapchain->GetFrameIndex() };
+			const VkCommandBuffer commandBuffer{ renderCommandBuffer->GetCommandBuffer(frameIndex) };
+			const auto [framebufferWidth, framebufferHeight] { framebuffer->GetSize() };
+
+			STL::Vector<VkClearAttachment> clearAttachments;
+			STL::Vector<VkClearRect> clearRectangles;
+			for (size_t i{ 0U }; i < framebuffer->GetColorAttachmentCount(); ++i)
+			{
+				clearAttachments.emplace_back
+				(
+					VkClearAttachment
+					{
+						.aspectMask{ VK_IMAGE_ASPECT_COLOR_BIT },
+						.colorAttachment{ static_cast<uint32_t>(i) },
+						.clearValue{ { framebuffer->GetColorAttachmentClearValue(i) }}
+					}
+				);
+
+				clearRectangles.emplace_back
+				(
+					VkClearRect
+					{
+						.rect
+						{
+							.offset{ 0, 0 },
+							.extent{ framebufferWidth, framebufferHeight }
+						},
+						.baseArrayLayer{ 0U },
+						.layerCount{ 1U },
+					}
+				);
+			}
+
+			vkCmdClearAttachments(
+				commandBuffer,
+				static_cast<uint32_t>(clearAttachments.size()),
+				clearAttachments.data(),
+				static_cast<uint32_t>(clearRectangles.size()),
+				clearRectangles.data());
+		}
 	}
 
 	void Renderer::RenderGeometry(
@@ -213,6 +237,7 @@ namespace Cinnamon {
 
 	void Renderer::RenderGeometry(
 		const STL::Unique<RenderCommandBuffer>& renderCommandBuffer, 
+		const STL::Unique<UniformBuffer>& UBO,
 		const STL::Unique<VertexBuffer>& vertexBuffer, 
 		const STL::Unique<IndexBuffer>& indexBuffer, 
 		const STL::Unique<Pipeline>& pipeline, 
@@ -244,21 +269,35 @@ namespace Cinnamon {
 			VK_PIPELINE_BIND_POINT_GRAPHICS,
 			graphicsPipeline);
 
+		const VkDescriptorSet dst{ shader->AllocateDescriptorSet(0U, m_DescriptorPool->GetPool(frameIndex)) };
+
+		const VkWriteDescriptorSet UBODescriptorWrite
+		{
+			.sType{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET },
+			.pNext{ nullptr },
+			.dstSet{ dst },
+			.dstBinding{ 0U },
+			.dstArrayElement{ 0U },
+			.descriptorCount{ 1U },
+			.descriptorType{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
+			.pImageInfo{ nullptr },
+			.pBufferInfo{ &UBO->GetDescriptorBufferInfo() },
+			.pTexelBufferView{ nullptr }
+		};
+
 		const VkDescriptorImageInfo imageInfo 
 		{ 
 			.sampler{ texture.GetSampler() },
 			.imageView{ texture.GetImageView() },
 			.imageLayout{ texture.GetImageLayout() }
 		};
-
-		VkDescriptorSet dst{ shader->AllocateDescriptorSet(0U, m_DescriptorPool->GetPool(frameIndex)) };
-
+		
 		const VkWriteDescriptorSet descriptorWrite
 		{
 			.sType{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET },
 			.pNext{ nullptr },
 			.dstSet{ dst },
-			.dstBinding{ 0U },
+			.dstBinding{ 1U },
 			.dstArrayElement{ 0U },
 			.descriptorCount{ 1U },
 			.descriptorType{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER },
@@ -267,10 +306,16 @@ namespace Cinnamon {
 			.pTexelBufferView{ nullptr }
 		};
 
+		const STL::Array<VkWriteDescriptorSet, 2U> descriptorSetWrites
+		{
+			descriptorWrite,
+			UBODescriptorWrite
+		};
+
 		vkUpdateDescriptorSets(
 			m_Device->GetLogicalDevice(), 
-			1, 
-			&descriptorWrite, 
+			static_cast<uint32_t>(descriptorSetWrites.size()),
+			descriptorSetWrites.data(),
 			0, 
 			nullptr);
 
@@ -289,6 +334,226 @@ namespace Cinnamon {
 			static_cast<uint32_t>(indexCount),
 			1U,
 			0U,
+			0U,
+			0U);
+	}
+
+	void Renderer::RenderGeometry(
+		const STL::Unique<RenderCommandBuffer>& renderCommandBuffer,
+		const STL::Unique<VertexBuffer>& vertexBuffer,
+		const STL::Unique<IndexBuffer>& indexBuffer,
+		const STL::Unique<Pipeline>& pipeline,
+		const STL::Unique<Material>& material,
+		const uint32_t indexCount)
+	{
+		const uint32_t frameIndex{ m_Swapchain->GetFrameIndex() };
+		const VkPipeline graphicsPipelineHandle{ pipeline->GetHandle() };
+		const VkCommandBuffer commandBufferHandle{ renderCommandBuffer->GetCommandBuffer(frameIndex) };
+		const VkBuffer vertexBufferHandle{ vertexBuffer->GetHandle() };
+		const VkBuffer indexBufferHandle{ indexBuffer->GetHandle() };
+		const STL::Unique<Shader>& shader{ pipeline->GetShader() };
+
+		constexpr VkDeviceSize offsets[1U]{ 0U };
+		/* Bind vertex buffer. */
+		vkCmdBindVertexBuffers(
+			commandBufferHandle,
+			0, 1,
+			&vertexBufferHandle,
+			offsets);
+
+		/* Bind index buffer. */
+		vkCmdBindIndexBuffer(
+			commandBufferHandle,
+			indexBufferHandle,
+			offsets[0U],
+			VK_INDEX_TYPE_UINT32);
+
+		/* Bind the graphics pipeline. */
+		vkCmdBindPipeline(
+			commandBufferHandle,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			graphicsPipelineHandle);
+
+		/* Allocate the descriptor sets needed for this shader. */
+		shader->AllocateDescriptorSets(m_DescriptorPool->GetPool(frameIndex));
+		material->Invalidate();
+
+		STL::Vector<VkDescriptorSet> descriptorSets;
+		for (const auto& [descriptorSetIndex, handle] : pipeline->GetShader()->GetDescriptorSetHandles())
+			descriptorSets.push_back(handle);
+
+		vkCmdBindDescriptorSets(
+			commandBufferHandle,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			pipeline->GetLayout(),
+			0,
+			static_cast<uint32_t>(descriptorSets.size()),
+			descriptorSets.data(),
+			0,
+			nullptr);
+
+		vkCmdDrawIndexed(
+			commandBufferHandle,
+			static_cast<uint32_t>(indexCount),
+			1U,
+			0U,
+			0U,
+			0U);
+	}
+
+	void Renderer::RenderGeometry(
+		const STL::Unique<RenderCommandBuffer>& renderCommandBuffer,
+		const STL::Unique<UniformBuffer>& UBO,
+		const STL::Unique<VertexBuffer>& vertexBuffer,
+		const STL::Unique<IndexBuffer>& indexBuffer,
+		const STL::Unique<Pipeline>& pipeline,
+		const STL::Unique<Material>& material,
+		const uint32_t indexCount)
+	{
+		const uint32_t frameIndex{ m_Swapchain->GetFrameIndex() };
+		const VkPipeline graphicsPipelineHandle{ pipeline->GetHandle() };
+		const VkCommandBuffer commandBufferHandle{ renderCommandBuffer->GetCommandBuffer(frameIndex) };
+		const VkBuffer vertexBufferHandle{ vertexBuffer->GetHandle() };
+		const VkBuffer indexBufferHandle{ indexBuffer->GetHandle() };
+		const STL::Unique<Shader>& shader{ pipeline->GetShader() };
+
+		constexpr VkDeviceSize offsets[1U]{ 0U };
+		/* Bind vertex buffer. */
+		vkCmdBindVertexBuffers(
+			commandBufferHandle,
+			0, 1,
+			&vertexBufferHandle,
+			offsets);
+
+		/* Bind index buffer. */
+		vkCmdBindIndexBuffer(
+			commandBufferHandle,
+			indexBufferHandle,
+			offsets[0U],
+			VK_INDEX_TYPE_UINT32);
+
+		/* Bind the graphics pipeline. */
+		vkCmdBindPipeline(
+			commandBufferHandle,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			graphicsPipelineHandle);
+
+		/* Allocate the descriptor sets needed for this shader. */
+		shader->AllocateDescriptorSets(m_DescriptorPool->GetPool(frameIndex));
+		/* Update the UBO */
+		UpdateUBO(UBO, shader);
+		
+		material->Invalidate();
+
+		STL::Vector<VkDescriptorSet> descriptorSets;
+		for (const auto& [descriptorSetIndex, handle] : pipeline->GetShader()->GetDescriptorSetHandles())
+			descriptorSets.push_back(handle);
+
+		vkCmdBindDescriptorSets(
+			commandBufferHandle,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			pipeline->GetLayout(),
+			0,
+			static_cast<uint32_t>(descriptorSets.size()),
+			descriptorSets.data(),
+			0,
+			nullptr);
+
+		vkCmdDrawIndexed(
+			commandBufferHandle,
+			static_cast<uint32_t>(indexCount),
+			1U,
+			0U,
+			0U,
+			0U);
+	}
+
+	void Renderer::RenderFullscreenQuad(
+		const STL::Unique<RenderCommandBuffer>& renderCommandBuffer,
+		/*const STL::Unique<UniformBuffer>& UBO,*/
+		const STL::Unique<Pipeline>& pipeline,
+		const STL::Unique<Material>& material)
+	{
+		const uint32_t frameIndex{ m_Swapchain->GetFrameIndex() };
+		const VkPipeline graphicsPipelineHandle{ pipeline->GetHandle() };
+		const VkCommandBuffer commandBufferHandle{ renderCommandBuffer->GetCommandBuffer(frameIndex) };
+		const STL::Unique<Shader>& shader{ pipeline->GetShader() };
+
+		/* Bind the graphics pipeline. */
+		vkCmdBindPipeline(
+			commandBufferHandle,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			graphicsPipelineHandle);
+
+		/* Allocate the descriptor sets needed for this shader. */
+		shader->AllocateDescriptorSets(m_DescriptorPool->GetPool(frameIndex));
+		/* Update the material data */
+		material->Invalidate();
+
+		STL::Vector<VkDescriptorSet> descriptorSets;
+		for (const auto& [descriptorSetIndex, handle] : pipeline->GetShader()->GetDescriptorSetHandles())
+			descriptorSets.push_back(handle);
+		
+		vkCmdBindDescriptorSets(
+			commandBufferHandle,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			pipeline->GetLayout(),
+			0,
+			static_cast<uint32_t>(descriptorSets.size()),
+			descriptorSets.data(),
+			0,
+			nullptr);
+
+		vkCmdDraw(
+			commandBufferHandle,
+			3U,
+			1U,
+			0U,
+			0U);
+	}
+
+	void Renderer::RenderFullscreenQuad(
+		const STL::Unique<RenderCommandBuffer>& renderCommandBuffer, 
+		const STL::Unique<UniformBuffer>&		UBO, 
+		const STL::Unique<Pipeline>&			pipeline, 
+		const STL::Unique<Material>&			material)
+	{
+		const uint32_t frameIndex{ m_Swapchain->GetFrameIndex() };
+		const VkPipeline graphicsPipelineHandle{ pipeline->GetHandle() };
+		const VkCommandBuffer commandBufferHandle{ renderCommandBuffer->GetCommandBuffer(frameIndex) };
+		const STL::Unique<Shader>& shader{ pipeline->GetShader() };
+
+		/* Bind the graphics pipeline. */
+		vkCmdBindPipeline(
+			commandBufferHandle,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			graphicsPipelineHandle);
+
+		/* Allocate the descriptor sets needed for this shader. */
+		shader->AllocateDescriptorSets(m_DescriptorPool->GetPool(frameIndex));
+		/* Update the material data */
+		material->Invalidate();
+		/* Update the UBO */
+		UpdateUBO(UBO, shader);
+
+		STL::Vector<VkDescriptorSet> descriptorSets;
+		for (const auto& [descriptorSetIndex, handle] : pipeline->GetShader()->GetDescriptorSetHandles())
+			descriptorSets.push_back(handle);
+
+		vkCmdBindDescriptorSets(
+			commandBufferHandle,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			pipeline->GetLayout(),
+			0,
+			static_cast<uint32_t>(descriptorSets.size()),
+			descriptorSets.data(),
+			0,
+			nullptr);
+
+		vkCmdDraw(
+			commandBufferHandle,
+			6U,
+			1U,
 			0U,
 			0U);
 	}
@@ -330,5 +595,53 @@ namespace Cinnamon {
 	{
 		CIN_ASSERT(m_DescriptorPool);
 		return m_DescriptorPool;
+	}
+
+	const STL::Unique<VulkanAllocator>& Renderer::GetAllocator() const
+	{
+		CIN_ASSERT(m_Allocator);
+		return m_Allocator;
+	}
+
+	void Renderer::UpdateUBO(
+		const STL::Unique<UniformBuffer>& UBO,
+		const STL::Unique<Shader>& shader)
+	{
+		/* Shader descriptor set 0 is reserved for UBOs */
+		if (shader->HasDescriptorSet(0U))
+		{
+			const auto& uboDescriptorSet{ shader->GetDescriptorSets().at(0U) };
+
+			STL::Vector<VkWriteDescriptorSet> writeDescriptorSets;
+			for (const auto& [uniformBufferBinding, uniformBuffer] : uboDescriptorSet.UniformBuffers)
+			{
+				const VkDescriptorSet uboDescriptorSetHandle{ shader->GetDescriptorSetHandle(0U) };
+				writeDescriptorSets.emplace_back
+				(
+					VkWriteDescriptorSet
+					{
+						.sType{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET },
+						.pNext{ nullptr },
+						.dstSet{ uboDescriptorSetHandle },
+						.dstBinding{ uniformBufferBinding },
+						.dstArrayElement{ 0U },
+						.descriptorCount{ 1U },
+						.descriptorType{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
+						.pImageInfo{ nullptr },
+						.pBufferInfo{ &UBO->GetDescriptorBufferInfo()},
+						.pTexelBufferView{ nullptr }
+					}
+				);
+			}
+
+			vkUpdateDescriptorSets(
+				m_Device->GetLogicalDevice(),
+				static_cast<uint32_t>(writeDescriptorSets.size()),
+				writeDescriptorSets.data(),
+				0,
+				nullptr);
+		}
+		else
+			CIN_WARN("Failed to update uniform buffer: the shader has no descriptor set 0");
 	}
 }

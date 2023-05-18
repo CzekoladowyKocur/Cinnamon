@@ -581,7 +581,6 @@ namespace Cinnamon {
 			.pSignalSemaphores{ &renderCompleteSemaphore },
 		};
 
-		CIN_ASSERT(m_RecordFunction);
 		if (m_RecordFunction)
 		{
 			m_RecordFunction(
@@ -724,6 +723,16 @@ namespace Cinnamon {
 	uint32_t Swapchain::GetFrameIndex() const
 	{
 		return m_FrameIndex;
+	}
+
+	VkClearValue Swapchain::GetClearValue() const
+	{
+		return m_ClearColor;
+	}
+
+	VkFormat Swapchain::GetFormat() const
+	{
+		return m_SurfaceFormat.format;
 	}
 
 	VkExtent2D Swapchain::GetExtent() const

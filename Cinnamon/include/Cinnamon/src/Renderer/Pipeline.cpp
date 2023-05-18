@@ -77,17 +77,26 @@ namespace Cinnamon {
 			vertexInputAttributes[i].format = static_cast<VkFormat>(element.ElementType);
 		}
 
-		VkVertexInputBindingDescription vertexInputBindingDescription;
-		vertexInputBindingDescription.binding = 0;
-		vertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-		vertexInputBindingDescription.stride = m_VertexBufferLayout.Stride;
+		STL::Vector<VkVertexInputBindingDescription> vertexInputBindingDescriptions;
+		if (vertexInputAttributes.size())
+		{
+			vertexInputBindingDescriptions.emplace_back
+			(
+				VkVertexInputBindingDescription
+				{
+					.binding{ 0U },
+					.stride{ m_VertexBufferLayout.Stride },
+					.inputRate{ VK_VERTEX_INPUT_RATE_VERTEX }
+				}
+			);
+		}
 
 		VkPipelineVertexInputStateCreateInfo vertexInputStateInfo;
 		vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 		vertexInputStateInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertexInputAttributes.size());
 		vertexInputStateInfo.pVertexAttributeDescriptions = vertexInputAttributes.data();
-		vertexInputStateInfo.vertexBindingDescriptionCount = 1;
-		vertexInputStateInfo.pVertexBindingDescriptions = &vertexInputBindingDescription;
+		vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(vertexInputBindingDescriptions.size());
+		vertexInputStateInfo.pVertexBindingDescriptions = vertexInputBindingDescriptions.size() ? vertexInputBindingDescriptions.data() : nullptr;
 		vertexInputStateInfo.flags = 0;
 		vertexInputStateInfo.pNext = nullptr;
 
@@ -107,7 +116,7 @@ namespace Cinnamon {
 		VkPipelineRasterizationStateCreateInfo rasterizationStateCreateInfo = {};
 		rasterizationStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 		rasterizationStateCreateInfo.polygonMode = false ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
-		rasterizationStateCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT; /* TODO: adjustable */
+		rasterizationStateCreateInfo.cullMode = VK_CULL_MODE_NONE;//VK_CULL_MODE_FRONT_BIT; /* TODO: adjustable */
 		rasterizationStateCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		rasterizationStateCreateInfo.depthClampEnable = VK_FALSE;
 		rasterizationStateCreateInfo.rasterizerDiscardEnable = VK_FALSE;
@@ -115,20 +124,7 @@ namespace Cinnamon {
 		rasterizationStateCreateInfo.lineWidth = 1.0f;
 		rasterizationStateCreateInfo.flags = 0;
 		rasterizationStateCreateInfo.pNext = nullptr;
-
-		std::vector<VkPipelineColorBlendAttachmentState> blendAttachmentStates;
-		auto& blendAttachmentState{ blendAttachmentStates.emplace_back(VkPipelineColorBlendAttachmentState{}) };
-
-
-		blendAttachmentState.colorWriteMask = 0xf;
-		blendAttachmentState.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-		blendAttachmentState.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-		blendAttachmentState.blendEnable = VK_TRUE;
-		blendAttachmentState.colorBlendOp = VK_BLEND_OP_ADD;
-		blendAttachmentState.alphaBlendOp = VK_BLEND_OP_ADD;
-		blendAttachmentState.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;//VK_BLEND_FACTOR_ONE;
-		blendAttachmentState.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA; //VK_BLEND_FACTOR_ZERO;
-
+		
 		VkPipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo;
 		depthStencilStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 		depthStencilStateCreateInfo.depthTestEnable = VK_TRUE;
@@ -142,6 +138,20 @@ namespace Cinnamon {
 		depthStencilStateCreateInfo.back = {};
 		depthStencilStateCreateInfo.flags = 0;
 		depthStencilStateCreateInfo.pNext = nullptr;
+
+		STL::Vector<VkPipelineColorBlendAttachmentState> blendAttachmentStates;
+		for (size_t i{ 0U }; i < m_Framebuffer->GetColorAttachmentCount(); ++i)
+		{
+			blendAttachmentStates.emplace_back(VkPipelineColorBlendAttachmentState{});
+			blendAttachmentStates[i].blendEnable = FormatHasAlphaChannel(m_Framebuffer->GetColorAttachmentFormat(i)) ? VK_TRUE : VK_FALSE;
+			blendAttachmentStates[i].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+			blendAttachmentStates[i].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+			blendAttachmentStates[i].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+			blendAttachmentStates[i].colorBlendOp = VK_BLEND_OP_ADD;
+			blendAttachmentStates[i].srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+			blendAttachmentStates[i].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+			blendAttachmentStates[i].alphaBlendOp = VK_BLEND_OP_ADD;
+		}
 
 		VkPipelineColorBlendStateCreateInfo colorBlendStateInfo{};
 		colorBlendStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -187,7 +197,7 @@ namespace Cinnamon {
 		graphicsPipelineCreateInfo.pVertexInputState = &vertexInputStateInfo;
 		graphicsPipelineCreateInfo.pTessellationState = &tesselationStateCreateInfo;
 		graphicsPipelineCreateInfo.pRasterizationState = &rasterizationStateCreateInfo;
-		graphicsPipelineCreateInfo.pColorBlendState = &colorBlendStateInfo; //colorBlending; 
+		graphicsPipelineCreateInfo.pColorBlendState = &colorBlendStateInfo; 
 		graphicsPipelineCreateInfo.pViewportState = &viewportState;
 		graphicsPipelineCreateInfo.pDynamicState = &dynamicStateInfo;
 		graphicsPipelineCreateInfo.pMultisampleState = &multisampleStateCreateInfo;
@@ -214,5 +224,10 @@ namespace Cinnamon {
 	VkPipelineLayout Pipeline::GetLayout() const
 	{
 		return m_Layout;
+	}
+
+	const STL::Unique<Shader>& Pipeline::GetShader() const
+	{
+		return m_Shader;
 	}
 }

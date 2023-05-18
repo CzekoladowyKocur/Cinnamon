@@ -1,4 +1,4 @@
-#pragma once
+    #pragma once
 #define InternalScope static
 #define FunctionVariable static
 

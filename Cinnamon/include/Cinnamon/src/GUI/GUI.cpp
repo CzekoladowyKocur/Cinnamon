@@ -1,5 +1,6 @@
 #include "Cinnamon/include/GUI/GUI.hpp"
 #include "Cinnamon/include/GUI/Icons.hpp"
+#include "Cinnamon/include/GUI/GUIRenderer.hpp"
 #include "Cinnamon/include/Core/Core.hpp"
 
 #include "Cinnamon/include/Renderer/VulkanTypes.hpp"
@@ -18,16 +19,24 @@ namespace Cinnamon {
 		const VkImageView imageView,
 		const VkImageLayout imageLayout);
 
+	extern GUIRenderer* s_GUIRenderer;
+
 	namespace GUI {
 		void Image(
-			const STL::Unique<Renderer>& renderer,
 			const ImageViewID imageViewID,
 			const float width,
-			const float height)
+			const float height,
+			const ImageSamplerID sampler,
+			const bool flip)
 		{
+			/* TODO: temporary */
+			CIN_ASSERT(s_GUIRenderer);
 			/* Descriptor pool is set in renderer */
-			const VkDescriptorSet descriptorSet{ ImGui_ImplVulkan_AddTextureUser(renderer, VK_NULL_HANDLE, VkImageView(imageViewID), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) };
-			ImGui::Image(descriptorSet, ImVec2{ width, height }, ImVec2{ 0, 1 }, ImVec2{ 1, 0 });
+			const VkDescriptorSet descriptorSet{ ImGui_ImplVulkan_AddTextureUser(s_GUIRenderer->GetRenderer(), VkSampler(sampler), VkImageView(imageViewID), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) };
+			if (flip)
+				ImGui::Image(descriptorSet, ImVec2{ width, height }, ImVec2{ 0, 1 }, ImVec2{ 1, 0 });
+			else
+				ImGui::Image(descriptorSet, ImVec2{ width, height }, ImVec2{ 0, 0 }, ImVec2{ 1, 1 });
 		}
 
 		bool SearchBar(
@@ -56,6 +65,37 @@ namespace Cinnamon {
 			return updated;
 		}
 
+		void Vec1Slider(
+			const STL::StringView label,
+			float values[1U],
+			float resetValue,
+			float width)
+		{
+			const float lineHeight{ GImGui->Font->FontSize + GImGui->Style.FramePadding.y * 2.0f };
+			const float buttonWidth{ ImGui::CalcTextSize("X").x + GImGui->Style.FramePadding.x };
+			const ImVec2 buttonSize{ buttonWidth, lineHeight };
+			const float dragfloatWidth{ width * 0.333f - buttonSize.x };
+
+			ImGui::PushID(label.data());
+			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ 0, 0 });
+
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.65f, 0.0f, 0.05f, 1.0f });
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.8f, 0.1f, 0.10f, 1.0f });
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.65f, 0.0f, 0.05f, 1.0f });
+
+			if (ImGui::Button("X", buttonSize))
+				values[0U] = resetValue;
+
+			ImGui::PopStyleColor(3);
+			ImGui::SameLine();
+			ImGui::PushItemWidth(dragfloatWidth);
+			ImGui::DragFloat("##X", &values[0U], 0.1f, 0.0f, 0.0f, "%.2f");
+			ImGui::PopItemWidth();
+
+			ImGui::PopStyleVar();
+			ImGui::PopID();
+		}
+
 		void Vec3Slider(
 			const STL::StringView label, 
 			float values[3U], 
@@ -63,14 +103,16 @@ namespace Cinnamon {
 			float width)
 		{
 			const float lineHeight{ GImGui->Font->FontSize + GImGui->Style.FramePadding.y * 2.0f };
-			const ImVec2 buttonSize{ lineHeight + 3.0f, lineHeight };
+			const float buttonWidth{ ImGui::CalcTextSize("X").x  + GImGui->Style.FramePadding.x };
+			const ImVec2 buttonSize{ buttonWidth, lineHeight };
 			const float dragfloatWidth{ width * 0.333f - buttonSize.x };
 
 			ImGui::PushID(label.data());
 			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ 0, 0 });
-			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.8f, 0.1f, 0.15f, 1.0f });
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.9f, 0.2f, 0.2f, 1.0f });
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.8f, 0.1f, 0.15f, 1.0f });
+
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.65f, 0.0f, 0.05f, 1.0f });
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.8f, 0.1f, 0.10f, 1.0f });
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.65f, 0.0f, 0.05f, 1.0f });
 
 			if (ImGui::Button("X", buttonSize))
 				values[0U] = resetValue;
@@ -82,9 +124,9 @@ namespace Cinnamon {
 			ImGui::PopItemWidth();
 
 			ImGui::SameLine();
-			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.2f, 0.7f, 0.2f, 1.0f });
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.3f, 0.8f, 0.3f, 1.0f });
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.2f, 0.7f, 0.2f, 1.0f });
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.05f, 0.65f, 0.05f, 1.0f });
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.1f, 0.8f, 0.1f, 1.0f });
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.05f, 0.65f, 0.05f, 1.0f });
 			if (ImGui::Button("Y", buttonSize))
 				values[1U] = resetValue;
 
@@ -95,9 +137,9 @@ namespace Cinnamon {
 			ImGui::PopItemWidth();
 
 			ImGui::SameLine();
-			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.1f, 0.25f, 0.8f, 1.0f });
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.2f, 0.35f, 0.9f, 1.0f });
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.1f, 0.25f, 0.8f, 1.0f });
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.05f, 0.05f, 0.65f, 1.0f });
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.1f, 0.1f, 0.8f, 1.0f });
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.05f, 0.05f, 0.65f, 1.0f });
 			if (ImGui::Button("Z", buttonSize))
 				values[2U] = resetValue;
 

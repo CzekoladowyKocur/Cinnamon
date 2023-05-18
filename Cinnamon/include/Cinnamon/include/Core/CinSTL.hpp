@@ -49,6 +49,11 @@ namespace Cinnamon {
 		template<typename T>
 		using USet = std::unordered_set<T>;
 
+		template<typename T>
+		using Optional = std::optional<T>;
+
+		using ErrorCode = std::error_code;
+
 		using StringView = std::string_view;
 		using StringU8View = std::u8string_view;
 		using StringU16View = std::u16string_view;

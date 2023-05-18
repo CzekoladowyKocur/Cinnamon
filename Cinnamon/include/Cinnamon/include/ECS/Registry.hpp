@@ -126,7 +126,9 @@ namespace Cinnamon {
 		public:
 			explicit Registry() noexcept(true)
 			{
-				CIN_CRITICAL("Safe component pools for entities are needed (old memory can move if pool grows). Allocate much space for now.");
+				CIN_WARN("Safe component pools for entities are needed (old memory can move if pool grows). Allocate much space for now.");
+				CIN_WARN("Safe component pools for entities are needed (old memory can move if pool grows). Allocate much space for now.");
+				CIN_WARN("Safe component pools for entities are needed (old memory can move if pool grows). Allocate much space for now.");
 			}
 
 			inline ~Registry() noexcept(true)

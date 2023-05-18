@@ -22,7 +22,7 @@ namespace Cinnamon {
 	{
 		ApplicationTick, ApplicationRender,
 		WindowClosed, WindowResized, WindowMinimized, WindowMaximized, WindowSurfaceUpdated,
-		KeyPressed, KeyHeld, KeyReleased,
+		KeyPressed, KeyHeld, KeyReleased, KeyTyped,
 		MousePressed, MouseHeld, MouseReleased, MouseMoved, MouseScrolled
 	};
 
@@ -53,11 +53,11 @@ namespace Cinnamon {
 	public:
 		explicit EventDispatcher(const Event& event) noexcept;
 
-		template<EventClassDerivative EventType, typename DispatchFunction>
-		CIN_FORCE_INLINE void Dispatch(const DispatchFunction&& function) const noexcept
+		template<EventClassDerivative EventType, typename... Args, typename DispatchFunction>
+		CIN_FORCE_INLINE void Dispatch(const DispatchFunction&& function, Args&&... args) const noexcept
 		{
 			if (m_Event.GetEventType() == ResolveAtCompileTime(EventType::GetEventTypeStatic()))
-				m_Event.IsHandled |= function(static_cast<const EventType&>(m_Event));
+				m_Event.IsHandled |= function(static_cast<const EventType&>(m_Event), std::forward<Args>(args)...);
 		}
 	private:
 		const Event& m_Event;

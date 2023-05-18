@@ -75,10 +75,10 @@ namespace CinMath {
 		template<typename T> friend Vector<3, T> operator+(const Vector<3, T>& vector) noexcept;
 		template<typename T> friend Vector<3, T> operator-(const Vector<3, T>& vector) noexcept;
 
-		template<typename T> friend void operator+=(Vector<3, T>& lhs, const Vector<4, T>& rhs) noexcept;
-		template<typename T> friend void operator-=(Vector<3, T>& lhs, const Vector<4, T>& rhs) noexcept;
-		template<typename T> friend void operator*=(Vector<3, T>& lhs, const Vector<4, T>& rhs) noexcept;
-		template<typename T> friend void operator/=(Vector<3, T>& lhs, const Vector<4, T>& rhs) noexcept;
+		template<typename T> friend void operator+=(Vector<3, T>& lhs, const Vector<3, T>& rhs) noexcept;
+		template<typename T> friend void operator-=(Vector<3, T>& lhs, const Vector<3, T>& rhs) noexcept;
+		template<typename T> friend void operator*=(Vector<3, T>& lhs, const Vector<3, T>& rhs) noexcept;
+		template<typename T> friend void operator/=(Vector<3, T>& lhs, const Vector<3, T>& rhs) noexcept;
 
 		template<typename T> friend void operator+=(Vector<3, T>& lhs, const T scalar) noexcept;
 		template<typename T> friend void operator-=(Vector<3, T>& lhs, const T scalar) noexcept;

@@ -22,6 +22,9 @@ namespace Cinnamon {
 		void EndFrame();
 		void SetTheme(const EUITheme theme);
 		void OnEvent(const Event& event);
+
+		[[nodiscard]] const STL::Unique<Renderer>&
+			GetRenderer() const;
 	private:
 		void UploadFontAtlas();
 		void UploadIconFontAtlas();

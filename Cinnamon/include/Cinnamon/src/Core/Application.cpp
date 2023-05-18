@@ -21,10 +21,9 @@ namespace Cinnamon {
 		:
 		m_Running(true),
 		m_Minimized(false),
+		m_FramePending(false),
 		m_LayerStack(STL::MakeUnique<LayerStack>()),
-		m_MainWindow(STL::MakeUnique<Window>(WindowProperties{ windowTitle.data(), windowWidth, windowHeight, EWindowMode::Windowed, enableVSync })),
-		m_Renderer(STL::MakeUnique<Renderer>(m_MainWindow)),
-		m_GUIRenderer(STL::MakeUnique<GUIRenderer>(m_MainWindow, m_Renderer))
+		m_MainWindow(STL::MakeUnique<Window>(WindowProperties{ windowTitle.data(), windowWidth, windowHeight, EWindowMode::Windowed, enableVSync }))
 	{
 		CIN_ASSERT(s_ApplicationInstance == nullptr, "Application already instantiated!");
 		CIN_TRACE("Running cinnamon build {}", Platform::GetBuildDate());
@@ -40,20 +39,18 @@ namespace Cinnamon {
 
 	Errr Application::Initialize()
 	{
-		CIN_WARN("Queues from same families might be faster");
 		m_MainWindow->SetEventCallback([this](const Event& event)
 		{ 
 			const EventDispatcher dispatcher(event);
 			dispatcher.Dispatch<ApplicationRenderEvent>(std::bind(&Application::OnApplicationRender, this, std::placeholders::_1));
 			dispatcher.Dispatch<WindowResizedEvent>(std::bind(&Application::OnWindowResized, this, std::placeholders::_1));
 			dispatcher.Dispatch<WindowClosedEvent>(std::bind(&Application::OnWindowClosed, this, std::placeholders::_1));
-			dispatcher.Dispatch<KeyPressedEvent>(std::bind(&Application::OnKeyPressed, this, std::placeholders::_1));
-		
-			for (Layer* const layer : *m_LayerStack)
-				[[likely]] if(not event.IsHandled)
-					layer->OnEvent(event);
-		
-			m_GUIRenderer->OnEvent(event);
+			dispatcher.Dispatch<KeyPressedEvent>(std::bind(&Application::OnKeyPressed, this, std::placeholders::_1));		
+			
+			if (event.IsHandled)
+				return;
+
+			OnEvent(event);
 		});
 
 		CIN_TRACE("Initializing user data");
@@ -68,17 +65,9 @@ namespace Cinnamon {
 
 	Errr Application::Run()
 	{
-		//double lastFrameTime{ Platform::GetAbsoluteTime() };
-
 		[[likely]]
 		while (m_Running)
-		{
 			m_MainWindow->PollEvents();
-			//const double currentTime{ Platform::GetAbsoluteTime() };
-			//const Timestep timestep{ static_cast<Timestep::Type>(currentTime - lastFrameTime) };
-			//lastFrameTime = currentTime;
-			OnApplicationRender({});
-		}
 
 		return Error::Success;
 	}
@@ -123,28 +112,13 @@ namespace Cinnamon {
 
 	bool Application::OnApplicationRender(const ApplicationRenderEvent& event)
 	{
-		FunctionVariable double f_LastFrameTime{ Platform::GetAbsoluteTime() };
-
-		[[likely]]
-		if (not m_Minimized)
-		{
-			const double currentTime{ Platform::GetAbsoluteTime() };
-			const Timestep timestep{ static_cast<Timestep::Type>(currentTime - f_LastFrameTime) };
-			f_LastFrameTime = currentTime;
-
-			m_Renderer->BeginFrame();
-			{
-				m_GUIRenderer->BeginFrame();
-			
-				for (Layer* const layer : *m_LayerStack)
-					layer->OnUpdate(timestep);
-			
-				m_GUIRenderer->EndFrame();
-			}
-			m_Renderer->EndFrame();
-		}
-
-		CIN_UNUSED(event);
+		/* Skip if frame is already pending */
+		if (m_FramePending)
+			return true;
+		
+		m_FramePending = true;
+		OnEvent(event);
+		m_FramePending = false;
 		return false;
 	}
 
@@ -152,10 +126,6 @@ namespace Cinnamon {
 	{
 		const auto [width, height] { event.GetResize() };
 		m_Minimized = (width == 0U) or (height == 0U);
-		
-		[[likely]]
-		if (not m_Minimized)
-			m_Renderer->SetViewportSize(width, height);
 		
 		return false;
 	}

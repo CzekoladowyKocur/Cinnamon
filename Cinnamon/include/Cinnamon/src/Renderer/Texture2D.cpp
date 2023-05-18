@@ -12,10 +12,11 @@ namespace Cinnamon {
 	InternalScope uint32_t CalculateMipCount(const uint32_t width, const uint32_t height);
 
 	Texture2D::Texture2D(
-		const STL::Unique<VulkanAllocator>& allocator,
 		const STL::Filepath& filepath,
+		const STL::Unique<VulkanAllocator>& allocator,
 		const TextureSpecification& specification) noexcept(true)
 		:
+		Asset(filepath, EAssetType::Texture),
 		m_Allocator(allocator),
 		m_Specification(specification),
 		m_Width(0U),
@@ -26,7 +27,8 @@ namespace Cinnamon {
 		m_TextureImageView(VK_NULL_HANDLE),
 		m_Sampler(VK_NULL_HANDLE),
 		m_ImageLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL),
-		m_DeviceAllocation()
+		m_DeviceAllocation(),
+		m_DescriptorImageInfo()
 	{
 		CIN_ASSERT(FileExists(filepath));
 		const STL::String filepathString{ filepath.string() };
@@ -321,7 +323,7 @@ namespace Cinnamon {
 				}
 			});
 
-			m_Allocator->DestroyBuffer(stagingBuffer, stagingBufferAllocation);
+			m_Allocator->DestroyBuffer(stagingBuffer, stagingBufferAllocation);			
 			const VkSamplerCreateInfo samplerCreateInfo
 			{
 				.sType{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO },
@@ -339,7 +341,7 @@ namespace Cinnamon {
 				.compareEnable{ VK_FALSE },
 				.compareOp{ VK_COMPARE_OP_NEVER },
 				.minLod{ 0.0f },
-				.maxLod{ 100.0f },
+				.maxLod{ static_cast<float>(mipCount + 1U)},
 				.borderColor{ VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE },
 				.unnormalizedCoordinates{ VK_FALSE }
 			};
@@ -349,6 +351,10 @@ namespace Cinnamon {
 				&samplerCreateInfo,
 				GraphicsContext::GetAllocator(),
 				&m_Sampler));
+
+			m_DescriptorImageInfo.sampler = m_Sampler;
+			m_DescriptorImageInfo.imageView = m_TextureImageView;
+			m_DescriptorImageInfo.imageLayout = m_ImageLayout;
 		}
 		// else asset invalid
 
@@ -383,6 +389,32 @@ namespace Cinnamon {
 		m_Allocator->DestroyImage(m_TextureImage, m_DeviceAllocation);
 	}
 
+	void Texture2D::Invalidate(const TextureSpecification& specification)
+	{
+		CIN_UNIMPLEMENTED();
+		m_Specification = specification;
+	}
+
+	const TextureSpecification& Texture2D::GetSpecification() const
+	{
+		return m_Specification;
+	}
+	
+	uint32_t Texture2D::GetWidth() const
+	{
+		return m_Width;
+	}
+
+	uint32_t Texture2D::GetHeight() const
+	{
+		return m_Height;
+	}
+
+	std::pair<uint32_t, uint32_t> Texture2D::GetSize() const
+	{
+		return std::pair<uint32_t, uint32_t>{ m_Width, m_Height };
+	}
+
 	VkImage Texture2D::GetImage() const
 	{
 		return m_TextureImage;
@@ -408,17 +440,26 @@ namespace Cinnamon {
 		return m_DeviceAllocation;
 	}
 
+	const VkDescriptorImageInfo& Texture2D::GetDescriptorImageInfo() const
+	{
+		CIN_ASSERT(
+			m_DescriptorImageInfo.sampler	and 
+			m_DescriptorImageInfo.imageView and 
+			m_DescriptorImageInfo.imageLayout);
+
+		return m_DescriptorImageInfo;
+	}
+
 	InternalScope constexpr VkFilter CinnamonSamplerFilterToVulkanSamplerFilter(const ETextureSamplerFilterMode filterMode)
 	{
 		switch (filterMode)
 		{
-			case ETextureSamplerFilterMode::None:		CIN_ASSERT(false, "Unknown filter"); return static_cast<VkFilter>(0);
 			case ETextureSamplerFilterMode::Nearest:	return VK_FILTER_NEAREST;
 			case ETextureSamplerFilterMode::Linear:		return VK_FILTER_LINEAR;
 
 			default:
 			{
-				CIN_ASSERT(false, "Unknown filter");
+				CIN_ASSERT(false, "Unknown filter mode");
 				return static_cast<VkFilter>(0);
 			}
 		}
@@ -428,13 +469,12 @@ namespace Cinnamon {
 	{
 		switch (wrapMode)
 		{
-			case ETextureSamplerWrapMode::None:		CIN_ASSERT(false, "Unknown filter"); return static_cast<VkSamplerAddressMode>(0);
 			case ETextureSamplerWrapMode::Clamp:	return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 			case ETextureSamplerWrapMode::Repeat:	return VK_SAMPLER_ADDRESS_MODE_REPEAT;
 
 			default:
 			{
-				CIN_ASSERT(false, "Unknown filter");
+				CIN_ASSERT(false, "Unknown wrap mode");
 				return static_cast<VkSamplerAddressMode>(0);
 			}
 		}
@@ -444,7 +484,6 @@ namespace Cinnamon {
 	{
 		switch (filterMode)
 		{
-			case ETextureSamplerFilterMode::None:		CIN_ASSERT(false, "Unknown filter mode"); return static_cast<VkSamplerMipmapMode>(0);
 			case ETextureSamplerFilterMode::Nearest:	return VK_SAMPLER_MIPMAP_MODE_NEAREST;
 			case ETextureSamplerFilterMode::Linear:		return VK_SAMPLER_MIPMAP_MODE_LINEAR;
 

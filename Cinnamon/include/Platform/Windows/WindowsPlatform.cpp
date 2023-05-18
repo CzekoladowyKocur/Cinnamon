@@ -1,9 +1,11 @@
 #ifdef CIN_PLATFORM_WINDOWS
 #include "Cinnamon/include/Core/Core.hpp"
+#include "Cinnamon/include/Core/Window.hpp"
 
 /* For UUIDS */
 #include <Rpcdce.h>
 #pragma comment(lib, "Rpcrt4.lib")
+#include <shlobj_core.h>
 
 constexpr WORD C_FOREGROUND_BLACK = 0;
 constexpr WORD C_FOREGROUND_BLUE = 1;
@@ -33,7 +35,11 @@ constexpr WORD C_BACKGROUND_YELLOW = 0x0060;
 constexpr WORD C_BACKGROUND_GREY = 0x0070;
 constexpr WORD C_BACKGROUND_INTENSITY = 0x0080;
 
+
 namespace Cinnamon {
+	// Used to force linking symbols.
+	bool PlatformForceLinking{ false };
+	
 	struct
 	{
 		/* Time */
@@ -162,6 +168,7 @@ namespace Cinnamon {
 		void WriteToConsole(const char* message, const EConsoleTextColor color)
 		{
 #ifdef CIN_DISTRIBUTION
+			CIN_UNUSED(color);
 			/* Move to logger? This should not be ever called in distribution */
 			const HANDLE dumpFile
 			{
@@ -192,7 +199,7 @@ namespace Cinnamon {
 			CloseHandle(
 				dumpFile);
 			CIN_PANIC_EXIT();
-#endif
+#else
 			/* Reflected off EConsoleTextColor */
 			constexpr WORD colors[5]{
 				C_FOREGROUND_WHITE,
@@ -216,6 +223,7 @@ namespace Cinnamon {
 					NULL,
 					NULL);
 			}
+#endif
 		}
 
 		double GetAbsoluteTime()
@@ -264,6 +272,152 @@ namespace Cinnamon {
 		STL::Vector<const char*> GetRequestedVulkanDeviceLayers()
 		{
 			return {};
+		}
+
+		STL::Optional<STL::Filepath> SelectDirectory()
+		{
+			LPWSTR g_path{};
+			::IFileDialog* pfd;
+			CHAR ResultBuffer[MAX_PATH]{ '\0' };
+
+			bool result = true;
+			if (SUCCEEDED(CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pfd))))
+			{
+				DWORD dwOptions;
+				if (SUCCEEDED(pfd->GetOptions(&dwOptions)))
+				{
+					pfd->SetOptions(dwOptions | FOS_PICKFOLDERS);
+				}
+
+				IShellItem* psi;
+				SHGetKnownFolderItem(FOLDERID_Documents, KF_FLAG_DEFAULT, nullptr, IID_PPV_ARGS(&psi));
+				pfd->SetDefaultFolder(psi);
+				psi->Release();
+
+				if (SUCCEEDED(pfd->Show(NULL)))
+				{
+					psi = nullptr;
+					if (SUCCEEDED(pfd->GetResult(&psi)))
+					{
+						if (!SUCCEEDED(psi->GetDisplayName(SIGDN_DESKTOPABSOLUTEPARSING, &g_path)))
+						{
+							MessageBoxA(NULL, "GetIDListName() failed", NULL, NULL);
+							result = false;
+						}
+						else
+						{
+							/* TODO: Figure it out */
+							size_t idkWhy[256];
+							wcstombs_s(idkWhy, ResultBuffer, g_path, 256);
+						}
+						psi->Release();
+					}
+					else
+					{
+						result = false;
+					}
+				}
+				else
+				{
+					result = false;
+				}
+				pfd->Release();
+			}
+			else
+			{
+				result = false;
+			}
+
+			if (result)
+				return ResultBuffer;
+			else
+				return std::nullopt;
+		}
+
+		STL::Optional<STL::Filepath> SelectFile(const STL::StringView filter)
+		{
+			OPENFILENAMEA openFileName;
+			ZeroMemory(&openFileName, sizeof(OPENFILENAMEA));
+
+			CHAR fileNameBuffer[MAX_PATH];
+			ZeroMemory(&fileNameBuffer, sizeof(char) * MAX_PATH);
+
+			openFileName.lStructSize = sizeof(OPENFILENAMEA);
+			openFileName.lpstrFile = fileNameBuffer;
+			openFileName.nMaxFile = sizeof(fileNameBuffer);
+			openFileName.lpstrFilter = filter.data();
+			openFileName.nFilterIndex = 1U;
+			openFileName.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+
+			if (GetOpenFileNameA(&openFileName))
+				return openFileName.lpstrFile;
+
+			return std::nullopt;
+		}
+
+		STL::Optional<STL::Filepath> SaveFileAs(const STL::StringView filter)
+		{
+			OPENFILENAMEA openFileName;
+			CHAR szFile[MAX_PATH]{ '\0' };
+			ZeroMemory(&openFileName, sizeof(OPENFILENAME));
+			openFileName.lStructSize = sizeof(OPENFILENAME);
+			openFileName.hwndOwner = nullptr; 
+			openFileName.lpstrFile = szFile;
+			openFileName.nMaxFile = sizeof(szFile);
+			openFileName.lpstrFilter = filter.data();
+			openFileName.nFilterIndex = 1;
+			openFileName.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+
+			// Sets the default extension by extracting it from the filter
+			openFileName.lpstrDefExt = strchr(filter.data(), '\0') + 1;
+
+			if (GetSaveFileNameA(&openFileName) == TRUE)
+				return openFileName.lpstrFile;
+
+			return std::nullopt;
+		}
+
+		bool OpenInExplorer(const STL::StringView path)
+		{
+			const HINSTANCE result
+			{
+				ShellExecuteA
+				(
+					nullptr,
+					"open",
+					path.data(),
+					nullptr,
+					nullptr,
+					SW_SHOWDEFAULT
+				)
+			};
+
+			return reinterpret_cast<INT_PTR>(result) > 32U;
+		}
+
+		// Dialog procedure for the custom dialog
+		INT_PTR CALLBACK CustomDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM /*lParam*/)
+		{
+			switch (uMsg)
+			{
+			case WM_INITDIALOG:
+				return TRUE;
+
+			case WM_COMMAND:
+				switch (LOWORD(wParam))
+				{
+				case IDYES:
+					EndDialog(hwndDlg, IDYES);
+					return TRUE;
+
+				case IDNO:
+					EndDialog(hwndDlg, IDNO);
+					return TRUE;
+				}
+				break;
+			}
+
+			return FALSE;
 		}
 	}
 }

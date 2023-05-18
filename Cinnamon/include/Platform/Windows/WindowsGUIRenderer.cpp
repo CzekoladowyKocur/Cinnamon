@@ -23,8 +23,11 @@
 #pragma warning(disable : 33010)
 #pragma warning(disable : 28182)
 #include "ThirdParty/imgui/imgui.h"
+#include "ThirdParty/imguizmo/ImGuizmo.h"
 #include "ThirdParty/imgui/backends/imgui_impl_vulkan.h"
 #include "ThirdParty/imgui/backends/imgui_impl_win32.h"
+
+void ImGui_ImplWin32_UpdateKeyModifiers();
 
 namespace Cinnamon {
 	struct InternalGUIRendererState
@@ -33,6 +36,11 @@ namespace Cinnamon {
 		/* Vulkan context */
 		VkDescriptorPool				DescriptorPool{ VK_NULL_HANDLE };
 	};
+
+	/* TODO: temporary */
+	GUIRenderer* s_GUIRenderer{ nullptr };
+	
+	extern void UserRenderCallback(const ImDrawList* parent_list, const ImDrawCmd* pcmd);
 
 	GUIRenderer::GUIRenderer(
 		const STL::Unique<Window>& window,
@@ -215,17 +223,18 @@ namespace Cinnamon {
 		using namespace GUIUtilities;
 		switch (event.GetEventType())
 		{
+			case EEventType::KeyTyped:
+			{
+				const KeyTypedEvent& keyTypedEvent{ static_cast<const KeyTypedEvent&>(event) };
+				IO.AddInputCharacterUTF16(static_cast<ImWchar16>(keyTypedEvent.GetKeyCode()));
+			} break;
+
 			case EEventType::KeyPressed:
 			{
+				ImGui_ImplWin32_UpdateKeyModifiers();
+				
 				const KeyPressedEvent& keyPressedEvent{ static_cast<const KeyPressedEvent&>(event) };
 				IO.AddKeyEvent(NativeKeyCodeToImGUIKeyCode(keyPressedEvent.GetKeyCode()), true);
-				
-				const char inputCharacter{ NativeKeyCodeToToChar(keyPressedEvent.GetKeyCode()) };
-
-				if (ImGui::IsKeyDown(ImGuiKey_RightShift) || ImGui::IsKeyDown(ImGuiKey_LeftShift) || (GetKeyState(VK_CAPITAL) & 0x0001))
-					IO.AddInputCharacter(inputCharacter);
-				else
-					IO.AddInputCharacter(static_cast<char>(std::tolower(static_cast<char>(inputCharacter))));
 			} break;
 
 			case EEventType::KeyReleased:
@@ -246,20 +255,29 @@ namespace Cinnamon {
 				IO.AddMouseButtonEvent(NativeMouseCodeToImGUIMouseCode(mouseReleasedEvent.GetMouseCode()), false);
 			} break;
 
+			case EEventType::MouseScrolled:
+			{
+				const MouseScrolledEvent& mouseScrolledEvent{ static_cast<const MouseScrolledEvent&>(event) };
+				IO.AddMouseWheelEvent(mouseScrolledEvent.GetHorizontalDelta(), mouseScrolledEvent.GetVerticalDelta());
+			} break;
+
 			default: break;
 		}
 	}
 
 	void GUIRenderer::BeginFrame()
 	{
+		s_GUIRenderer = this;
 		ImGui::SetCurrentContext(m_InternalState->Context);
 		ImGui_ImplWin32_NewFrame();
 		ImGui_ImplVulkan_NewFrame();
 		ImGui::NewFrame();
+		ImGuizmo::BeginFrame();
 	}
 
 	void GUIRenderer::EndFrame()
 	{
+		ImGui::EndFrame();
 		ImGui::Render();
 		if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 		{
@@ -359,6 +377,7 @@ namespace Cinnamon {
 		});
 
 		//ImGui::SetCurrentContext(nullptr);
+		s_GUIRenderer = nullptr;
 	}
 
 	void GUIRenderer::SetTheme(const EUITheme theme)
@@ -387,6 +406,11 @@ namespace Cinnamon {
 		config.GlyphMinAdvanceX = GUIUtilities::GetIconFontSize(); // Use if you want to make the icon monospaced
 
 		io.Fonts->AddFontFromFileTTF("Resources/fonts/FontAwesome/fa-solid-900.ttf", GUIUtilities::GetIconFontSize(), &config, icon_ranges);
+	}
+
+	const STL::Unique<Renderer>& GUIRenderer::GetRenderer() const
+	{
+		return m_Renderer;
 	}
 }
 

@@ -5,7 +5,6 @@
 #include "shaderc/env.h"
 #include <cmath>
 
-
 #ifdef CIN_PLATFORM_WINDOWS
 #pragma warning(push)
 #pragma warning(disable : 26439)
@@ -37,10 +36,11 @@ namespace Cinnamon {
 		const bool forceCompile) noexcept
 		:
 		m_Allocator(allocator),
-		m_PipelineStages(),
-		m_ShaderDescriptorSetLayouts(),
 		m_ShaderSources(),
-		m_ShaderBinaries()
+		m_ShaderBinaries(),
+		m_PipelineStages(),
+		m_ShaderDescriptorSets(),
+		m_ShaderDescriptorSetLayouts()
 	{
 		std::ifstream shaderFile(filepath, std::ios::in | std::ios::binary);
 		CIN_ASSERT(shaderFile.is_open());
@@ -64,7 +64,7 @@ namespace Cinnamon {
 			VkShaderModule shaderModule{ VK_NULL_HANDLE };
 			VK_CHECK(vkCreateShaderModule(
 				m_Allocator->GetDevice()->GetLogicalDevice(),
-				&shaderModuleCreateInfo,
+				&shaderModuleCreateInfo,	
 				GraphicsContext::GetAllocator(),
 				&shaderModule));
 
@@ -83,6 +83,7 @@ namespace Cinnamon {
 		}
 
 		Reflect();
+		ReflectResourceDefinitions();
 	}
 	
 	Shader::~Shader() noexcept
@@ -114,16 +115,30 @@ namespace Cinnamon {
 			const spirv_cross::Compiler compiler(binary);
 			const spirv_cross::ShaderResources resources{ compiler.get_shader_resources() };
 
+			for (const auto& uniformBuffer : resources.uniform_buffers)
+			{
+				const STL::String& uniformBufferName{ uniformBuffer.name };
+				const uint32_t binding{ compiler.get_decoration(uniformBuffer.id, spv::DecorationBinding) };
+				const uint32_t descriptorSet{ compiler.get_decoration(uniformBuffer.id, spv::DecorationDescriptorSet) };
+
+				CIN_INFO("Found uniform buffer at binding {} with name {} in descriptor set {}", binding, uniformBufferName, descriptorSet);
+
+				m_ShaderDescriptorSets[descriptorSet].UniformBuffers[binding] = UniformBufferDescription
+				{
+					.Name{ uniformBufferName },
+					.BindingPoint{ binding },
+					.DescriptorSet{ descriptorSet }
+				};
+			}
+
 			for (const auto& sampledImage : resources.sampled_images)
 			{
-				const std::string& sampledImageName{ sampledImage.name };
+				const STL::String& sampledImageName{ sampledImage.name };
 				const uint32_t binding{ compiler.get_decoration(sampledImage.id, spv::DecorationBinding) };
 				const uint32_t descriptorSet{ compiler.get_decoration(sampledImage.id, spv::DecorationDescriptorSet) };
 			
-				CIN_WARN("Found sampled image at binding {} with name {} in descriptor set, {}", binding, sampledImageName, descriptorSet);
-				if (m_ShaderDescriptorSets.size() <= descriptorSet)
-					m_ShaderDescriptorSets.resize(descriptorSet + 1U);
-			
+				CIN_INFO("Found sampled image at binding {} with name {} in descriptor set {}", binding, sampledImageName, descriptorSet);
+
 				m_ShaderDescriptorSets[descriptorSet].ImageSamplers[binding] = ImageSamplerDescription
 				{
 					.Name{ sampledImageName },
@@ -131,61 +146,182 @@ namespace Cinnamon {
 					.DescriptorSet{ descriptorSet },
 					.ArraySize{ 1U }
 				};
-			}
-
-			for (size_t shaderDescriptorSetIndex{ 0U }; shaderDescriptorSetIndex < m_ShaderDescriptorSets.size(); ++shaderDescriptorSetIndex)
-			{
-				auto& shaderDescriptorSet{ m_ShaderDescriptorSets[shaderDescriptorSetIndex]};
-
-				VkDescriptorPoolSize descriptorPoolSize;
-				if (const uint32_t resourceCount = static_cast<uint32_t>(shaderDescriptorSet.ImageSamplers.size()))
-				{
-					descriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-					descriptorPoolSize.descriptorCount = resourceCount;
-
-					shaderDescriptorSet.DescriptorPoolSizes.emplace_back(std::move(descriptorPoolSize));
-				}
-
-				STL::Vector<VkDescriptorSetLayoutBinding> descriptorSetLayoutBindings;
-				for (const auto& [binding, imageSampler] : shaderDescriptorSet.ImageSamplers)
-				{
-					VkDescriptorSetLayoutBinding descriptorSetLayoutBinding{};
-					descriptorSetLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-					descriptorSetLayoutBinding.binding = binding;
-					descriptorSetLayoutBinding.stageFlags = imageSampler.ShaderStage;
-					descriptorSetLayoutBinding.descriptorCount = imageSampler.ArraySize;
-					descriptorSetLayoutBinding.pImmutableSamplers = 0;
-
-					VkWriteDescriptorSet writeDescriptorSet{};
-					writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-					writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-					writeDescriptorSet.descriptorCount = imageSampler.ArraySize;
-					writeDescriptorSet.dstBinding = binding;
-
-					descriptorSetLayoutBindings.emplace_back(descriptorSetLayoutBinding);
-					shaderDescriptorSet.WriteDescriptorSets[imageSampler.Name] = std::move(writeDescriptorSet);
-				}
-
-				/* Make sure our descriptor set layout vector can hold all of the layouts */
-				if (shaderDescriptorSetIndex >= m_ShaderDescriptorSetLayouts.size())
-					m_ShaderDescriptorSetLayouts.resize(shaderDescriptorSetIndex + 1);
-
-				VkDescriptorSetLayoutCreateInfo descriptorSetLayoutInfo;
-				descriptorSetLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-				descriptorSetLayoutInfo.bindingCount = static_cast<uint32_t>(descriptorSetLayoutBindings.size());
-				descriptorSetLayoutInfo.pBindings = descriptorSetLayoutBindings.data();
-				descriptorSetLayoutInfo.flags = 0;
-				descriptorSetLayoutInfo.pNext = nullptr;
-
-				VK_CHECK(vkCreateDescriptorSetLayout(
-					m_Allocator->GetDevice()->GetLogicalDevice(),
-					&descriptorSetLayoutInfo,
-					GraphicsContext::GetAllocator(),
-					&m_ShaderDescriptorSetLayouts[shaderDescriptorSetIndex]));
-
-				++shaderDescriptorSetIndex;
 			}			
 		}
+
+		for (size_t shaderDescriptorSetIndex{ 0U }; shaderDescriptorSetIndex < m_ShaderDescriptorSets.size(); ++shaderDescriptorSetIndex)
+		{
+			auto& shaderDescriptorSet{ m_ShaderDescriptorSets[(uint32_t)shaderDescriptorSetIndex] };
+
+			VkDescriptorPoolSize descriptorPoolSize;
+			if (const uint32_t resourceCount = static_cast<uint32_t>(shaderDescriptorSet.ImageSamplers.size()))
+			{
+				descriptorPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+				descriptorPoolSize.descriptorCount = resourceCount;
+
+				shaderDescriptorSet.DescriptorPoolSizes.emplace_back(std::move(descriptorPoolSize));
+			}
+
+			STL::Vector<VkDescriptorSetLayoutBinding> descriptorSetLayoutBindings;
+			for (const auto& [binding, uniformBuffer] : shaderDescriptorSet.UniformBuffers)
+			{
+				const VkDescriptorSetLayoutBinding descriptorSetLayoutBinding
+				{
+					.binding{ binding },
+					.descriptorType{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
+					.descriptorCount{ 1U },
+					.stageFlags{ uniformBuffer.ShaderStage },
+					.pImmutableSamplers{ nullptr }
+				};
+
+				VkWriteDescriptorSet writeDescriptorSet
+				{
+					.sType{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET },
+					.pNext{ nullptr },
+					.dstSet{ VK_NULL_HANDLE },
+					.dstBinding{ binding },
+					.dstArrayElement{ 0U },
+					.descriptorCount{ 0U },
+					.descriptorType{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
+					.pImageInfo{ nullptr },
+					.pBufferInfo{ nullptr },
+					.pTexelBufferView{ nullptr }
+				};
+
+				descriptorSetLayoutBindings.emplace_back(descriptorSetLayoutBinding);
+				shaderDescriptorSet.WriteDescriptorSets[uniformBuffer.Name] = std::move(writeDescriptorSet);
+			}
+
+			for (const auto& [binding, imageSampler] : shaderDescriptorSet.ImageSamplers)
+			{
+				const VkDescriptorSetLayoutBinding descriptorSetLayoutBinding
+				{
+					.binding{ binding },
+					.descriptorType{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER },
+					.descriptorCount{ imageSampler.ArraySize },
+					.stageFlags{ imageSampler.ShaderStage },
+					.pImmutableSamplers{ nullptr }
+				};
+
+				VkWriteDescriptorSet writeDescriptorSet
+				{
+					.sType{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET },
+					.pNext{ nullptr },
+					.dstSet{ VK_NULL_HANDLE },
+					.dstBinding{ binding },
+					.dstArrayElement{ 0U },
+					.descriptorCount{ imageSampler.ArraySize },
+					.descriptorType{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER },
+					.pImageInfo{ nullptr },
+					.pBufferInfo{ nullptr },
+					.pTexelBufferView{ nullptr }
+				};
+
+				descriptorSetLayoutBindings.emplace_back(descriptorSetLayoutBinding);
+				shaderDescriptorSet.WriteDescriptorSets[imageSampler.Name] = std::move(writeDescriptorSet);
+			}
+
+			/* Make sure our descriptor set layout vector can hold all of the layouts */
+			if (shaderDescriptorSetIndex >= m_ShaderDescriptorSetLayouts.size())
+				m_ShaderDescriptorSetLayouts.resize(shaderDescriptorSetIndex + 1);
+
+			const VkDescriptorSetLayoutCreateInfo descriptorSetLayoutInfo
+			{
+				.sType{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO },
+				.pNext{ nullptr },
+				.flags{ 0U },
+				.bindingCount{ static_cast<uint32_t>(descriptorSetLayoutBindings.size()) },
+				.pBindings{ descriptorSetLayoutBindings.empty() ? nullptr : descriptorSetLayoutBindings.data() }
+			};
+
+			VK_CHECK(vkCreateDescriptorSetLayout(
+				m_Allocator->GetDevice()->GetLogicalDevice(),
+				&descriptorSetLayoutInfo,
+				GraphicsContext::GetAllocator(),
+				&m_ShaderDescriptorSetLayouts[shaderDescriptorSetIndex]));
+
+			++shaderDescriptorSetIndex;
+		}
+	}
+
+	void Shader::ReflectResourceDefinitions()
+	{
+		CIN_INFO("Reflecting shader resources");
+		for (const auto& [descriptorSetIndex, descriptorSet] : m_ShaderDescriptorSets)
+		{
+			CIN_INFO("Reflecting descriptor set {}", descriptorSetIndex);
+			
+			CIN_INFO("Reflecting uniform buffers");
+			for (const auto& [uniformBufferBinding, uniformBuffer] : descriptorSet.UniformBuffers)
+			{
+				CIN_INFO("Reflected uniform buffer {} in descriptor set {} at binding {}", uniformBuffer.Name, uniformBuffer.DescriptorSet, uniformBuffer.BindingPoint);
+				m_ShaderResourceDefinitions[uniformBuffer.Name] =
+				{
+					ShaderResource
+					{
+						.Set{ uniformBuffer.DescriptorSet },
+						.Binding{ uniformBufferBinding }
+					}
+				};
+			}
+			
+			for (const auto& [samplerBinding, sampler] : descriptorSet.ImageSamplers)
+			{
+				CIN_INFO("Reflected image sampler {} in descriptor set {} at binding {}", sampler.Name, sampler.DescriptorSet, sampler.BindingPoint);
+				m_ShaderResourceDefinitions[sampler.Name] =
+				{
+					ShaderResource
+					{
+						.Set{ sampler.DescriptorSet },
+						.Binding{ samplerBinding }
+					}
+				};
+			}
+		}
+	}
+
+	void Shader::AllocateDescriptorSets(const VkDescriptorPool descriptorPool)
+	{
+		for (const auto& [descriptorSetIndex, descriptorSet] : m_ShaderDescriptorSets)
+		{
+			const VkDescriptorSetAllocateInfo descriptorSetAllocateInfo
+			{
+				.sType{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO },
+				.pNext{ nullptr },
+				.descriptorPool{ descriptorPool },
+				.descriptorSetCount{ 1U },
+				.pSetLayouts{ &m_ShaderDescriptorSetLayouts[descriptorSetIndex] },
+			};
+
+			VkDescriptorSet descriptorSetHandle;
+			VK_CHECK(vkAllocateDescriptorSets(
+				m_Allocator->GetDevice()->GetLogicalDevice(),
+				&descriptorSetAllocateInfo,
+				&descriptorSetHandle));
+
+			m_DescriptorSetHandles[descriptorSetIndex] = descriptorSetHandle;
+		}
+	}
+
+	STL::UMap<uint32_t, VkDescriptorSet>& Shader::GetDescriptorSetHandles()
+	{
+		return m_DescriptorSetHandles;
+	}
+
+	bool Shader::HasDescriptorSet(const uint32_t set)
+	{
+		return m_ShaderDescriptorSets.contains(set);
+	}
+	
+	VkDescriptorSet Shader::GetDescriptorSetHandle(const uint32_t set)
+	{
+		CIN_ASSERT(not m_DescriptorSetHandles.empty());
+		return m_DescriptorSetHandles[set];
+	}
+
+	const STL::UMap<uint32_t, ShaderDescriptorSet>& Shader::GetDescriptorSets() const
+	{
+		return m_ShaderDescriptorSets;
 	}
 
 	const STL::Vector<VkDescriptorSetLayout>& Shader::GetDescriptorSetLayouts() const
@@ -216,6 +352,17 @@ namespace Cinnamon {
 	const STL::Vector<VkPipelineShaderStageCreateInfo>& Shader::GetPipelineStages() const
 	{
 		return m_PipelineStages;
+	}
+
+	const STL::Unique<VulkanAllocator>& Shader::GetAllocator()
+	{
+		return m_Allocator;
+	}
+
+	const ShaderResource& Shader::FindShaderResource(const STL::String& name) const
+	{
+		CIN_ASSERT(m_ShaderResourceDefinitions.contains(name));
+		return m_ShaderResourceDefinitions.at(name);
 	}
 
 	InternalScope STL::UMap<EShaderType, STL::String> PreprocessShaderSource(std::ifstream& file) noexcept
@@ -253,6 +400,13 @@ namespace Cinnamon {
 					{
 						shaderType.erase(formatter);
 						formatter = { shaderType.find('\n') };
+					}
+
+					formatter = { shaderType.find(' ') };
+					while (formatter != STL::String::npos)
+					{
+						shaderType.erase(formatter);
+						formatter = { shaderType.find(' ') };
 					}
 
 					const EShaderType shader{ ShaderTypeStringToType(shaderType) };
@@ -333,6 +487,9 @@ namespace Cinnamon {
 					)
 				};
 
+				if (shaderc_result_get_compilation_status(compilationResult) != shaderc_compilation_status_success)
+					CIN_ERROR("{}", shaderc_result_get_error_message(compilationResult));
+				
 				CIN_ASSERT(shaderc_result_get_compilation_status(compilationResult) == shaderc_compilation_status_success);
 				
 				const void* binaryData = shaderc_result_get_bytes(compilationResult);

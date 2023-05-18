@@ -7,7 +7,9 @@ namespace Cinnamon {
 		struct QuadVertex final
 		{
 			CinMath::Vector3 Position;
+			CinMath::Vector4 Color;
 			CinMath::Vector2 TextureCoordinates;
+			float			 TilingFactor;
 			
 			static VertexBufferLayout GetLayout() noexcept
 			{
@@ -16,7 +18,9 @@ namespace Cinnamon {
 					STL::InitializerList<VertexBufferElement>
 					{
 						VertexBufferElement{ EShaderDataType::Float3 },
-						VertexBufferElement{ EShaderDataType::Float2 }
+						VertexBufferElement{ EShaderDataType::Float4 },
+						VertexBufferElement{ EShaderDataType::Float2 },
+						VertexBufferElement{ EShaderDataType::Float1 }
 					}
 				};
 			}

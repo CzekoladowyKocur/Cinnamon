@@ -31,4 +31,9 @@ namespace Cinnamon {
 		:
 		KeyEvent(keyCode)
 	{}
+
+	KeyTypedEvent::KeyTypedEvent(const KeyCode keyCode) noexcept
+		:
+		KeyEvent(keyCode)
+	{}
 }

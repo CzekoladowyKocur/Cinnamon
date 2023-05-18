@@ -56,8 +56,14 @@ namespace Cinnamon {
 		[[nodiscard]] uint32_t 
 			GetFrameIndex() const;
 
+		[[nodiscard]] VkFormat
+			GetFormat() const;
+
 		[[nodiscard]] VkExtent2D 
 			GetExtent() const;
+
+		[[nodiscard]] VkClearValue
+			GetClearValue() const;
 
 		[[nodiscard]] VkRenderPass 
 			GetRenderPass() const;

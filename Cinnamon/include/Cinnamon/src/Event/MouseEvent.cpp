@@ -11,6 +11,11 @@ namespace Cinnamon {
 		return m_MouseCode;
 	}
 
+	Mouse MouseEvent::GetMouseButton() const
+	{
+		return static_cast<Mouse>(m_MouseCode);
+	}
+
 	MousePressedEvent::MousePressedEvent(const MouseCode mouseCode) noexcept
 		:
 		MouseEvent(mouseCode)
@@ -32,23 +37,23 @@ namespace Cinnamon {
 		return { m_PositionX, m_PositionY };
 	}
 
-	MouseScrolledEvent::MouseScrolledEvent(const uint16_t horizontalDelta, const uint16_t verticalDelta) noexcept
+	MouseScrolledEvent::MouseScrolledEvent(const int16_t horizontalDelta, const int16_t verticalDelta) noexcept
 		:
 		m_HorizontalDelta(horizontalDelta),
 		m_VerticalDelta(verticalDelta)
 	{}
 
-	uint16_t MouseScrolledEvent::GetHorizontalDelta() const
+	int16_t MouseScrolledEvent::GetHorizontalDelta() const
 	{
 		return m_HorizontalDelta;
 	}
 
-	uint16_t MouseScrolledEvent::GetVerticalDelta() const
+	int16_t MouseScrolledEvent::GetVerticalDelta() const
 	{
 		return m_VerticalDelta;
 	}
 
-	std::pair<uint16_t, uint16_t> MouseScrolledEvent::GetDelta() const
+	std::pair<int16_t, int16_t> MouseScrolledEvent::GetDelta() const
 	{
 		return { m_HorizontalDelta, m_VerticalDelta };
 	}

@@ -1,5 +1,6 @@
 #pragma once
 #include "Cinnamon/include/Core/Core.hpp"
+#include "Cinnamon/include/Asset/Asset.hpp"
 #include "Cinnamon/include/Renderer/Image.hpp"
 #include "Cinnamon/include/Renderer/VulkanTypes.hpp"
 #include "Cinnamon/include/Renderer/VulkanAllocator.hpp"
@@ -7,37 +8,52 @@
 namespace Cinnamon {
 	enum class ETextureSamplerWrapMode
 	{
-		None = -1,
-		Clamp = 0,
-		Repeat = 1,
-		End,
+		Clamp = 0U,
+		Repeat
 	};
 
 	enum class ETextureSamplerFilterMode
 	{
-		None = -1,
-		Nearest = 0,
-		Linear = 1,
-		End,
+		Nearest = 0U,
+		Linear
 	};
 
 	struct TextureSpecification final
 	{
 		ETextureSamplerWrapMode SamplerWrapMode;
 		ETextureSamplerFilterMode SamplerFilterMode;
+
+		constexpr bool operator==(const TextureSpecification& other) const noexcept
+		{
+			return SamplerWrapMode == other.SamplerWrapMode and SamplerFilterMode == other.SamplerFilterMode;
+		}
 	};
 
-	class Texture2D final
+	class Texture2D final : public Asset
 	{
 	private:
 		NON_COPYABLE(Texture2D)
 	public:
 		explicit Texture2D(
-			const STL::Unique<VulkanAllocator>& allocator,
 			const STL::Filepath& filepath, 
+			const STL::Unique<VulkanAllocator>& allocator,
 			const TextureSpecification& specification) noexcept(true);
 		
 		~Texture2D() noexcept;
+
+		void Invalidate(const TextureSpecification& specification);
+
+		[[nodiscard]] const TextureSpecification&
+			GetSpecification() const;
+
+		[[nodiscard]] uint32_t
+			GetWidth() const;
+
+		[[nodiscard]] uint32_t
+			GetHeight() const;
+
+		[[nodiscard]] std::pair<uint32_t, uint32_t>
+			GetSize() const;
 
 		[[nodiscard]] VkImage
 			GetImage() const;
@@ -53,6 +69,9 @@ namespace Cinnamon {
 
 		[[nodiscard]] VmaAllocation
 			GetImageAllocation() const;
+
+		[[nodiscard]] const VkDescriptorImageInfo& 
+			GetDescriptorImageInfo() const;
 	private:
 		const STL::Unique<VulkanAllocator>& m_Allocator;
 
@@ -67,5 +86,7 @@ namespace Cinnamon {
 		VkSampler m_Sampler;
 		VkImageLayout m_ImageLayout;
 		VmaAllocation m_DeviceAllocation;
+
+		VkDescriptorImageInfo m_DescriptorImageInfo;
 	};
 }

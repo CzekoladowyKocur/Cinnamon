@@ -7,12 +7,18 @@ namespace Cinnamon {
 	class Event;
 }
 
+class Project;
+
 class EditorPanelBase
 {
 private:
 	NON_COPYABLE(EditorPanelBase)
 public:
-	explicit EditorPanelBase(Cinnamon::Scene*& sceneContext, Cinnamon::Entity& selectionContext) noexcept;
+	explicit EditorPanelBase(
+		Project*& projectContext,
+		Cinnamon::Scene*& sceneContext, 
+		Cinnamon::Entity& selectionContext) noexcept;
+
 	virtual ~EditorPanelBase() noexcept = default;
 
 	virtual void OnUpdate(const Timestep timestep) = 0;
@@ -20,7 +26,8 @@ public:
 	virtual void OnEvent(const Cinnamon::Event& event) = 0;
 
 	constexpr virtual const char* GetPanelName() const = 0;
-public:
+protected:
+	Project*& m_ProjectContext;
 	Cinnamon::Scene*& m_SceneContext;
 	Cinnamon::Entity& m_SelectionContext;
 };

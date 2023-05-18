@@ -50,6 +50,7 @@ namespace Cinnamon {
 		/* User functions */
 		virtual Errr OnUserInitialize() = 0;
 		virtual void OnUserShutdown() = 0;
+		virtual void OnEvent(const Event& event) = 0;
 	private:
 		bool OnApplicationRender(const ApplicationRenderEvent& event);
 		bool OnWindowResized(const WindowResizedEvent& event);
@@ -58,11 +59,10 @@ namespace Cinnamon {
 	protected:
 		bool m_Running;
 		bool m_Minimized;
+		bool m_FramePending;
 
 		STL::Unique<LayerStack> m_LayerStack;
 		STL::Unique<Window> m_MainWindow;
-		STL::Unique<Renderer> m_Renderer;
-		STL::Unique<GUIRenderer> m_GUIRenderer;
 	public:
 		static const Application* Get();
 		static void Close();

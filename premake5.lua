@@ -59,6 +59,7 @@ VmaInclude = "Cinnamon/include/ThirdParty/VulkanMemoryAllocator/include"
 CinMathInclude = "Cinnamon/include/ThirdParty/CinMath/include"
 StbImageInclude = "Cinnamon/include/ThirdParty/stb_image/include"
 SpirvCrossInclude = "Cinnamon/include/ThirdParty/spirv_cross/include"
+YamlInclude = "Cinnamon/include/ThirdParty/yaml-cpp/include"
 
 workspace ("Cinnamon")
 	architecture "x64"
@@ -139,6 +140,7 @@ workspace ("Cinnamon")
 		defines "VK_USE_PLATFORM_WIN32_KHR"
 		systemversion "latest"
 		entrypoint "wWinMainCRTStartup"
+		files { "*.rc" } -- Add all the .rc files to the project
 
 	filter "system:linux"
 		defines "CIN_PLATFORM_LINUX"
@@ -159,8 +161,10 @@ include "Cinnamon/include/ThirdParty/volk"
 include "Cinnamon/include/ThirdParty/VulkanMemoryAllocator"
 include "Cinnamon/include/ThirdParty/fmt"
 include "Cinnamon/include/ThirdParty/imgui"
+include "Cinnamon/include/ThirdParty/imguizmo"
 include "Cinnamon/include/ThirdParty/stb_image"
 include "Cinnamon/include/ThirdParty/spirv_cross"
+include "Cinnamon/include/ThirdParty/yaml-cpp"
 group ""
 
 project ("Cinnamon")
@@ -202,7 +206,8 @@ project ("Cinnamon")
 		FMTInclude,
 		VmaInclude,
 		StbImageInclude,
-		SpirvCrossInclude
+		SpirvCrossInclude,
+		YamlInclude
 	}
 
 	libdirs
@@ -215,8 +220,10 @@ project ("Cinnamon")
 		"VulkanMemoryAllocator",
 		"volk",
 		"imgui",		
+		"imguizmo",
 		"stb_image",
 		"spirv_cross",
+		"yaml-cpp"
 	}
 
 	filter "configurations:Debug"
@@ -344,6 +351,67 @@ project ("Sandbox")
 							 
 		"%{prj.name}/include/Sandbox/**.c", 
 		"%{prj.name}/include/Sandbox/**.cpp",
+		-------------------------------------
+	}
+
+	includedirs
+	{
+		"%{prj.name}/include",
+		"%{wks.location}/Cinnamon/include",
+		CinMathInclude,
+		VulkanIncludeDirectory,
+		FMTInclude,
+		VmaInclude
+	}
+
+	libdirs
+	{
+		VulkanLibraryDirectory,
+	}
+
+	links
+	{
+		"Cinnamon",
+		"imgui",
+	}
+
+	postbuildcommands 
+	{
+		"{COPY} %{wks.location}/CinnamonEditor/include/Resources %{cfg.targetdir}/Resources",
+	}
+
+	filter "system:linux"
+		libdirs
+		{
+			VulkanLibraryDirectory,			
+		}
+
+		links
+        {
+			"VulkanMemoryAllocator",
+			"shaderc_combined",
+			"wayland-client",
+			"xdg",
+			"stb_image",
+			"spirv_cross"
+        }
+
+project ("CinnamonRuntime")
+	location ("CinnamonRuntime/include")
+	language "C++"
+	cppdialect "C++20"
+	kind "ConsoleApp"
+
+	targetdir ("bin/" .. (OutputDirectory) .. "/%{prj.name}")
+	objdir ("bin-int/" .. (OutputDirectory) .. "/%{prj.name}")
+
+	files 
+	{ 
+		"%{prj.name}/include/CinnamonRuntime/**.h", 
+		"%{prj.name}/include/CinnamonRuntime/**.hpp", 
+							 
+		"%{prj.name}/include/CinnamonRuntime/**.c", 
+		"%{prj.name}/include/CinnamonRuntime/**.cpp",
 		-------------------------------------
 	}
 

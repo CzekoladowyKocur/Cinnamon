@@ -1,6 +1,6 @@
 #pragma once
 #include "Cinnamon/include/Core/Core.hpp"
-#include <functional>
+
 namespace Cinnamon {
 	class Window;
 	class Device;
@@ -9,9 +9,11 @@ namespace Cinnamon {
 	class VertexBuffer;
 	class IndexBuffer;
 	class Shader;
+	class Material;
 	class Pipeline;
 	class Framebuffer;
 	class RenderCommandBuffer;
+	class UniformBuffer;
 	class DescriptorPool;
 	class Texture2D;
 
@@ -25,7 +27,7 @@ namespace Cinnamon {
 
 		void BeginFrame();
 		void EndFrame();
-
+		
 		void BeginRenderPass(
 			const STL::Unique<RenderCommandBuffer>& renderCommandBuffer,
 			const STL::Unique<Framebuffer>& framebuffer);
@@ -33,6 +35,10 @@ namespace Cinnamon {
 		void EndRenderPass(
 			const STL::Unique<RenderCommandBuffer>& renderCommandBuffer);
 
+		void Clear(
+			const STL::Unique<RenderCommandBuffer>& renderCommandBuffer,
+			const STL::Unique<Framebuffer>& framebuffer);
+
 		void RenderGeometry(
 			const STL::Unique<RenderCommandBuffer>& renderCommandBuffer,
 			const STL::Unique<VertexBuffer>& vertexBuffer,
@@ -42,12 +48,41 @@ namespace Cinnamon {
 
 		void RenderGeometry(
 			const STL::Unique<RenderCommandBuffer>& renderCommandBuffer,
+			const STL::Unique<UniformBuffer>& UBO,
 			const STL::Unique<VertexBuffer>& vertexBuffer,
 			const STL::Unique<IndexBuffer>& indexBuffer,
 			const STL::Unique<Pipeline>& pipeline,
 			const STL::Unique<Shader>& shader,
 			const Texture2D& texture,
 			const uint32_t indexCount);
+
+		void RenderGeometry(
+			const STL::Unique<RenderCommandBuffer>& renderCommandBuffer,
+			const STL::Unique<VertexBuffer>& vertexBuffer,
+			const STL::Unique<IndexBuffer>& indexBuffer,
+			const STL::Unique<Pipeline>& pipeline,
+			const STL::Unique<Material>& material,
+			const uint32_t indexCount);
+
+		void RenderGeometry(
+			const STL::Unique<RenderCommandBuffer>& renderCommandBuffer,
+			const STL::Unique<UniformBuffer>& UBO,
+			const STL::Unique<VertexBuffer>& vertexBuffer,
+			const STL::Unique<IndexBuffer>& indexBuffer,
+			const STL::Unique<Pipeline>& pipeline,
+			const STL::Unique<Material>& material,
+			const uint32_t indexCount);
+		
+		void RenderFullscreenQuad(
+			const STL::Unique<RenderCommandBuffer>& renderCommandBuffer,
+			const STL::Unique<Pipeline>& pipeline,
+			const STL::Unique<Material>& material);
+
+		void RenderFullscreenQuad(
+			const STL::Unique<RenderCommandBuffer>& renderCommandBuffer,
+			const STL::Unique<UniformBuffer>& UBO,
+			const STL::Unique<Pipeline>& pipeline,
+			const STL::Unique<Material>& material);
 
 		void SetClearColor(
 			const float r, 
@@ -70,6 +105,13 @@ namespace Cinnamon {
 
 		[[nodiscard]] const STL::Unique<DescriptorPool>&
 			GetDescriptorPool() const;
+
+		[[nodiscard]] const STL::Unique<VulkanAllocator>&
+			GetAllocator() const;
+	private:
+		void UpdateUBO(
+			const STL::Unique<UniformBuffer>& UBO,
+			const STL::Unique<Shader>& shader);
 	private:
 		STL::Unique<Device>				m_Device;
 		STL::Unique<Swapchain>			m_Swapchain;

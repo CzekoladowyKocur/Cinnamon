@@ -41,6 +41,15 @@ namespace Cinnamon {
 		}
 
 		template<typename T> requires ECS::ComponentConcept<T>
+		[[nodiscard]] inline const T& GetComponent() const noexcept
+		{
+			T* const componentMemory{ reinterpret_cast<T*>(GetComponentInternal(ECS::GetComponentID<T>())) };
+			CIN_ASSERT(componentMemory);
+
+			return *componentMemory;
+		}
+
+		template<typename T> requires ECS::ComponentConcept<T>
 		[[nodiscard]] inline bool HasComponent() const noexcept
 		{
 			return HasComponentInternal(ECS::GetComponentID<T>());
@@ -80,6 +89,7 @@ namespace Cinnamon {
 	private:
 		[[nodiscard]] void* AddComponentInternal(const ECS::ComponentID componentID, const size_t componentSize) noexcept;
 		[[nodiscard]] void* GetComponentInternal(const ECS::ComponentID componentID) noexcept;
+		[[nodiscard]] void* GetComponentInternal(const ECS::ComponentID componentID) const noexcept;
 		[[nodiscard]] bool HasComponentInternal(const ECS::ComponentID componentID) const noexcept;
 		void RemoveComponentInternal(const ECS::ComponentID componentID) noexcept;
 	private:

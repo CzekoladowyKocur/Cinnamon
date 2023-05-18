@@ -7,7 +7,7 @@ namespace Cinnamon {
 		None = VK_FORMAT_UNDEFINED,
 		/* Color formats */
 		R32F			= VK_FORMAT_R32_SFLOAT,
-		R32I			= VK_FORMAT_UNDEFINED,
+		R32I			= VK_FORMAT_R32_UINT,
 		R16G16F			= VK_FORMAT_UNDEFINED,
 		R32G32F			= VK_FORMAT_UNDEFINED,
 		R8G8B8			= VK_FORMAT_R8G8B8_UNORM,
@@ -22,6 +22,8 @@ namespace Cinnamon {
 		/* Defaults */
 		Depth			= Depth24Stencil8,
 	};
+
+	bool FormatHasAlphaChannel(const VkFormat format);
 
 	void InsertImageMemoryBarrier(
 		const VkCommandBuffer commandBuffer,

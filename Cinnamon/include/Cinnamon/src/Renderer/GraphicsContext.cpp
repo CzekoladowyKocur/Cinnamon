@@ -5,6 +5,7 @@
 #include "Platform/Platform.hpp"
 
 namespace Cinnamon {
+	extern bool PlatformForceLinking;
 	/* TODO: Change to GPU score system */
 	InternalScope bool PhysicalDeviceMeetsRequirements(const VkPhysicalDevice physicalDevice)
 	{
@@ -327,6 +328,14 @@ namespace Cinnamon {
 #else
 			CIN_WARN("Vulkan library was left unloaded");
 #endif
+			if (PlatformForceLinking)
+			{
+				vkBindImageMemory2(reinterpret_cast<VkDevice>(VK_NULL_HANDLE), 0U, nullptr);
+				vkBindBufferMemory2(reinterpret_cast<VkDevice>(VK_NULL_HANDLE), 0U, nullptr);
+				vkGetBufferMemoryRequirements2(reinterpret_cast<VkDevice>(VK_NULL_HANDLE), nullptr, nullptr);
+				vkGetPhysicalDeviceMemoryProperties2(reinterpret_cast<VkPhysicalDevice>(VK_NULL_HANDLE), nullptr);
+				vkGetImageMemoryRequirements2(reinterpret_cast<VkDevice>(VK_NULL_HANDLE), nullptr, nullptr);
+			}
 		}
 
 		uint32_t GetAPIVersion()

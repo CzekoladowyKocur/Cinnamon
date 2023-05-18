@@ -1,11 +1,15 @@
 #pragma once
 #include "Cinnamon/include/Core/Core.hpp"
 #include "Cinnamon/include/Scene/Entity.hpp"
+#include "Cinnamon/include/Scene/Components.hpp"
+#include "Cinnamon/include/Scene/SceneCamera.hpp"
 
 namespace Cinnamon {
 	namespace ECS {
 		class Registry;
 	}
+	
+	class Environment;
 
 	class Scene final
 	{
@@ -25,8 +29,22 @@ namespace Cinnamon {
 
 		[[nodiscard]] const STL::Unique<ECS::Registry>&
 			GetRegistry() const noexcept;
+
+		[[nodiscard]] STL::Unique<Environment>&
+			GetEnvironment() noexcept;
+
+		[[nodiscard]] const STL::Unique<Environment>&
+			GetEnvironment() const noexcept;
+
+		[[nodiscard]] const SceneCamera&
+			GetPrimaryCamera() const noexcept;
+
+		[[nodiscard]] SceneCamera&
+			GetPrimaryCamera() noexcept;
 	private:
 		STL::Unique<ECS::Registry> m_Registry;
+		STL::Unique<Environment> m_Environment;
+		SceneCamera m_DefaultCamera;
 	private:
 		friend class Entity;
 	};

@@ -3,6 +3,7 @@
 #include "Cinnamon/include/Event/WindowEvent.hpp"
 #include "Cinnamon/include/Renderer/Swapchain.hpp"
 #include "Cinnamon/include/Renderer/VertexBuffer.hpp"
+#include "Cinnamon/include/Renderer/Material.hpp"
 #include "Cinnamon/include/GUI/GUI.hpp"
 
 #include "ThirdParty/imgui/imgui.h"
@@ -13,10 +14,10 @@ SandboxLayer::SandboxLayer(STL::Unique<Window>& window, STL::Unique<Renderer>& r
 	m_Window(window),
 	m_Renderer(renderer),
 	m_Allocator(cinew VulkanAllocator(m_Renderer->GetDevice())),
-	m_Framebuffer(STL::MakeUnique<Framebuffer>(m_Allocator, FramebufferSpecification{ m_Window->GetWidth(), m_Window->GetHeight(), 1U, EImageFormat::R8G8B8A8 })),
-	m_RenderCommandBuffer(STL::MakeUnique<RenderCommandBuffer>(m_Renderer->GetDevice(), m_Renderer->GetSwapchain()->GetImageCount()))
-
+	m_Framebuffer(STL::MakeUnique<Framebuffer>(m_Allocator, FramebufferSpecification{ m_Window->GetWidth(), m_Window->GetHeight(), 1U, EImageFormat::R8G8B8A8 }, m_Renderer->GetSwapchain())),
+	m_RenderCommandBuffer(STL::MakeUnique<RenderCommandBuffer>(m_Renderer->GetDevice(), m_Renderer->GetSwapchain()))
 {
+#if 1
 	m_Window->SetEventCallback([](const Event& /*event*/) 
 	{});
 
@@ -35,7 +36,7 @@ SandboxLayer::SandboxLayer(STL::Unique<Window>& window, STL::Unique<Renderer>& r
 
 	m_QuadVertexBuffer = (STL::MakeUnique<VertexBuffer>(m_Allocator, sizeof(float) * 3U * 4U, layout));
 	m_QuadIndexBuffer = (STL::MakeUnique<IndexBuffer>(m_Allocator, sizeof(uint32_t) * 6U));
-	m_QuadShader = (STL::MakeUnique<Shader>(m_Allocator, "Resources/shaders/SimpleShader.shader", false));
+	m_QuadShader = (STL::MakeUnique<Shader>(m_Allocator, "Resources/shaders/BasicQuad.shader", true));
 	m_Pipeline = (STL::MakeUnique<Pipeline>(m_Renderer->GetDevice(), m_Framebuffer, m_QuadShader, 
 		m_QuadVertexBuffer->GetLayout(), EPrimitiveTopology::Triangles));
 
@@ -56,6 +57,7 @@ SandboxLayer::SandboxLayer(STL::Unique<Window>& window, STL::Unique<Renderer>& r
 	};
 	
 	m_QuadIndexBuffer->SetData(indices, sizeof(indices));
+#endif
 }
 
 SandboxLayer::~SandboxLayer() noexcept
@@ -67,10 +69,7 @@ void SandboxLayer::OnAttach()
 
 void SandboxLayer::OnUpdate(const Timestep /*timestep*/)
 {
-	//m_Window->PollEvents();
 	const uint32_t frameIndex{ m_Renderer->GetFrameIndex() };
-	//
-	//m_Renderer->BeginFrame();
 	m_RenderCommandBuffer->Begin(frameIndex);
 	
 	m_Renderer->BeginRenderPass(m_RenderCommandBuffer, m_Framebuffer);
@@ -85,30 +84,9 @@ void SandboxLayer::OnUpdate(const Timestep /*timestep*/)
 	);
 	
 	m_Renderer->EndRenderPass(m_RenderCommandBuffer);
-	
 	m_RenderCommandBuffer->End(frameIndex);
 	m_RenderCommandBuffer->Submit(frameIndex);
 	m_RenderCommandBuffer->Wait(frameIndex);
-	
-	ImGui::Begin("Test");
-	static uint32_t widthCached{ (uint32_t)ImGui::GetContentRegionAvail().x };
-	static uint32_t heightCached{ (uint32_t)ImGui::GetContentRegionAvail().y };
-
-	if (widthCached != (uint32_t)ImGui::GetContentRegionAvail().x || heightCached != (uint32_t)ImGui::GetContentRegionAvail().y)
-	{
-		m_Framebuffer->Invalidate((uint32_t)ImGui::GetContentRegionAvail().x, (uint32_t)ImGui::GetContentRegionAvail().y);
-		widthCached={ (uint32_t)ImGui::GetContentRegionAvail().x };
-		heightCached= { (uint32_t)ImGui::GetContentRegionAvail().y };
-	}
-	GUI::Image(
-		m_Renderer,
-		reinterpret_cast<ImageViewID>(m_Framebuffer->GetColorAttachmentView()), 
-		ImGui::GetContentRegionAvail().x,
-		ImGui::GetContentRegionAvail().y);
-
-	//ImGui::Image(m_Framebuffer->GetColorAttachmentView(), {ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y});
-	ImGui::End();
-	//m_Renderer->EndFrame();
 }
 
 void SandboxLayer::OnDetach()

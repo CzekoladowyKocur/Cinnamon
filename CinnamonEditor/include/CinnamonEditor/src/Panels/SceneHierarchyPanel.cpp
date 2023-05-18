@@ -9,9 +9,12 @@
 #include "ThirdParty/imgui/imgui_internal.h"
 
 using namespace Cinnamon;
-SceneHierarchyPanel::SceneHierarchyPanel(Scene*& sceneContext, Entity& selectionContext) noexcept
+SceneHierarchyPanel::SceneHierarchyPanel(
+	Project*& projectContext,
+	Scene*& sceneContext, 
+	Entity& selectionContext) noexcept
 	:
-	EditorPanelBase(sceneContext, selectionContext),
+	EditorPanelBase(projectContext, sceneContext, selectionContext),
 	m_HierarchyTableRowColors({})
 {
 	const ImVec4 firstColor{ ImGui::GetStyle().Colors[ImGuiCol_FrameBg] };
@@ -58,6 +61,7 @@ void SceneHierarchyPanel::OnGUIRender()
 	else if (outSearch.empty())
 		m_SearchDiscaredEntities.clear();
 
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 2.0f, 2.0f });
 	/* Draw entity hierarchy. */
 	if (ImGui::BeginTable("##hierarchy_table", 2))
 	{
@@ -113,17 +117,23 @@ void SceneHierarchyPanel::OnGUIRender()
 		ImGui::EndTable();
 	}
 
+	/* Reset selection. */
 	if (ImGui::IsWindowHovered() && ImGui::IsMouseDown(ImGuiMouseButton_Left))
 		m_SelectionContext = Entity();
 
 	/* Create entity popup. */
-	if (ImGui::BeginPopupContextWindow(0, ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems))
+	if (ImGui::BeginPopupContextWindow(nullptr, ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems))
 	{
-		if (ImGui::MenuItem("Create Empty Entity"))
+		if (ImGui::Button("Create Empty Entity"))
+		{
 			m_SelectionContext = m_SceneContext->CreateEntity("Unnamed Entity");
+			ImGui::CloseCurrentPopup();
+		}
 
 		ImGui::EndPopup();
 	}
+
+	ImGui::PopStyleVar();
 	ImGui::End();
 }
 
@@ -139,11 +149,24 @@ constexpr const char* SceneHierarchyPanel::GetPanelName() const
 
 void SceneHierarchyPanel::DrawEntityNode(Entity entity)
 {
-	const ImGuiTreeNodeFlags conditionalFlags{ m_SelectionContext == entity ? ImGuiTreeNodeFlags_Selected : ImGuiTreeNodeFlags_None };
-	const ImGuiTreeNodeFlags treeNodeFlags{ ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_DefaultOpen | conditionalFlags };
+	ImGuiTreeNodeFlags conditionalFlags{ ImGuiTreeNodeFlags_None };
+	if (m_SelectionContext == entity)
+	{
+		ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg1, ImGui::GetColorU32(ImGui::GetStyle().Colors[ImGuiCol_HeaderActive]));
+		conditionalFlags |= ImGuiTreeNodeFlags_Selected;
+	}
+
+	const ImGuiTreeNodeFlags treeNodeFlags
+	{ 
+		ImGuiTreeNodeFlags_SpanFullWidth	|	 
+		ImGuiTreeNodeFlags_Leaf				| 
+		ImGuiTreeNodeFlags_DefaultOpen		|	 
+		conditionalFlags 
+	};
 
 	CIN_ASSERT(entity.HasComponent<TagComponent>());
-	const bool entityOpened{ ImGui::TreeNodeEx(reinterpret_cast<void*>(static_cast<uint64_t>(entity)), treeNodeFlags, entity.GetComponent<TagComponent>()) };
+	const auto& tag{ entity.GetComponent<TagComponent>().Tag };
+	const bool entityOpened{ ImGui::TreeNodeEx(reinterpret_cast<void*>(static_cast<uint64_t>(entity)), treeNodeFlags, tag.data()) };
 
 	if (ImGui::IsItemClicked())
 		m_SelectionContext = entity;
@@ -151,7 +174,7 @@ void SceneHierarchyPanel::DrawEntityNode(Entity entity)
 	bool wasEntityDeleted{ false };
 	if (ImGui::BeginPopupContextItem())
 	{
-		wasEntityDeleted = ImGui::MenuItem("Delete Entity");
+		wasEntityDeleted = ImGui::Button("Delete Entity");
 
 		ImGui::EndPopup();
 	}

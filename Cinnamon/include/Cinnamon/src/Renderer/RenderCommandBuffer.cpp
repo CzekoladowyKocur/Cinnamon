@@ -78,33 +78,20 @@ namespace Cinnamon {
 		for (uint32_t i{ 0U }; i < swapchainImageCount; ++i)
 			m_PrimaryCommandBuffers[i] = swapchain->GetCommandBuffer(i);
 
-		const VkFenceCreateInfo fenceCreateInfo
-		{
-			.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-			.pNext = nullptr,
-			.flags = VK_FENCE_CREATE_SIGNALED_BIT,
-		};
-
 		m_WaitFences.resize(swapchainImageCount);
-		for (uint32_t i{ 0U }; i < swapchainImageCount; ++i)
-			VK_CHECK(vkCreateFence(
-				m_Device->GetLogicalDevice(),
-				&fenceCreateInfo,
-				GraphicsContext::GetAllocator(),
-				&m_WaitFences[i]));
 	}
 
 	RenderCommandBuffer::~RenderCommandBuffer() noexcept
 	{
-		if (!m_WaitFences.empty())
-		{
-			VK_CHECK(vkWaitForFences(
-				m_Device->GetLogicalDevice(),
-				static_cast<uint32_t>(m_WaitFences.size()),
-				m_WaitFences.data(),
-				VK_TRUE,
-				std::numeric_limits<std::uint64_t>::max()));
-		}
+		if (m_Swapchain)
+			return;
+
+		VK_CHECK(vkWaitForFences(
+			m_Device->GetLogicalDevice(),
+			static_cast<uint32_t>(m_WaitFences.size()),
+			m_WaitFences.data(),
+			VK_TRUE,
+			std::numeric_limits<std::uint64_t>::max()));
 
 		for (size_t i{ 0U }; i < m_WaitFences.size(); ++i)
 		{
@@ -113,9 +100,6 @@ namespace Cinnamon {
 				m_WaitFences[i],
 				GraphicsContext::GetAllocator());
 		}
-		
-		if (m_Swapchain)
-			return;
 
 		vkDestroyCommandPool(
 			m_Device->GetLogicalDevice(),

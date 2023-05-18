@@ -21,6 +21,15 @@ namespace Cinnamon {
 		return m_Scene->m_Registry->Get(m_EntityID, componentID);
 	}
 
+	void* Entity::GetComponentInternal(const ECS::ComponentID componentID) const noexcept
+	{
+		CIN_ASSERT(m_Scene);
+		CIN_ASSERT(ECS::IsEntityValid(m_EntityID));
+		CIN_ASSERT(HasComponentInternal(componentID));
+
+		return m_Scene->m_Registry->Get(m_EntityID, componentID);
+	}
+
 	bool Entity::HasComponentInternal(const ECS::ComponentID componentID) const noexcept
 	{
 		CIN_ASSERT(m_Scene);

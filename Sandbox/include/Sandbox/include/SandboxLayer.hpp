@@ -35,7 +35,6 @@ private:
 	STL::Unique<Framebuffer> m_Framebuffer;
 	STL::Unique<RenderCommandBuffer> m_RenderCommandBuffer;
 
-
 	STL::Unique<VertexBuffer>		m_QuadVertexBuffer;
 	STL::Unique<IndexBuffer>		m_QuadIndexBuffer;
 	STL::Unique<Shader>				m_QuadShader;

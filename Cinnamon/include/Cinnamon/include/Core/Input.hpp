@@ -37,6 +37,9 @@ namespace Cinnamon {
 	public:
 		static bool IsKeyPressed(const Key key);
 		static bool IsMouseButtonPressed(const Mouse mouseButton);
+
+		static uint32_t GetMousePositionX();
+		static uint32_t GetMousePositionY();
 		static std::pair<uint32_t, uint32_t> GetMousePosition();
 	private:
 	};

@@ -1,4 +1,4 @@
-#include "Cinnamon/include/Event/Event.hpp"
+#include "Cinnamon/include/Event/ApplicationEvent.hpp"
 
 namespace Cinnamon {
 

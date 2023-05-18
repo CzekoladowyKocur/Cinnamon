@@ -1,8 +1,11 @@
 #pragma once
 #include "Cinnamon/include/Core/Core.hpp"
+#include "Cinnamon/include/Scene/SceneCamera.hpp"
 #include "CinMath/CinMath.h"
 
 namespace Cinnamon {
+	class Texture2D;
+
 	struct TagComponent final
 	{
 		constexpr explicit TagComponent(const STL::StringView tag) noexcept
@@ -20,11 +23,6 @@ namespace Cinnamon {
 			return Tag;
 		}
 
-		constexpr operator const char* () const noexcept
-		{
-			return Tag.data();
-		}
-
 		STL::String Tag;
 	};
 
@@ -32,19 +30,49 @@ namespace Cinnamon {
 	{
 		constexpr explicit TransformComponent() noexcept
 			:
-			Position()
+			Translation(),
+			Scale(1.0f, 1.0f, 1.0f),
+			Rotation()
 		{}
 
-		constexpr explicit TransformComponent(const CinMath::Vector3& position) noexcept
+		constexpr explicit TransformComponent(const CinMath::Vector3& translation) noexcept
 			:
-			Position(position)
+			Translation(translation)
 		{}
 
 		CinMath::Matrix4 Calculate() const noexcept
 		{
-			return CinMath::TranslateIdentity<4U, 4U, float>(Position);
+			return CinMath::TranslateIdentity<4U, 4U, float>(Translation) * CinMath::Scale(CinMath::Matrix4(1.0), Scale);
 		}
 
-		CinMath::Vector3 Position;
+		CinMath::Vector3 Translation;
+		CinMath::Vector3 Scale;
+		CinMath::Vector3 Rotation;
+	};
+
+	struct CameraComponent final
+	{
+		SceneCamera Camera;
+		bool Primary;
+	};
+
+	struct SpriteRendererComponent final
+	{
+		constexpr explicit SpriteRendererComponent() noexcept
+			:
+			Texture(nullptr),
+			Color(1.0f, 1.0f, 1.0f, 1.0f),
+			TilingFactor(1.0f)
+		{}
+
+		Texture2D* Texture;
+		CinMath::Vector4 Color;
+		float TilingFactor;
+	};
+
+	struct PointLightComponent
+	{
+		CinMath::Vector4 Color{ 1.0f, 1.0f, 1.0f, 1.0f };
+		float Intensity{ 1.0f };
 	};
 }

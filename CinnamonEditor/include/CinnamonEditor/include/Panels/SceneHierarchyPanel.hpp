@@ -2,12 +2,18 @@
 #include "CinnamonEditor/include/Panels/EditorPanelBase.hpp"
 #include "Cinnamon/include/Scene/Entity.hpp"
 
+class Project;
+
 class SceneHierarchyPanel final : public EditorPanelBase
 {
 private:
 	NON_COPYABLE(SceneHierarchyPanel)
 public:
-	explicit SceneHierarchyPanel(Cinnamon::Scene*& sceneContext, Cinnamon::Entity& selectionContext) noexcept;
+	explicit SceneHierarchyPanel(
+		Project*& projectContext,
+		Cinnamon::Scene*& sceneContext, 
+		Cinnamon::Entity& selectionContext) noexcept;
+	
 	virtual ~SceneHierarchyPanel() noexcept = default;
 
 	virtual void OnUpdate(const Timestep timestep) override final;

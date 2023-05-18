@@ -14,6 +14,12 @@ namespace Cinnamon {
 		Triangles	= VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
 	};
 
+	enum class ECullMode
+	{
+		Front	= VK_CULL_MODE_FRONT_BIT,
+		Back	= VK_CULL_MODE_BACK_BIT,
+	};
+
 	class Pipeline final
 	{
 	private:
@@ -35,6 +41,9 @@ namespace Cinnamon {
 
 		[[nodiscard]] VkPipelineLayout
 			GetLayout() const;
+
+		[[nodiscard]] const STL::Unique<Shader>&
+			GetShader() const;
 	private:
 		const STL::Unique<Device>& m_Device;
 		const STL::Unique<Framebuffer>& m_Framebuffer;

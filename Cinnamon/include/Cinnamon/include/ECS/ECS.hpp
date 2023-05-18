@@ -4,6 +4,7 @@
 namespace Cinnamon {
 	// ECS is bloated so it has it's own namespace.
 	namespace ECS {
+		typedef void (*ComponentDeletionFunction)(void* const);
 		// Components are designed to be data-only. They shouldn't perform any logic.
 		template<typename ComponentType>
 		concept ComponentConcept = requires
@@ -19,14 +20,41 @@ namespace Cinnamon {
 		using EntityVersion = uint32_t;
 
 		constexpr EntityID Null{ 0xffff'ffff'ffff'ffff };
+		
+		template<typename Component>
+		[[nodiscard]] ComponentID InitializeComponent() noexcept(true)
+		{
+			extern ComponentID e_ComponentCounter;
+			const ComponentID componentID{ e_ComponentCounter++ };
+
+			extern STL::UMap<ComponentID, ComponentDeletionFunction> s_DeletionFunctions;
+			s_DeletionFunctions[componentID] = [](void* data)
+			{
+				Component* const componentData{ reinterpret_cast<Component*>(data) };
+				componentData->~Component();
+			};
+
+			CIN_TRACE("Initialized component ID of {} for {}", componentID, typeid(Component).name());
+			return componentID;
+		}
 
 		template<typename Component>
 		[[nodiscard]] ComponentID GetComponentID() noexcept(true)
 		{
-			extern ComponentID e_ComponentCounter;
-			static ComponentID s_ComponentID{ e_ComponentCounter++ };
-
+			static ComponentID s_ComponentID{ InitializeComponent<Component>() };
 			return s_ComponentID;
+		}
+
+		[[nodiscard]] inline ComponentID GetCurrentMaxComponentID() noexcept(true)
+		{
+			extern ComponentID e_ComponentCounter;
+			return e_ComponentCounter;
+		}
+
+		[[nodiscard]] inline auto GetComponentDeletion(const ComponentID componentID) noexcept(true)
+		{
+			extern STL::UMap<ComponentID, ComponentDeletionFunction> s_DeletionFunctions;
+			return s_DeletionFunctions[componentID];
 		}
 
 		[[nodiscard]] constexpr EntityID CreateEntityID(

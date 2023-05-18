@@ -51,4 +51,16 @@ namespace Cinnamon {
 		EVENT_CATEGORY(Keyboard)
 	private:
 	};
+
+	class KeyTypedEvent final : public KeyEvent
+	{
+	private:
+	public:
+		explicit KeyTypedEvent(const KeyCode keyCode) noexcept;
+		constexpr virtual ~KeyTypedEvent() noexcept = default;
+
+		EVENT_TYPE(KeyTyped)
+		EVENT_CATEGORY(Keyboard)
+	private:
+	};
 }

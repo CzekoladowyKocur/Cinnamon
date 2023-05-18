@@ -45,8 +45,7 @@ namespace Cinnamon {
 	void VertexBuffer::SetData(const void* data, const VkDeviceSize size, const VkDeviceSize offset)
 	{
 		Byte* const destination{ reinterpret_cast<Byte*>(m_Allocator->MapMemory(m_DeviceAllocation)) };
-		memcpy(destination + offset, reinterpret_cast<const Byte*>(data) + offset, size);
-
+		memcpy(destination + offset, data, size);
 		m_Allocator->UnmapMemory(m_DeviceAllocation);
 	}
 }
