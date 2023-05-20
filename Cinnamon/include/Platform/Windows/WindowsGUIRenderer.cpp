@@ -239,6 +239,8 @@ namespace Cinnamon {
 
 			case EEventType::KeyReleased:
 			{
+				ImGui_ImplWin32_UpdateKeyModifiers();
+
 				const KeyReleasedEvent& keyReleasedEvent{ static_cast<const KeyReleasedEvent&>(event) };
 				IO.AddKeyEvent(NativeKeyCodeToImGUIKeyCode(keyReleasedEvent.GetKeyCode()), false);
 			} break;

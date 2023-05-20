@@ -29,7 +29,8 @@ namespace Cinnamon {
 
 		~SceneRenderer() noexcept;
 
-		void RenderScene(const CinMath::Matrix4& camera);
+		void OnUpdate(const Timestep timestep);
+		void RenderScene(const CinMath::Matrix4& camera, const CinMath::Vector3& viewPosition);
 		void SetRenderedScene(Scene* const scene);
 		void SetAspectRatio(const float aspectRatio);
 		void SetViewportSize(const uint32_t viewportWidth, const uint32_t viewportHeight);

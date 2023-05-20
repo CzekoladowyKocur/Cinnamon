@@ -1,10 +1,9 @@
 #include "CinnamonEditor/include/Panels/EditorPanelBase.hpp"
 
-using namespace Cinnamon;
 EditorPanelBase::EditorPanelBase(
-	Project*& projectContext,
-	Scene*& sceneContext, 
-	Entity& selectionContext) noexcept
+	ProjectContext		projectContext,
+	SceneContext		sceneContext, 
+	SelectionContext	selectionContext) noexcept
 	:
 	m_ProjectContext(projectContext),
 	m_SceneContext(sceneContext),

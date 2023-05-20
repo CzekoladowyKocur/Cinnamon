@@ -22,7 +22,7 @@ namespace Cinnamon {
 				colors[ImGuiCol_WindowBg]				= ImVec4(0.15f, 0.15f, 0.15f, 1.0f);
 				colors[ImGuiCol_ChildBg]				= ImVec4(0.200f, 0.200f, 0.200f, 1.000f);
 				colors[ImGuiCol_PopupBg]				= ImVec4(0.143f, 0.143f, 0.143f, 1.0f);
-				colors[ImGuiCol_Border]					= ImVec4(0.266f, 0.266f, 0.266f, 1.000f);
+				colors[ImGuiCol_Border]					= ImVec4(0.192f, 0.192f, 0.192f, 1.000f);
 				colors[ImGuiCol_BorderShadow]			= ImVec4(0.0f, 0.0f, 0.0f, 0.0);
 				colors[ImGuiCol_FrameBg]				= ImVec4(0.106f, 0.106f, 0.106f, 1.0f);
 				colors[ImGuiCol_FrameBgHovered]			= ImVec4(0.200f, 0.200f, 0.200f, 1.000f);
@@ -41,7 +41,7 @@ namespace Cinnamon {
 				colors[ImGuiCol_Button]					= ImVec4(1.000f, 1.000f, 1.000f, 0.000f);
 				colors[ImGuiCol_ButtonHovered]			= ImVec4(1.000f, 1.000f, 1.000f, 0.156f);
 				colors[ImGuiCol_ButtonActive]			= ImVec4(1.000f, 1.000f, 1.000f, 0.391f);
-				colors[ImGuiCol_Header]					= ImVec4(0.218f, 0.218f, 0.218f, 1.000f);
+				colors[ImGuiCol_Header]					= ImVec4(0.192f, 0.192f, 0.192f, 1.000f);
 				colors[ImGuiCol_HeaderHovered]			= ImVec4(0.469f, 0.469f, 0.469f, 1.000f);
 				colors[ImGuiCol_HeaderActive]			= ImVec4(0.469f, 0.469f, 0.469f, 1.000f);
 				colors[ImGuiCol_Separator]				= ImVec4(0.195f, 0.195f, 0.195f, 1.0f);

@@ -22,9 +22,9 @@
 
 using namespace Cinnamon;
 EditorViewportPanel::EditorViewportPanel(
-	Project*& projectContext,
-	Scene*& sceneContext,
-	Entity& selectionContext,
+	ProjectContext projectContext,
+	SceneContext sceneContext,
+	SelectionContext selectionContext,
 	const STL::Unique<Renderer>& renderer, 
 	const STL::Unique<AssetManager>& assetManager,
 	const uint32_t viewportWidth,
@@ -55,13 +55,14 @@ EditorViewportPanel::~EditorViewportPanel() noexcept
 
 void EditorViewportPanel::OnUpdate(const Timestep timestep)
 {
-	m_SceneRenderer->SetRenderedScene(m_SceneContext);
+	m_SceneRenderer->SetRenderedScene(m_SimulatedScene ? m_SimulatedScene.get() : m_SceneContext);
+	m_SceneRenderer->OnUpdate(timestep);
 	
 	if (m_Renderer)
 	{
 		m_EditorCamera.SetAspectRatio(m_Viewport.AspectRatio);
 		m_SceneRenderer->SetAspectRatio(m_Viewport.AspectRatio);
-		m_SceneRenderer->RenderScene(m_EditorCamera.GetViewProjectionMatrix());
+		m_SceneRenderer->RenderScene(m_EditorCamera.GetViewProjectionMatrix(), m_EditorCamera.GetPosition());
 	}
 
 	CIN_UNUSED(timestep);
@@ -111,7 +112,7 @@ void EditorViewportPanel::OnEvent(const Event& event)
 
 constexpr const char* EditorViewportPanel::GetPanelName() const
 {
-	return "Editor Viewport Panel";
+	return "Editor Viewport";
 }
 
 bool EditorViewportPanel::OnKeyPressed(const KeyPressedEvent& event)
@@ -191,6 +192,39 @@ void EditorViewportPanel::RenderToolbar()
 	/* Show FPS. */
 	ImGui::SameLine();
 	ImGui::Text("FPS: %f\n", ImGui::GetIO().Framerate);
+	/* Render Scene Play/Pause/Stop buttons. */
+	constexpr ImVec2 buttonSize{ 21.0f, 24.0f };
+	const float spacing{ (ImGui::GetWindowWidth() - buttonSize.x * 3.0f) * 0.5f };
+
+	ImGui::BeginDisabled(not m_SceneContext);
+	{
+		const bool isSceneInPlay{ m_SimulatedScene ? m_SimulatedScene->GetSceneState() == ESceneState::Playing : false };
+		const bool isScenePaused{ m_SimulatedScene ? m_SimulatedScene->GetSceneState() == ESceneState::Paused : false};
+		const bool isSceneEdited{ m_SimulatedScene ? m_SimulatedScene->GetSceneState() == ESceneState::Edited : false };
+		
+		ImGui::SameLine();
+		ImGui::SetCursorPosX(spacing);
+		ImGui::BeginDisabled(isSceneInPlay);
+		if (ImGui::Button(ICON_FA_PLAY, buttonSize))
+			SetSimulatedSceneState(ESceneState::Playing);
+			
+		ImGui::EndDisabled();
+
+		ImGui::SameLine();
+		ImGui::BeginDisabled(not isSceneInPlay);
+		if (ImGui::Button(ICON_FA_PAUSE, buttonSize))
+			SetSimulatedSceneState(ESceneState::Paused);
+
+		ImGui::EndDisabled();
+
+		ImGui::BeginDisabled(not isSceneInPlay and not isScenePaused or isSceneEdited);
+		ImGui::SameLine();
+		if (ImGui::Button(ICON_FA_STOP, buttonSize))
+			SetSimulatedSceneState(ESceneState::Edited);
+
+		ImGui::EndDisabled();
+	}
+	ImGui::EndDisabled();
 }
 
 void EditorViewportPanel::RenderViewport()
@@ -214,7 +248,7 @@ void EditorViewportPanel::RenderViewport()
 				cindel m_SceneContext;
 
 			m_SelectionContext = Entity();
-			m_SceneContext = cinew Scene();
+			m_SceneContext = cinew Scene(ESceneState::Edited);
 			if (not (SceneSerializer(m_SceneContext, m_AssetManager) << scenePath))
 				CIN_ERROR("Failed loading a dragged scene with path {}", scenePath.string());
 		}
@@ -222,7 +256,7 @@ void EditorViewportPanel::RenderViewport()
 		ImGui::EndDragDropTarget();
 	}
 	
-	if (m_SelectionContext and m_Viewport.Focused and m_GizmoOperation != EGizmoOperation::None)
+	if (m_SelectionContext and m_Viewport.Hovered and m_GizmoOperation != EGizmoOperation::None)
 	{
 		/* Render gizmos if used */
 		ImGuizmo::SetOrthographic(true);
@@ -249,8 +283,57 @@ void EditorViewportPanel::RenderViewport()
 			ImGuizmo::DecomposeMatrixToComponents(transform, translation, rotation, scale);
 
 			transformComponent.Translation = translation;
-			transformComponent.Rotation = rotation;
+			transformComponent.Rotation = -rotation;
 			transformComponent.Scale = scale;
 		}
+	}
+}
+
+void EditorViewportPanel::SetSimulatedSceneState(const ESceneState sceneState)
+{
+	CIN_ASSERT(m_SceneContext);
+	switch (sceneState)
+	{
+		case ESceneState::Paused:
+		{
+			CIN_ASSERT(m_SimulatedScene);
+			m_SimulatedScene->SetSceneState(ESceneState::Paused);
+		} break;
+
+		case ESceneState::Playing:
+		{
+			if (m_SimulatedScene and m_SimulatedScene->GetSceneState() == ESceneState::Paused)
+			{
+				m_SimulatedScene->SetSceneState(ESceneState::Playing);
+			}
+			else
+			{
+				FunctionVariable constexpr const char* simulatedSceneFile{ "SimulatedScene.cinscene" };
+				if (not (SceneSerializer(m_SceneContext, m_AssetManager) >> simulatedSceneFile))
+				{
+					CIN_ERROR("Failed to serialize scene for runtime");
+				}
+				else
+				{
+					m_SimulatedScene = STL::MakeUnique<Scene>(ESceneState::Playing);
+					if (not (SceneSerializer(m_SimulatedScene.get(), m_AssetManager) << simulatedSceneFile))
+					{
+						CIN_ERROR("Failed to deserialize scene for runtime");
+						m_SimulatedScene.reset();
+					}
+
+					m_SimulatedScene->SetSceneState(ESceneState::Playing);
+				}
+			}
+			
+			m_SceneRenderer->SetRenderedScene(m_SimulatedScene.get());
+		} break;
+
+		case ESceneState::Edited:
+		{
+			CIN_ASSERT(m_SimulatedScene);
+			m_SimulatedScene.reset();
+			m_SceneRenderer->SetRenderedScene(m_SceneContext);
+		} break;
 	}
 }

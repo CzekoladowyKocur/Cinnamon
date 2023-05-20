@@ -1,6 +1,7 @@
 #pragma once
 #include "Cinnamon/include/Core/Core.hpp"
 #include "Cinnamon/include/Scene/SceneCamera.hpp"
+#include "Cinnamon/include/Physics/PhysicsBody2D.hpp"
 #include "CinMath/CinMath.h"
 
 namespace Cinnamon {
@@ -42,7 +43,10 @@ namespace Cinnamon {
 
 		CinMath::Matrix4 Calculate() const noexcept
 		{
-			return CinMath::TranslateIdentity<4U, 4U, float>(Translation) * CinMath::Scale(CinMath::Matrix4(1.0), Scale);
+			return
+					CinMath::TranslateIdentity<4U, 4U, float>(Translation)													* 
+					CinMath::RotateZ(CinMath::Matrix4::Identity(), CinMath::Angle(CinMath::Degrees::FromValue(Rotation.z))) *
+					CinMath::Scale(CinMath::Matrix4(1.0), Scale);
 		}
 
 		CinMath::Vector3 Translation;
@@ -70,9 +74,22 @@ namespace Cinnamon {
 		float TilingFactor;
 	};
 
-	struct PointLightComponent
+	struct PointLightComponent final
 	{
 		CinMath::Vector4 Color{ 1.0f, 1.0f, 1.0f, 1.0f };
 		float Intensity{ 1.0f };
+	};
+
+	struct RigidBody2DComponent final
+	{
+		RuntimeBodyHandle	RuntimeBody{ nullptr };
+		EBodyType			BodyType{ EBodyType::Static };
+		CinMath::Vector2	Offset{ 0.0f };
+		float				Angle{ 0.0f };
+	};
+
+	struct Box2DColliderComponent final
+	{
+		CinMath::Vector2	Size{ 1.0f };
 	};
 }

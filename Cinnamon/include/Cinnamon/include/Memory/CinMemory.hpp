@@ -48,7 +48,7 @@ scripted objects usually work with handles instead of pointers to support hot-re
 #define CIN_ALLOCATOR_FORCE_INLINE	CIN_FORCE_INLINE
 
 #define CIN_ALLOCATOR_SHARED_STATE 1 /* Can free allocated memory from all threads */ 
-#define CIN_ALLOCATOR_USE_NOTHROW_NEW 1 /* Disable exceptions */
+#define CIN_ALLOCATOR_USE_NOTHROW_NEW 0 /* Disable exceptions */
 #if CIN_ALLOCATOR_USE_NOTHROW_NEW 
 #define CIN_ALLOCATOR_THROW_ATTRIBUTE (std::nothrow)
 #else

@@ -17,6 +17,7 @@ public:
 	void OnEvent(const Cinnamon::Event& event, const bool shouldUpdate);
 	void SetAspectRatio(const float aspectRatio);
 
+	[[nodiscard]] CinMath::Vector3 GetPosition() const;
 	[[nodiscard]] CinMath::Matrix4 GetViewMatrix() const;
 	[[nodiscard]] CinMath::Matrix4 GetProjectionMatrix() const;
 	[[nodiscard]] CinMath::Matrix4 GetViewProjectionMatrix() const;

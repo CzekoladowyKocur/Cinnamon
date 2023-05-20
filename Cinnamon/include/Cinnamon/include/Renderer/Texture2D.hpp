@@ -38,6 +38,14 @@ namespace Cinnamon {
 			const STL::Filepath& filepath, 
 			const STL::Unique<VulkanAllocator>& allocator,
 			const TextureSpecification& specification) noexcept(true);
+
+		explicit Texture2D(
+			const STL::Unique<VulkanAllocator>& allocator,
+			const void* const pixelData,
+			const uint32_t width,
+			const uint32_t height,
+			const EImageFormat format,
+			const TextureSpecification& specification);
 		
 		~Texture2D() noexcept;
 
@@ -72,6 +80,10 @@ namespace Cinnamon {
 
 		[[nodiscard]] const VkDescriptorImageInfo& 
 			GetDescriptorImageInfo() const;
+	private:
+		void CreateImage(const void* const pixelData, const size_t size, const uint32_t mipCount);
+		void CreateImageView();
+		void CreateSampler(const uint32_t mipCount);
 	private:
 		const STL::Unique<VulkanAllocator>& m_Allocator;
 

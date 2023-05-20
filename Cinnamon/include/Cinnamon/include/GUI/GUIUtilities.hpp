@@ -166,6 +166,7 @@ namespace Cinnamon {
 				#ifdef CIN_PLATFORM_WINDOWS
 				case Key::Control:		return ImGuiKey_LeftCtrl;
 				case Key::Shift:		return ImGuiKey_LeftShift;
+				case Key::Plus:			return ImGuiKey_None;
 				#endif
 				default:
 				{

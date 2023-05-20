@@ -19,6 +19,7 @@
 #include "CinnamonEditor/include/Panels/SceneHierarchyPanel.hpp"
 #include "CinnamonEditor/include/Panels/ContentBrowserPanel.hpp"
 #include "CinnamonEditor/include/Panels/EntityPropertiesPanel.hpp"
+#include "CinnamonEditor/include/Panels/WorldSettingsPanel.hpp"
 /* GUI */
 #include "ThirdParty/imgui/imgui.h"
 #include "ThirdParty/imgui/imgui_internal.h"
@@ -58,11 +59,11 @@ EditorLayer::EditorLayer(
 				CIN_WARN("Failed deserializing last project: {}", error.what());
 				return;
 			}
-
+	
 			const STL::Filepath& startScenePath{ m_Project->GetStartScenePath() };
 			if (not startScenePath.empty() and std::filesystem::exists(startScenePath))
 			{
-				m_SceneContext = cinew Scene();
+				m_SceneContext = cinew Scene(ESceneState::Edited);
 				{
 					if (not (SceneSerializer(m_SceneContext, m_AssetManager) << startScenePath))
 						CIN_WARN("Failed loading start scene {}", startScenePath.string());
@@ -75,7 +76,7 @@ EditorLayer::EditorLayer(
 			}
 		}
 	}
-
+	
 	if (not m_SceneContext)
 		EmptyScene();
 }
@@ -103,10 +104,11 @@ void EditorLayer::OnAttach()
 	CIN_TRACE("Attaching editor layer");
 
 	const auto [windowWidth, windowHeight]{ m_Window->GetSize() };
-	m_Panels.emplace_back(cinew EditorViewportPanel(m_Project, m_SceneContext, m_SelectionContext, m_Renderer, m_AssetManager, windowWidth, windowHeight));
 	m_Panels.emplace_back(cinew SceneHierarchyPanel(m_Project, m_SceneContext, m_SelectionContext));
 	m_Panels.emplace_back(cinew ContentBrowserPanel(m_Project, m_SceneContext, m_SelectionContext));
+	m_Panels.emplace_back(cinew WorldSettingsPanel(m_Project, m_SceneContext, m_SelectionContext));
 	m_Panels.emplace_back(cinew EntityPropertiesPanel(m_Project, m_SceneContext, m_SelectionContext, m_AssetManager));
+	m_Panels.emplace_back(cinew EditorViewportPanel(m_Project, m_SceneContext, m_SelectionContext, m_Renderer, m_AssetManager, windowWidth, windowHeight));
 }
 
 void EditorLayer::OnUpdate(const Timestep timestep)
@@ -310,7 +312,7 @@ void EditorLayer::OpenScene()
 		if (m_SceneContext)
 			cindel m_SceneContext;
 		
-		m_SceneContext = cinew Scene();
+		m_SceneContext = cinew Scene(ESceneState::Edited);
 		if (not (SceneSerializer(m_SceneContext, m_AssetManager) << *filepath))
 			CIN_ERROR("Failed saving scene with path {}", filepath.value().string());
 		else
@@ -558,7 +560,7 @@ void EditorLayer::EmptyScene()
 		cindel m_SceneContext;
 
 	m_SelectionContext = Entity();
-	m_SceneContext = cinew Scene();
+	m_SceneContext = cinew Scene(ESceneState::Edited);
 	m_CurrentScenePath.clear();
 	UpdateWindowTitle();
 }

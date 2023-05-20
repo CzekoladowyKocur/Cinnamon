@@ -10,9 +10,9 @@
 
 using namespace Cinnamon;
 SceneHierarchyPanel::SceneHierarchyPanel(
-	Project*& projectContext,
-	Scene*& sceneContext, 
-	Entity& selectionContext) noexcept
+	ProjectContext		projectContext,
+	SceneContext		sceneContext, 
+	SelectionContext	selectionContext) noexcept
 	:
 	EditorPanelBase(projectContext, sceneContext, selectionContext),
 	m_HierarchyTableRowColors({})
@@ -144,7 +144,7 @@ void SceneHierarchyPanel::OnEvent(const Event& event)
 
 constexpr const char* SceneHierarchyPanel::GetPanelName() const
 {
-	return "Scene Hierarchy Panel";
+	return "Scene Hierarchy";
 }
 
 void SceneHierarchyPanel::DrawEntityNode(Entity entity)

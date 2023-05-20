@@ -38,7 +38,7 @@ namespace Cinnamon {
 				const auto bufferIndex{ entityIndex + 1U };
 				if (m_ComponentBuffer.Capacity >= bufferIndex)
 				{
-					return new (reinterpret_cast<void*>(m_ComponentBuffer.Data + (entityIndex * m_ComponentSize))) ComponentType(std::forward<Args>(args)...);
+					return cinew (reinterpret_cast<void*>(m_ComponentBuffer.Data + (entityIndex * m_ComponentSize))) ComponentType(std::forward<Args>(args)...);
 				}
 				else
 				{
@@ -134,7 +134,7 @@ namespace Cinnamon {
 			inline ~Registry() noexcept(true)
 			{
 				for (auto pool : m_ComponentPools)
-					delete pool;
+					cindel pool;
 			}
 	
 			[[nodiscard]] inline EntityID CreateEntity() noexcept(true)
@@ -185,7 +185,7 @@ namespace Cinnamon {
 					m_ComponentPools.resize(componentID + 1U, nullptr);
 				
 				if(!m_ComponentPools[componentID])
-					m_ComponentPools[componentID] = new ComponentPool(sizeof(ComponentType));
+					m_ComponentPools[componentID] = cinew ComponentPool(sizeof(ComponentType));
 	
 				const EntityIndex entityIndex{ FetchEntityIndexFromID(entityID) };
 				ComponentType* component{ m_ComponentPools[componentID]->Construct<ComponentType>(entityIndex, std::forward<Args>(args)...) };
@@ -248,7 +248,7 @@ namespace Cinnamon {
 					m_ComponentPools.resize(componentID + 1U, nullptr);
 
 				if (!m_ComponentPools[componentID])
-					m_ComponentPools[componentID] = new ComponentPool(componentSize);
+					m_ComponentPools[componentID] = cinew ComponentPool(componentSize);
 
 				const EntityIndex entityIndex{ FetchEntityIndexFromID(entityID) };
 				void* componentMemory{ m_ComponentPools[componentID]->Allocate(entityIndex) };
@@ -294,7 +294,7 @@ namespace Cinnamon {
 			inline void Reset() noexcept(true)
 			{
 				for (auto pool : m_ComponentPools)
-					delete pool;
+					cindel pool;
 			
 				m_ComponentPools.clear();
 				m_FreeEntityIndices.clear();

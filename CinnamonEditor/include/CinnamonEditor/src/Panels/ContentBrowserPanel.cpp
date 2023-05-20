@@ -314,16 +314,16 @@ private:
 
 InternalScope constinit std::atomic<bool> s_FileTreeNeedsRescan{ true };
 ContentBrowserPanel::ContentBrowserPanel(
-	Project*& projectContext,
-	Scene*& sceneContext, 
-	Entity& selectionContext) noexcept
+	ProjectContext		projectContext,
+	SceneContext		sceneContext, 
+	SelectionContext	selectionContext) noexcept
 	:
 	EditorPanelBase(projectContext, sceneContext, selectionContext),
 	m_FileWatcher(nullptr),
 	m_FileTree(nullptr),
 	m_AssetDragCallbackFunction(nullptr),
 	m_FilePopupCallbackFunction(nullptr),
-	m_FilePopupSelectionCache{},
+	m_FilePopupSelectionCache(),
 	m_OpenFilePopup(false)
 {
 	m_AssetDragCallbackFunction = [](const STL::Filepath& filepath) noexcept
@@ -403,7 +403,7 @@ void ContentBrowserPanel::OnEvent(const Event& event)
 
 constexpr const char* ContentBrowserPanel::GetPanelName() const
 {
-	return "Content Browser Panel";
+	return "Content Browser";
 }
 
 void ContentBrowserPanel::ReconstructFileTreeIfNeeded()

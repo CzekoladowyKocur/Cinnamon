@@ -10,9 +10,9 @@ private:
 	NON_COPYABLE(SceneHierarchyPanel)
 public:
 	explicit SceneHierarchyPanel(
-		Project*& projectContext,
-		Cinnamon::Scene*& sceneContext, 
-		Cinnamon::Entity& selectionContext) noexcept;
+		ProjectContext		projectContext,
+		SceneContext		sceneContext, 
+		SelectionContext	selectionContext) noexcept;
 	
 	virtual ~SceneHierarchyPanel() noexcept = default;
 

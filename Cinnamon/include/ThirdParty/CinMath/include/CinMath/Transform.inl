@@ -1821,7 +1821,7 @@ namespace CinMath {
 	template<Length_t rows, Length_t columns, typename ValueType>
 	CIN_MATH_INLINE Matrix<rows, columns, ValueType> RotateZ(const Matrix<rows, columns, ValueType>& matrix, const TAngle<ValueType> rotation) noexcept
 	{
-		return Implementation::MatrixRotateZ<rows, columns, ValueType>::implementation(rotation.ToRadians());
+		return Implementation::MatrixRotateZ<rows, columns, ValueType>::implementation(matrix, rotation.ToRadians());
 	}
 
 	template<Length_t rows, Length_t columns, typename ValueType>

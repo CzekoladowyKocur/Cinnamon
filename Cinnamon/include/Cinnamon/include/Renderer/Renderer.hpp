@@ -48,16 +48,6 @@ namespace Cinnamon {
 
 		void RenderGeometry(
 			const STL::Unique<RenderCommandBuffer>& renderCommandBuffer,
-			const STL::Unique<UniformBuffer>& UBO,
-			const STL::Unique<VertexBuffer>& vertexBuffer,
-			const STL::Unique<IndexBuffer>& indexBuffer,
-			const STL::Unique<Pipeline>& pipeline,
-			const STL::Unique<Shader>& shader,
-			const Texture2D& texture,
-			const uint32_t indexCount);
-
-		void RenderGeometry(
-			const STL::Unique<RenderCommandBuffer>& renderCommandBuffer,
 			const STL::Unique<VertexBuffer>& vertexBuffer,
 			const STL::Unique<IndexBuffer>& indexBuffer,
 			const STL::Unique<Pipeline>& pipeline,

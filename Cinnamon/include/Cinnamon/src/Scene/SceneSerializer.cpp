@@ -137,6 +137,11 @@ YAML::Emitter& operator<<(YAML::Emitter& out, const Cinnamon::ETextureSamplerWra
 	return (out << static_cast<uint32_t>(wrapMode));
 }
 
+YAML::Emitter& operator<<(YAML::Emitter& out, const Cinnamon::EBodyType bodyType)
+{
+	return (out << static_cast<uint32_t>(bodyType));
+}
+
 YAML::Emitter& operator<<(YAML::Emitter& out, const Cinnamon::TagComponent& tagComponent)
 {
 	out << YAML::Key << "TagComponent";
@@ -151,6 +156,8 @@ YAML::Emitter& operator<<(YAML::Emitter& out, const Cinnamon::TransformComponent
 	out << YAML::Key << "TransformComponent";
 	out << YAML::BeginMap;
 	out << YAML::Key << "Translation" << YAML::Value << transformComponent.Translation;
+	out << YAML::Key << "Scale" << YAML::Value << transformComponent.Scale;
+	out << YAML::Key << "Rotation" << YAML::Value << transformComponent.Rotation;
 	out << YAML::EndMap;
 	return out;
 }
@@ -184,7 +191,30 @@ YAML::Emitter& operator<<(YAML::Emitter& out, const Cinnamon::PointLightComponen
 {
 	out << YAML::Key << "PointLightComponent";
 	out << YAML::BeginMap;
+	out << YAML::Key << "Color" << YAML::Value << pointLightComponent.Color;
 	out << YAML::Key << "Intensity" << YAML::Value << pointLightComponent.Intensity;
+	out << YAML::EndMap;
+	return out;
+}
+
+YAML::Emitter& operator<<(YAML::Emitter& out, const Cinnamon::RigidBody2DComponent& rigidBodyComponent)
+{
+	out << YAML::Key << "RigidBody2DComponent";
+	out << YAML::BeginMap;
+	out << YAML::Key << "BodyType" << YAML::Value << rigidBodyComponent.BodyType;
+	out << YAML::Key << "Offset" << YAML::Value << rigidBodyComponent.Offset;
+	out << YAML::Key << "Angle" << YAML::Value << rigidBodyComponent.Angle;
+	out << YAML::EndMap;
+	return out;
+}
+
+YAML::Emitter& operator<<(YAML::Emitter& out, const Cinnamon::Box2DColliderComponent& box2DCollider)
+{
+	CIN_UNUSED(box2DCollider);
+
+	out << YAML::Key << "Box2DColliderComponent";
+	out << YAML::BeginMap;
+	out << YAML::Key << "Size" << YAML::Value << box2DCollider.Size;
 	out << YAML::EndMap;
 	return out;
 }
@@ -262,7 +292,9 @@ namespace Cinnamon {
 				{
 					auto& transformComponent{ deserializedEntity.GetComponent<TransformComponent>() };
 
-					transformComponent.Translation = transform["Translation"].as<CinMath::Vector3>();
+					transformComponent.Translation	= transform["Translation"].as<CinMath::Vector3>();
+					transformComponent.Scale		= transform["Scale"].as<CinMath::Vector3>();
+					transformComponent.Rotation		= transform["Rotation"].as<CinMath::Vector3>();
 				}
 
 				const auto spriteRenderer{ iterator["SpriteRendererComponent"] };
@@ -284,7 +316,24 @@ namespace Cinnamon {
 				if (pointLight)
 				{
 					auto& pointLightComponent{ deserializedEntity.AddComponent<PointLightComponent>() };
+					pointLightComponent.Color = pointLight["Color"].as<CinMath::Vector4>();
 					pointLightComponent.Intensity = pointLight["Intensity"].as<float>();
+				}
+
+				const auto rigidBody2D{ iterator["RigidBody2DComponent"] };
+				if (rigidBody2D)
+				{
+					auto& rigidBody2DComponent{ deserializedEntity.AddComponent<RigidBody2DComponent>() };
+					rigidBody2DComponent.BodyType	= static_cast<EBodyType>(rigidBody2D["BodyType"].as<uint32_t>());
+					rigidBody2DComponent.Offset		= rigidBody2D["Offset"].as<CinMath::Vector2>();
+					rigidBody2DComponent.Angle		= rigidBody2D["Angle"].as<float>();
+				}
+
+				const auto box2DCollider{ iterator["Box2DColliderComponent"] };
+				if (box2DCollider)
+				{
+					auto& box2DColliderComponent{ deserializedEntity.AddComponent<Box2DColliderComponent>() };
+					box2DColliderComponent.Size = box2DCollider["Size"].as<CinMath::Vector2>();
 				}
 			}
 		}
@@ -307,6 +356,12 @@ namespace Cinnamon {
 
 		if (entity.HasComponent<PointLightComponent>())
 			emitter << entity.GetComponent<PointLightComponent>();
+
+		if (entity.HasComponent<RigidBody2DComponent>())
+			emitter << entity.GetComponent<RigidBody2DComponent>();
+
+		if (entity.HasComponent<Box2DColliderComponent>())
+			emitter << entity.GetComponent<Box2DColliderComponent>();
 
 		emitter << YAML::EndMap; /* Entity */
 	}

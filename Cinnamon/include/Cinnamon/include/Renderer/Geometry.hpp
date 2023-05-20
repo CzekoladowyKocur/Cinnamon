@@ -25,5 +25,23 @@ namespace Cinnamon {
 				};
 			}
 		};
+
+		struct LineVertex final
+		{
+			CinMath::Vector3 Position;
+			CinMath::Vector4 Color;
+
+			static VertexBufferLayout GetLayout() noexcept
+			{
+				return VertexBufferLayout
+				{
+					STL::InitializerList<VertexBufferElement>
+					{
+						VertexBufferElement{ EShaderDataType::Float3 },
+						VertexBufferElement{ EShaderDataType::Float4 }
+					}
+				};
+			}
+		};
 	}
 }

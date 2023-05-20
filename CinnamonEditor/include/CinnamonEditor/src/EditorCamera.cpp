@@ -79,6 +79,11 @@ void EditorCamera::SetAspectRatio(const float aspectRatio)
 	RecalculateProjection();
 }
 
+CinMath::Vector3 EditorCamera::GetPosition() const
+{
+	return m_Position;
+}
+
 CinMath::Matrix4 EditorCamera::GetViewMatrix() const
 {
 	return m_ViewMatrix;

@@ -29,6 +29,7 @@ layout(set = 0, binding = 2) readonly uniform LightBufferStruct
 {
 	int LightCount;
 	vec3 AmbientLight;
+	vec4 ViewPosition;
 	Light Lights[100];
 } LightBuffer;
 
@@ -44,12 +45,24 @@ void main()
 	{
 		vec3 lightDirection = normalize(LightBuffer.Lights[i].Position - fragmentPosition);
 
+		// Diffuse 
 		float diffuseFactor = max(dot(fragNormal, lightDirection), 0.0);
 
 		vec3 diffuseColor = diffuseFactor * albedo.xyz * LightBuffer.Lights[i].Color.xyz * LightBuffer.Lights[i].Intensity;
 
 		finalColor += diffuseColor * albedo.w;
+
+		// Specular
+		vec3 viewDirection = normalize(LightBuffer.ViewPosition.xyz - fragmentPosition);
+		vec3 reflectionDirection = reflect(-lightDirection, fragNormal);
+
+		float specularStrength = 0.2;
+		float specularFactor = pow(max(dot(viewDirection, reflectionDirection), 0.0), 16);
+		vec3 specular = specularStrength * specularFactor * LightBuffer.Lights[i].Color.xyz * LightBuffer.Lights[i].Intensity;
+
+		finalColor += specular * albedo.w;
 	}
 
-	Color = vec4(LightBuffer.AmbientLight + finalColor, 1.0);
+	vec3 ambientAlbedo = LightBuffer.AmbientLight * albedo.xyz * albedo.a;
+	Color = vec4(ambientAlbedo + finalColor, albedo.w);
 }

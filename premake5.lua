@@ -60,6 +60,7 @@ CinMathInclude = "Cinnamon/include/ThirdParty/CinMath/include"
 StbImageInclude = "Cinnamon/include/ThirdParty/stb_image/include"
 SpirvCrossInclude = "Cinnamon/include/ThirdParty/spirv_cross/include"
 YamlInclude = "Cinnamon/include/ThirdParty/yaml-cpp/include"
+Box2DInclude = "Cinnamon/include/ThirdParty/box2d/include"
 
 workspace ("Cinnamon")
 	architecture "x64"
@@ -165,6 +166,7 @@ include "Cinnamon/include/ThirdParty/ImGuizmo"
 include "Cinnamon/include/ThirdParty/stb_image"
 include "Cinnamon/include/ThirdParty/spirv_cross"
 include "Cinnamon/include/ThirdParty/yaml-cpp"
+include "Cinnamon/include/ThirdParty/box2d"
 group ""
 
 project ("Cinnamon")
@@ -207,7 +209,8 @@ project ("Cinnamon")
 		VmaInclude,
 		StbImageInclude,
 		SpirvCrossInclude,
-		YamlInclude
+		YamlInclude,
+		Box2DInclude
 	}
 
 	libdirs
@@ -223,7 +226,8 @@ project ("Cinnamon")
 		"imguizmo",
 		"stb_image",
 		"spirv_cross",
-		"yaml-cpp"
+		"yaml-cpp",
+		"box2d"
 	}
 
 	filter "configurations:Debug"

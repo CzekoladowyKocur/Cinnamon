@@ -9,7 +9,7 @@ using FilePopupCallbackFunction = std::function<void(const std::filesystem::path
 class ContentBrowserPanel final : public EditorPanelBase
 {
 private:
-	struct FilePopupSelectionCache
+	struct FilePopupSelectionCache final
 	{
 		Cinnamon::STL::Filepath Path;
 		bool IsDirectory;
@@ -29,9 +29,9 @@ private:
 	NON_COPYABLE(ContentBrowserPanel)
 public:
 	explicit ContentBrowserPanel(
-		Project*& projectContext,
-		Cinnamon::Scene*& sceneContext, 
-		Cinnamon::Entity& selectionContext) noexcept;
+		ProjectContext		projectContext,
+		SceneContext		sceneContext, 
+		SelectionContext	selectionContext) noexcept;
 
 	virtual ~ContentBrowserPanel() noexcept;
 

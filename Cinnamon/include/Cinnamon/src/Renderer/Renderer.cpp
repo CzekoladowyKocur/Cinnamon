@@ -15,10 +15,6 @@
 #include "Cinnamon/include/Renderer/Texture2D.hpp"
 #include "Cinnamon/include/Core/Window.hpp"
 
-/* Temporary */
-#include "Cinnamon/include/GUI/GUI.hpp"
-#include "ThirdParty/imgui/imgui.h"
-
 namespace Cinnamon {
 	Renderer::Renderer(const STL::Unique<Window>& windowContext) noexcept
 		:
@@ -233,110 +229,7 @@ namespace Cinnamon {
 			0U, 
 			0U, 
 			0U);
-	}
-
-	void Renderer::RenderGeometry(
-		const STL::Unique<RenderCommandBuffer>& renderCommandBuffer, 
-		const STL::Unique<UniformBuffer>& UBO,
-		const STL::Unique<VertexBuffer>& vertexBuffer, 
-		const STL::Unique<IndexBuffer>& indexBuffer, 
-		const STL::Unique<Pipeline>& pipeline, 
-		const STL::Unique<Shader>& shader,
-		const Texture2D& texture, 
-		const uint32_t indexCount)
-	{
-		const uint32_t frameIndex{ m_Swapchain->GetFrameIndex() };
-		const VkPipeline graphicsPipeline{ pipeline->GetHandle() };
-		const VkCommandBuffer commandBuffer{ renderCommandBuffer->GetCommandBuffer(frameIndex) };
-		const VkBuffer vertexBufferHandle{ vertexBuffer->GetHandle() };
-		const VkBuffer indexBufferHandle{ indexBuffer->GetHandle() };
-		constexpr VkDeviceSize offsets[1U]{ 0U };
-
-		vkCmdBindVertexBuffers(
-			commandBuffer,
-			0, 1,
-			&vertexBufferHandle,
-			offsets);
-
-		vkCmdBindIndexBuffer(
-			commandBuffer,
-			indexBufferHandle,
-			offsets[0U],
-			VK_INDEX_TYPE_UINT32);
-
-		vkCmdBindPipeline(
-			commandBuffer,
-			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			graphicsPipeline);
-
-		const VkDescriptorSet dst{ shader->AllocateDescriptorSet(0U, m_DescriptorPool->GetPool(frameIndex)) };
-
-		const VkWriteDescriptorSet UBODescriptorWrite
-		{
-			.sType{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET },
-			.pNext{ nullptr },
-			.dstSet{ dst },
-			.dstBinding{ 0U },
-			.dstArrayElement{ 0U },
-			.descriptorCount{ 1U },
-			.descriptorType{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
-			.pImageInfo{ nullptr },
-			.pBufferInfo{ &UBO->GetDescriptorBufferInfo() },
-			.pTexelBufferView{ nullptr }
-		};
-
-		const VkDescriptorImageInfo imageInfo 
-		{ 
-			.sampler{ texture.GetSampler() },
-			.imageView{ texture.GetImageView() },
-			.imageLayout{ texture.GetImageLayout() }
-		};
-		
-		const VkWriteDescriptorSet descriptorWrite
-		{
-			.sType{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET },
-			.pNext{ nullptr },
-			.dstSet{ dst },
-			.dstBinding{ 1U },
-			.dstArrayElement{ 0U },
-			.descriptorCount{ 1U },
-			.descriptorType{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER },
-			.pImageInfo{ &imageInfo },
-			.pBufferInfo{ nullptr },
-			.pTexelBufferView{ nullptr }
-		};
-
-		const STL::Array<VkWriteDescriptorSet, 2U> descriptorSetWrites
-		{
-			descriptorWrite,
-			UBODescriptorWrite
-		};
-
-		vkUpdateDescriptorSets(
-			m_Device->GetLogicalDevice(), 
-			static_cast<uint32_t>(descriptorSetWrites.size()),
-			descriptorSetWrites.data(),
-			0, 
-			nullptr);
-
-		vkCmdBindDescriptorSets(
-			commandBuffer, 
-			VK_PIPELINE_BIND_POINT_GRAPHICS, 
-			pipeline->GetLayout(),
-			0, 
-			1, 
-			&dst, 
-			0, 
-			nullptr);
-
-		vkCmdDrawIndexed(
-			commandBuffer,
-			static_cast<uint32_t>(indexCount),
-			1U,
-			0U,
-			0U,
-			0U);
-	}
+	}	
 
 	void Renderer::RenderGeometry(
 		const STL::Unique<RenderCommandBuffer>& renderCommandBuffer,

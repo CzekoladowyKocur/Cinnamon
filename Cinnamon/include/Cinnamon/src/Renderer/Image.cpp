@@ -1,6 +1,17 @@
 #include "Cinnamon/include/Renderer/Image.hpp"
 
 namespace Cinnamon {
+	uint32_t ChannelCountFromFormat(const EImageFormat format)
+	{
+		switch (format)
+		{
+			case EImageFormat::R8G8B8:		return 3U;
+			case EImageFormat::R8G8B8A8:	return 4U;
+
+			[[unlikely]] default: CIN_ASSERT(false); return 4U;
+		}
+	}
+
 	bool FormatHasAlphaChannel(const VkFormat format)
 	{
 		switch (format)
@@ -11,8 +22,7 @@ namespace Cinnamon {
 			case VK_FORMAT_B8G8R8A8_UNORM:
 				return true;
 
-			default:
-				return false;
+			[[unlikely]] default: CIN_ASSERT(false); return false;
 		}
 	}
 

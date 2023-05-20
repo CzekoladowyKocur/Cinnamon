@@ -65,19 +65,98 @@ namespace Cinnamon {
 			return updated;
 		}
 
+		void Vec1Slider(const STL::StringView label, float values[1U], const float min, const float max, const float width)
+		{
+			ImGui::PushID(label.data());
+			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ 0, 0 });
+
+			ImGui::PushItemWidth(width);
+			ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 2.0f);
+			ImGui::DragFloat("##X", &values[0U], 0.1f, min, max, "%.2f");
+			ImGui::PopStyleVar();
+			ImGui::PopItemWidth();
+
+			ImGui::PopStyleVar();
+			ImGui::PopID();
+		}
+
 		void Vec1Slider(
 			const STL::StringView label,
 			float values[1U],
-			float resetValue,
-			float width)
+			const float resetValue,
+			const float min,
+			const float max,
+			const float width)
+		{
+			const float lineHeight{ GImGui->Font->FontSize + GImGui->Style.FramePadding.y * 2.0f };
+			const float buttonWidth{ 5.0f };
+			const ImVec2 buttonSize{ buttonWidth, lineHeight };
+			const float dragfloatWidth{ width - buttonSize.x };
+
+			ImGui::PushID(label.data());
+			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ 0, 0 });
+
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.65f, 0.0f, 0.05f, 1.0f });
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.8f, 0.1f, 0.10f, 1.0f });
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.65f, 0.0f, 0.05f, 1.0f });
+
+			if (ImGui::Button("", buttonSize))
+				values[0U] = resetValue;
+
+			ImGui::PopStyleColor(3);
+			ImGui::SameLine();
+			ImGui::SetCursorPosX(ImGui::GetCursorPosX());
+			ImGui::PushItemWidth(dragfloatWidth);
+			ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 2.0f);
+			ImGui::DragFloat("##X", &values[0U], 0.1f, min, max, "%.2f");
+			ImGui::PopStyleVar();
+			ImGui::PopItemWidth();
+
+			ImGui::PopStyleVar();
+			ImGui::PopID();
+		}
+
+		void Vec2Slider(
+			const STL::StringView label, 
+			float values[2U], 
+			const float min, 
+			const float max, 
+			const float width)
+		{
+			const float dragfloatWidth{ width * 0.5f };
+
+			ImGui::PushID(label.data());
+			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ 0, 0 });
+			
+			ImGui::PushItemWidth(dragfloatWidth);
+			ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 2.0f);
+			ImGui::DragFloat("##X", &values[0U], 0.1f, min, max, "%.2f");
+			ImGui::PopStyleVar();
+
+			ImGui::SameLine();
+			ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 2.0f);
+			ImGui::DragFloat("##Y", &values[1U], 0.1f, min, max, "%.2f");
+			ImGui::PopStyleVar();
+			ImGui::PopItemWidth();
+			ImGui::PopStyleVar(1);
+			ImGui::PopID();
+		}
+
+		void Vec2Slider(
+			const STL::StringView label, 
+			float values[2U], 
+			const float resetValue, 
+			const float min,
+			const float max,
+			const float width)
 		{
 			const float lineHeight{ GImGui->Font->FontSize + GImGui->Style.FramePadding.y * 2.0f };
 			const float buttonWidth{ ImGui::CalcTextSize("X").x + GImGui->Style.FramePadding.x };
 			const ImVec2 buttonSize{ buttonWidth, lineHeight };
-			const float dragfloatWidth{ width * 0.333f - buttonSize.x };
+			const float dragfloatWidth{ width * 0.5f - buttonSize.x };
 
 			ImGui::PushID(label.data());
-			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ 0, 0 });
+			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ 0, 0 });			
 
 			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.65f, 0.0f, 0.05f, 1.0f });
 			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.8f, 0.1f, 0.10f, 1.0f });
@@ -89,18 +168,37 @@ namespace Cinnamon {
 			ImGui::PopStyleColor(3);
 			ImGui::SameLine();
 			ImGui::PushItemWidth(dragfloatWidth);
-			ImGui::DragFloat("##X", &values[0U], 0.1f, 0.0f, 0.0f, "%.2f");
+			ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
+			ImGui::DragFloat("##X", &values[0U], 0.1f, min, max, "%.2f");
+			ImGui::PopStyleVar();
 			ImGui::PopItemWidth();
 
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.05f, 0.65f, 0.05f, 1.0f });
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{ 0.1f, 0.8f, 0.1f, 1.0f });
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4{ 0.05f, 0.65f, 0.05f, 1.0f });
+			
+			ImGui::SameLine();
+			if (ImGui::Button("Y", buttonSize))
+				values[1U] = resetValue;
+
+			ImGui::SameLine();
+			ImGui::PushItemWidth(dragfloatWidth);
+			ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
+			ImGui::DragFloat("##Y", &values[1U], 0.1f, min, max, "%.2f");
 			ImGui::PopStyleVar();
+			ImGui::PopItemWidth();
+			ImGui::PopStyleVar(1);
+			ImGui::PopStyleColor(3);
 			ImGui::PopID();
 		}
 
 		void Vec3Slider(
 			const STL::StringView label, 
 			float values[3U], 
-			float resetValue, 
-			float width)
+			const float resetValue, 
+			const float min,
+			const float max,
+			const float width)
 		{
 			const float lineHeight{ GImGui->Font->FontSize + GImGui->Style.FramePadding.y * 2.0f };
 			const float buttonWidth{ ImGui::CalcTextSize("X").x  + GImGui->Style.FramePadding.x };
@@ -120,7 +218,9 @@ namespace Cinnamon {
 			ImGui::PopStyleColor(3);
 			ImGui::SameLine();
 			ImGui::PushItemWidth(dragfloatWidth);
-			ImGui::DragFloat("##X", &values[0U], 0.1f, 0.0f, 0.0f, "%.2f");
+			ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 2.0f);
+			ImGui::DragFloat("##X", &values[0U], 0.1f, min, max, "%.2f");
+			ImGui::PopStyleVar();
 			ImGui::PopItemWidth();
 
 			ImGui::SameLine();
@@ -133,7 +233,9 @@ namespace Cinnamon {
 			ImGui::PopStyleColor(3);
 			ImGui::SameLine();
 			ImGui::PushItemWidth(dragfloatWidth);
-			ImGui::DragFloat("##Y", &values[1U], 0.1f, 0.0f, 0.0f, "%.2f");
+			ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 2.0f);
+			ImGui::DragFloat("##Y", &values[1U], 0.1f, min, max, "%.2f");
+			ImGui::PopStyleVar();
 			ImGui::PopItemWidth();
 
 			ImGui::SameLine();
@@ -147,12 +249,26 @@ namespace Cinnamon {
 
 			ImGui::SameLine();
 			ImGui::PushItemWidth(dragfloatWidth);
-			ImGui::DragFloat("##Z", &values[2U], 0.1f, 0.0f, 0.0f, "%.2f");
+			ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 2.0f);
+			ImGui::DragFloat("##Z", &values[2U], 0.1f, min, max, "%.2f");
+			ImGui::PopStyleVar();
 			ImGui::PopItemWidth();
 
 			ImGui::PopStyleVar();
 			ImGui::PopID();
 		}
+
+		void ColorPicker4(
+			const STL::StringView label, 
+			float values[4U],
+			const float width)
+		{
+			ImGui::SetNextItemWidth(width);
+			ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 2.0f);
+			ImGui::ColorPicker4(label.data(), values, ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_NoTooltip);
+			ImGui::PopStyleVar();
+		}
+
 	}
 }
 

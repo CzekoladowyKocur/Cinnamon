@@ -8,6 +8,9 @@ namespace Cinnamon {
 }
 
 class Project;
+using ProjectContext	= Project*&;
+using SceneContext		= Cinnamon::Scene*&;
+using SelectionContext	= Cinnamon::Entity&;
 
 class EditorPanelBase
 {
@@ -15,9 +18,9 @@ private:
 	NON_COPYABLE(EditorPanelBase)
 public:
 	explicit EditorPanelBase(
-		Project*& projectContext,
-		Cinnamon::Scene*& sceneContext, 
-		Cinnamon::Entity& selectionContext) noexcept;
+		ProjectContext		projectContext,
+		SceneContext		sceneContext, 
+		SelectionContext	selectionContext) noexcept;
 
 	virtual ~EditorPanelBase() noexcept = default;
 
@@ -27,7 +30,7 @@ public:
 
 	constexpr virtual const char* GetPanelName() const = 0;
 protected:
-	Project*& m_ProjectContext;
-	Cinnamon::Scene*& m_SceneContext;
-	Cinnamon::Entity& m_SelectionContext;
+	ProjectContext		m_ProjectContext;
+	SceneContext		m_SceneContext;
+	SelectionContext	m_SelectionContext;
 };

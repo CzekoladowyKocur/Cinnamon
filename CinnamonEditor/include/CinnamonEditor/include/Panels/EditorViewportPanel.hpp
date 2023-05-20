@@ -10,6 +10,7 @@ namespace Cinnamon {
 	class KeyPressedEvent;
 	class MousePressedEvent;
 	class WindowResizedEvent;
+	enum class ESceneState;
 }
 
 class Project;
@@ -20,9 +21,9 @@ private:
 	NON_COPYABLE(EditorViewportPanel)
 public:
 	explicit EditorViewportPanel(
-		Project*& projectContext,
-		Cinnamon::Scene*& sceneContext,
-		Cinnamon::Entity& selectionContext,
+		ProjectContext projectContext,
+		SceneContext sceneContext,
+		SelectionContext selectionContext,
 		const Cinnamon::STL::Unique<Cinnamon::Renderer>& renderer, 
 		const Cinnamon::STL::Unique<Cinnamon::AssetManager>& assetManager, 
 		const uint32_t viewportWidth, 
@@ -42,13 +43,15 @@ private:
 
 	void RenderToolbar();
 	void RenderViewport();
+	void SetSimulatedSceneState(const Cinnamon::ESceneState sceneState);
 private:
 	EditorCamera m_EditorCamera;
 	EGizmoOperation m_GizmoOperation;
-	
+		
 	const Cinnamon::STL::Unique<Cinnamon::Renderer>& m_Renderer;
 	const Cinnamon::STL::Unique<Cinnamon::AssetManager>& m_AssetManager;
 
+	Cinnamon::STL::Unique<Cinnamon::Scene> m_SimulatedScene;
 	Cinnamon::STL::Unique<Cinnamon::SceneRenderer> m_SceneRenderer;
 
 	struct

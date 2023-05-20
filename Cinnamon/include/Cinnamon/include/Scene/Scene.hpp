@@ -9,21 +9,33 @@ namespace Cinnamon {
 		class Registry;
 	}
 	
+	class PhysicsWorld2D;
 	class Environment;
+
+	enum class ESceneState
+	{
+		Paused,
+		Playing,
+		Edited,
+	};
 
 	class Scene final
 	{
-	private:
-		NON_COPYABLE(Scene)
 	public:
-		explicit Scene() noexcept;
+		explicit Scene(const ESceneState state) noexcept;
 		~Scene() noexcept;
 
+		void OnUpdate(const Timestep timestep);
+		
 		[[nodiscard]] Entity
 			CreateEntity(const STL::StringView entityName = "Unnamed Entity") noexcept;
 
 		void DestroyEntity(Entity entity) noexcept;
+		void SetSceneState(const ESceneState sceneState);
 
+		[[nodiscard]] ESceneState
+			GetSceneState() const;
+		
 		[[nodiscard]] STL::Unique<ECS::Registry>&
 			GetRegistry() noexcept;
 
@@ -36,15 +48,25 @@ namespace Cinnamon {
 		[[nodiscard]] const STL::Unique<Environment>&
 			GetEnvironment() const noexcept;
 
-		[[nodiscard]] const SceneCamera&
-			GetPrimaryCamera() const noexcept;
-
 		[[nodiscard]] SceneCamera&
 			GetPrimaryCamera() noexcept;
+
+		[[nodiscard]] const SceneCamera&
+			GetPrimaryCamera() const noexcept;	
 	private:
-		STL::Unique<ECS::Registry> m_Registry;
-		STL::Unique<Environment> m_Environment;
-		SceneCamera m_DefaultCamera;
+		void OnScenePause(const ESceneState previousSceneState);
+		void OnScenePlay(const ESceneState previousSceneState);
+		void OnSceneEdit(const ESceneState previousSceneState); 
+
+		void OnScenePausedUpdate(const Timestep timestep);
+		void OnScenePlayedUpdate(const Timestep timestep);
+		void OnSceneEditedUpdate(const Timestep timestep);
+	private:
+		STL::Unique<ECS::Registry>	m_Registry;
+		STL::Unique<PhysicsWorld2D> m_PhysicsWorld;
+		STL::Unique<Environment>	m_Environment;
+		SceneCamera					m_DefaultCamera;
+		ESceneState					m_SceneState;
 	private:
 		friend class Entity;
 	};

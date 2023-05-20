@@ -4,7 +4,7 @@
 namespace Cinnamon {
 	enum class EImageFormat
 	{
-		None = VK_FORMAT_UNDEFINED,
+		None			= VK_FORMAT_UNDEFINED,
 		/* Color formats */
 		R32F			= VK_FORMAT_R32_SFLOAT,
 		R32I			= VK_FORMAT_R32_UINT,
@@ -23,6 +23,7 @@ namespace Cinnamon {
 		Depth			= Depth24Stencil8,
 	};
 
+	uint32_t ChannelCountFromFormat(const EImageFormat format);
 	bool FormatHasAlphaChannel(const VkFormat format);
 
 	void InsertImageMemoryBarrier(
