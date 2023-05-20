@@ -217,7 +217,7 @@ void EditorViewportPanel::RenderToolbar()
 
 		ImGui::EndDisabled();
 
-		ImGui::BeginDisabled(not isSceneInPlay and not isScenePaused or isSceneEdited);
+		ImGui::BeginDisabled((not isSceneInPlay and not isScenePaused) or isSceneEdited);
 		ImGui::SameLine();
 		if (ImGui::Button(ICON_FA_STOP, buttonSize))
 			SetSimulatedSceneState(ESceneState::Edited);

@@ -77,8 +77,9 @@ namespace Cinnamon {
 			.LightBuffer			{ },
 			.LightBufferBase		{ nullptr },
 		},
-		m_AmbientLight(0.15f),
-		m_LightUniformBuffers()
+		m_LightUniformBuffers(),
+		m_CameraViewPosition(0.0f),
+		m_AmbientLight(0.15f)
 	{
 		BuildDeferredPrepass();
 		BuildDeferredPass();

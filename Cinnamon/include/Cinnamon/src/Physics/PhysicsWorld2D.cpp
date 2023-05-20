@@ -1,8 +1,14 @@
 #include "Cinnamon/include/Physics/PhysicsWorld2D.hpp"
+
+#ifdef CIN_PLATFORM_WINDOWS
 #pragma warning(push, 0)  
 #include "box2d/box2d.h"
 #include "box2d/b2_contact.h"
 #pragma warning(pop)
+#else
+#include "box2d/box2d.h"
+#include "box2d/b2_contact.h"
+#endif
 
 namespace Cinnamon {
 	static_assert(static_cast<uint32_t>(b2_staticBody)		== static_cast<uint32_t>(EBodyType::Static));

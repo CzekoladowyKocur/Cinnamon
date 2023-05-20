@@ -3,12 +3,12 @@ Entities:
   - TagComponent:
       Tag: Coin 1
     TransformComponent:
-      Translation: [-0.199920878, 0.583769917, 0]
+      Translation: [-0.00329164974, 0.038826108, 0]
       Scale: [1, 1, 1]
       Rotation: [-0, 0, -0]
     SpriteRendererComponent:
-      Texture: C:\Users\marti\Documents\ProdigyProjects\Project\coin_0.png
-      Filter: 0
+      Texture: /home/dxm/Documents/Projekt/XD/corn_PORN.png
+      Filter: 1
       Wrap: 1
       Color: [1, 1, 1, 1]
       TilingFactor: 1
@@ -34,8 +34,8 @@ Entities:
       Scale: [0.999999881, 0.999999881, 1]
       Rotation: [-0, 0, 0]
     SpriteRendererComponent:
-      Texture: C:\Users\marti\Documents\ProdigyProjects\Project\coin_0.png
-      Filter: 0
+      Texture: ""
+      Filter: 1
       Wrap: 1
       Color: [1, 1, 1, 1]
       TilingFactor: 1
@@ -52,8 +52,8 @@ Entities:
       Scale: [0.99999994, 0.99999994, 1]
       Rotation: [-0, 0, -14.4063387]
     SpriteRendererComponent:
-      Texture: C:\Users\marti\Documents\ProdigyProjects\Project\coin_0.png
-      Filter: 0
+      Texture: ""
+      Filter: 1
       Wrap: 1
       Color: [1, 1, 1, 1]
       TilingFactor: 1

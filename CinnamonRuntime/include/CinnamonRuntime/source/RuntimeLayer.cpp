@@ -16,7 +16,7 @@ RuntimeLayer::RuntimeLayer(const Cinnamon::STL::Unique<Cinnamon::Window>& window
 	m_Renderer(STL::MakeUnique<Renderer>(window)),
 	m_SceneRenderer(STL::MakeUnique<SceneRenderer>(m_Renderer, true, window->GetWidth(), window->GetHeight())),
 	m_AssetManager(STL::MakeUnique<AssetManager>(m_Renderer->GetAllocator())),
-	m_Scene(STL::MakeUnique<Scene>()),
+	m_Scene(STL::MakeUnique<Scene>(ESceneState::Playing)),
 	m_SceneCamera(STL::MakeUnique<SceneCamera>(static_cast<float>(window->GetWidth()) / window->GetHeight()))
 {
 	SceneSerializer serializer(m_Scene.get(), m_AssetManager);
@@ -37,7 +37,7 @@ void RuntimeLayer::OnUpdate(const Timestep timestep)
 	auto proj{ m_SceneCamera->GetViewProjection() };
 	proj[5] *= -1.0f;
 
-	m_SceneRenderer->RenderScene(proj);
+	m_SceneRenderer->RenderScene(proj, CinMath::Vector3{ 0.0f });
 	m_Renderer->EndFrame();
 	CIN_UNUSED(timestep);
 }

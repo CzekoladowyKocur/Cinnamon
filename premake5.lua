@@ -331,7 +331,8 @@ project ("CinnamonEditor")
 			"stb_image",
 			"spirv_cross",
 			"yaml-cpp",
-			"imguizmo"
+			"imguizmo",
+			"box2d"
         }
 
 	filter "configurations:Distribution"
@@ -464,5 +465,6 @@ project ("CinnamonRuntime")
 			"stb_image",
 			"spirv_cross",
 			"yaml-cpp",
-			"imguizmo"
+			"imguizmo",
+			"box2d"
         }
